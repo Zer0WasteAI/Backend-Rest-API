@@ -31,18 +31,24 @@ class GeminiAdapter(IAFoodAnalyzer):
         image = Image.open(image_file)
 
         prompt = """
-        Analiza esta imagen y devuelve una lista JSON con metadatos de cada ingrediente.
-        Formato esperado:
+        Actúa como un chef experto con conocimientos en conservación de alimentos y análisis visual.
+        Recibirás una imagen con uno o varios ingredientes. Reconócelos y devuelve una lista JSON estructurada con la siguiente información por cada uno:
+        - name: nombre del ingrediente
+        - quantity: cantidad aproximada
+        - type_unit: unidad (puede ser 'unidades', 'gramos', 'kilos', etc.)
+        - storage_type: tipo de almacenamiento ideal ('Refrigerado', 'Congelado', o 'Ambiente')
+        - expiration_time: tiempo aproximado antes de que se deteriore, expresado en DÍAS
+        - tips: consejo breve para conservarlo correctamente
+        Formato de respuesta:
         [
-        {
-        "name": "Nombre del ingrediente",
-        "quantity": 2,
-        "type_unit": "unidades",
-        "storage_type": "Refrigerado",
-        "expiration_time": "5",
-        "tips": "Consejo de conservación"
-        },
-        ...
+          {
+            "name": "Nombre del ingrediente",
+            "quantity": 2,
+            "type_unit": "unidades",
+            "storage_type": "Refrigerado",
+            "expiration_time": "5",
+            "tips": "Consejo de conservación"
+          }
         ]
         """
         
@@ -50,7 +56,31 @@ class GeminiAdapter(IAFoodAnalyzer):
         return self._parse_response_text(response.text)
     
     def recognize_food(self, image_file) -> List[Dict]:
-        raise NotImplementedError("Este método aún no está implementado.")
+        image = Image.open(image_file)
+
+        prompt = """
+        Actúa como un chef experto en cocina internacional. Analiza la siguiente imagen que contiene uno o más platos preparados.
+        Devuélveme una lista JSON donde por cada plato se detalle lo siguiente:
+        - name: nombre del plato
+        - main_ingredients: lista de ingredientes principales (en español)
+        - category: tipo de plato (por ejemplo: Entrada, Plato principal, Postre, Bebida)
+        - calories: cantidad aproximada de calorías (solo si es razonable estimarlo)
+        - description: una breve descripción del plato y su preparación típica
+        Formato esperado:
+        [
+          {
+            "name": "Lomo saltado",
+            "main_ingredients": ["Carne de res", "Papas", "Cebolla", "Tomate", "Sillao"],
+            "category": "Plato principal",
+            "calories": 600,
+            "description": "Plato típico peruano que mezcla carne salteada con papas fritas, cebolla y tomate."
+          }
+        ]
+        """
+
+        response = self.model.generate_content([prompt, image], generation_config={"temperature": 0.4})
+
+        return self._parse_response_text(response.text)
 
     def recognize_batch(self, image_files: List) -> List[Dict]:
         raise NotImplementedError("Este método aún no está implementado.")

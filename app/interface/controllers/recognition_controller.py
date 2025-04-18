@@ -1,6 +1,7 @@
 from flask import Blueprint, request, jsonify
 from infrastructure.ai.gemini_adapter import GeminiAdapter
 from use_cases.recognize_ingedient import recognize_ingredients_metadata
+from use_cases.recognize_food import recognize_food_metadata
 
 recognition_bp = Blueprint('recognition_bp', __name__)
 
@@ -12,6 +13,18 @@ def ingredients_metadata():
     image_file = request.files['img']
     recognizer = GeminiAdapter()
     result = recognize_ingredients_metadata(image_file, recognizer)
-    print("RESPONSE:", result)
+    #print("RESPONSE:", result)
+
+    return jsonify(result), 200
+
+@recognition_bp.route('/food_metadata', methods=['GET'])
+def food_metadata():
+    if 'img' not in request.files:
+        return jsonify({"error": "No image provided"}), 400
+
+    image_file = request.files['img']
+    recognizer = GeminiAdapter()
+    result = recognize_food_metadata(image_file, recognizer)
+    #print("RESPONSE:", result)
 
     return jsonify(result), 200
