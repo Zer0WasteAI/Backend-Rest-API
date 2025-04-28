@@ -35,6 +35,10 @@ class UserRepository:
         user = User.query.filter_by(uid=uid).first()
         if user:
             user.email = new_email
+            user.updated_at = datetime.now(timezone.utc)
+            db.session.commit()
+            return user
+        return None
 
     @staticmethod
     def find_user_with_auth_by_email(email: str):

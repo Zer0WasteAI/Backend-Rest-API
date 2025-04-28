@@ -32,6 +32,12 @@ services:
       MYSQL_USER: user
       MYSQL_PASSWORD: userpass
       MYSQL_DATABASE: zwaidb
+      DB_HOST: mysql_db
+      DB_PORT: 3306
+      DB_USER: user
+      DB_PASS: userpass
+      DB_NAME: zwaidb
+      EMAIL_PORT: 587
     depends_on:
       - mysql
     networks:
