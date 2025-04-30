@@ -38,6 +38,8 @@ services:
       DB_PASS: userpass
       DB_NAME: zwaidb
       EMAIL_PORT: 587
+    env_file:
+      - .env
     depends_on:
       - mysql
     networks:
