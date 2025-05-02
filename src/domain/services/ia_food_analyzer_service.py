@@ -10,7 +10,7 @@ class IAFoodAnalyzerService(ABC):
         pass
 
     @abstractmethod
-    def recognize_food(self, image_file) -> List[Dict]:
+    def recognize_foods(self, image_file) -> List[Dict]:
         """
         Reconoce el plato de comida en una imagen y devuelve metadatos.
         """

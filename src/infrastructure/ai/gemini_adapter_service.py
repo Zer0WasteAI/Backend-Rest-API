@@ -63,7 +63,7 @@ class GeminiAdapterService(IAFoodAnalyzerService):
         "ingredients": raw.get("ingredients", [])
         }
     
-    def recognize_food(self, image_file: IO[bytes]) -> Dict[str, List[Dict[str, Any]]]:
+    def recognize_foods(self, image_file: IO[bytes]) -> Dict[str, List[Dict[str, Any]]]:
         try:
             image = Image.open(image_file)
         except Exception as e:
@@ -108,9 +108,9 @@ class GeminiAdapterService(IAFoodAnalyzerService):
             "foods": raw.get("foods", [])
         }
     
-    def recognize_batch(self, image_files: List[IO[bytes]]) -> Dict[str, List]:
+    def recognize_batch(self, images_files: List[IO[bytes]]) -> Dict[str, List]:
         try:
-            images = [Image.open(f) for f in image_files]
+            images = [Image.open(f) for f in images_files]
         except Exception as e:
             raise UnidentifiedImageException() from e
     

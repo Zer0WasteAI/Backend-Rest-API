@@ -3,13 +3,13 @@ from datetime import datetime, timezone
 from typing import IO
 from src.domain.models.recognition import Recognition
 
-class RecognizeIngredientsUseCase:
+class RecognizeFoodsUseCase:
     def __init__(self, ai_service, recognition_repository):
         self.ai_service = ai_service
         self.recognition_repository = recognition_repository
 
     def execute(self, user_uid: str, image_file: IO[bytes], image_path: str) -> dict:
-        result = self.ai_service.recognize_ingredients(image_file)
+        result = self.ai_service.recognize_foods(image_file)
 
         recognition = Recognition(
             uid=str(uuid.uuid4()),
