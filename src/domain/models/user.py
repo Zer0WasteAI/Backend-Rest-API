@@ -6,4 +6,4 @@ class User:
         self.updated_at = updated_at
 
     def __repr__(self):
-        return f"User(id={self.uid}, email={self.email}, created_at={self.created_at}, updated_at={self.updated_at})"
+        return f"User(uid={self.uid}, email={self.email}, created_at={self.created_at}, updated_at={self.updated_at})"

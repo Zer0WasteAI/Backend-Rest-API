@@ -11,6 +11,7 @@ from src.infrastructure.db.schemas.user_schema import db
 from src.interface.controllers.auth_controller import auth_bp
 from src.config.swagger_config import swagger_config, swagger_template
 from src.interface.controllers.user_controller import user_bp
+from src.interface.controllers.recognition_controller import recognition_bp
 
 
 def create_app():
@@ -23,6 +24,7 @@ def create_app():
 
     application.register_blueprint(auth_bp, url_prefix='/api/auth')
     application.register_blueprint(user_bp, url_prefix='/api/user')
+    application.register_blueprint(recognition_bp, url_prefix='/api/recognition')
 
     @application.route('/')
     def welcome():
@@ -102,4 +104,5 @@ with app.app_context():
     else:
         print("🎉 Inicialización exitosa: La base de datos está lista.")
 
-
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=3000)

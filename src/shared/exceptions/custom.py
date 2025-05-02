@@ -31,3 +31,11 @@ class EmailAlreadyExistsException(AppException):
 class SMSDeliveryException(AppException):
     def __init__(self, message="Error sending SMS"):
         super().__init__(message, status_code=500)
+
+class UnidentifiedImageException(AppException):
+    def __init__(self, message="Unidentified image"):
+        super().__init__(message, status_code=400)
+
+class InvalidResponseFormatException(AppException):
+    def __init__(self, message="Error parsing response from external service"):
+        super().__init__(message, status_code=502)

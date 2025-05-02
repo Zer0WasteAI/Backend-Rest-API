@@ -22,6 +22,8 @@ services:
     container_name: zerowasteai_api
     volumes:
       - .:/app
+      - ./src/config/firebase_credentials.json:/app/src/config/firebase_credentials.json
+    working_dir: /app
     ports:
       - "3000:3000"
     environment:
@@ -38,6 +40,8 @@ services:
       DB_PASS: userpass
       DB_NAME: zwaidb
       EMAIL_PORT: 587
+      FIREBASE_CREDENTIALS_PATH: src/config/firebase_credentials.json
+      FIREBASE_STORAGE_BUCKET: zer0wasteai-91408.firebasestorage.app
     env_file:
       - .env
     depends_on:

@@ -24,6 +24,7 @@ __pycache__/
 *.env
 .env.*
 !.env.example
+firebase_credentials.json
 
 # Docker
 *.pid
@@ -31,10 +32,3 @@ __pycache__/
 *.tar
 *.img
 docker-compose.override.yml
-
-# Ignorar archivos de Python compilados
-*.pyc
-__pycache__/
-
-# Ignorar variables de entorno
-.env
