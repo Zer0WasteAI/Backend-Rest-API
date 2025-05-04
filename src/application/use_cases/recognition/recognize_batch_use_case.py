@@ -3,7 +3,6 @@ from datetime import datetime, timezone
 
 from src.domain.models.recognition import Recognition
 from typing import List, IO
-from src.domain.services.ia_food_analyzer_service import IAFoodAnalyzerService
 
 
 class RecognizeBatchUseCase:

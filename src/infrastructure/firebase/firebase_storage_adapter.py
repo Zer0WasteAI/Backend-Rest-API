@@ -23,6 +23,3 @@ def get_image_from_firebase(path_in_bucket: str) -> BytesIO:
         return BytesIO(image_bytes)
     except Exception as e:
         raise RuntimeError(f"Error al obtener la imagen '{path_in_bucket}': {e}")
-
-def get_images_from_firebase(paths: list[str]) -> list[BytesIO]:
-    return [get_image_from_firebase(path) for path in paths]

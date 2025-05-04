@@ -1,23 +1,23 @@
 from abc import ABC, abstractmethod
-from typing import List, Dict
+from typing import List, Dict, Any
 
 class IAFoodAnalyzerService(ABC):
     @abstractmethod
-    def recognize_ingredients(self, image_file) -> List[Dict]:
+    def recognize_ingredients(self, image_files: List) -> Dict[str, List[Dict[str, Any]]]:
         """
         Analiza una imagen de ingredientes y devuelve metadatos.
         """
         pass
 
     @abstractmethod
-    def recognize_foods(self, image_file) -> List[Dict]:
+    def recognize_foods(self, image_files: List) -> Dict[str, List[Dict[str, Any]]]:
         """
         Reconoce el plato de comida en una imagen y devuelve metadatos.
         """
         pass
 
     @abstractmethod
-    def recognize_batch(self, image_files: List) -> List[Dict]:
+    def recognize_batch(self, image_files: List) -> Dict[str, List]:
         """
         Analiza varias imágenes y devuelve una lista de resultados estructurados.
         """
