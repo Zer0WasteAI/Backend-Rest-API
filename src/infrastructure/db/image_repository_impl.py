@@ -20,7 +20,7 @@ class ImageRepositoryImpl(ImageReferenceRepository):
             uid=image.uid,
             name=image.name,
             image_path=image.image_path,
-            type=image.type
+            image_type=image.image_type
         )
         self.db.session.add(obj)
         self.db.session.commit()
@@ -51,5 +51,5 @@ class ImageRepositoryImpl(ImageReferenceRepository):
             uid=row.uid,
             name=row.name,
             image_path=row.image_path,
-            type=row.type
+            image_type=row.image_type
         )
