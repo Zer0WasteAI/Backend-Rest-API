@@ -7,7 +7,6 @@ class RecognitionORM(db.Model):
     uid = db.Column(db.String(36), primary_key=True)
     user_uid = db.Column(db.String(36), db.ForeignKey("users.uid"), nullable=False)
     recognized_at = db.Column(db.DateTime, default=datetime.now(timezone.utc))
-    image_path = db.Column(db.Text, nullable=True)
     images_paths = db.Column(db.JSON, nullable=True)
     raw_result = db.Column(db.JSON)
     is_validated = db.Column(db.Boolean, default=False)
