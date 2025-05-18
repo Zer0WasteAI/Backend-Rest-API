@@ -1,6 +1,6 @@
 from src.domain.repositories.recognition_repository import RecognitionRepository
 from src.domain.models.recognition import Recognition
-from src.infrastructure.db.models.recognition_model import RecognitionORM
+from src.infrastructure.db.models.recognition_orm import RecognitionORM
 
 from sqlalchemy import insert, select, update
 from typing import List, Optional
@@ -42,11 +42,10 @@ class RecognitionRepositoryImpl(RecognitionRepository):
         self.db.session.execute(stmt)
         self.db.session.commit()
 
-    def _to_domain(self, row) -> Recognition:
+    def _to_domain(self, row: RecognitionORM) -> Recognition:
         return Recognition(
             uid=row.uid,
             user_uid=row.user_uid,
-            image_path=row.image_path,
             images_paths=row.images_paths,
             recognized_at=row.recognized_at,
             raw_result=row.raw_result,
