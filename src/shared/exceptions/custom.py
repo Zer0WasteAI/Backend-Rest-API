@@ -39,3 +39,14 @@ class UnidentifiedImageException(AppException):
 class InvalidResponseFormatException(AppException):
     def __init__(self, message="Error parsing response from external service"):
         super().__init__(message, status_code=502)
+
+class InvalidRequestDataException(AppException):
+    def __init__(self, message="Invalid request data", details=None):
+        super().__init__(message=message, status_code=400)
+        self.details = details
+
+    def to_dict(self):
+        error_response = super().to_dict()
+        if self.details:
+            error_response["details"] = self.details
+        return error_response
