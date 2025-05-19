@@ -11,7 +11,7 @@ from src.shared.exceptions.custom import UnidentifiedImageException, InvalidResp
 class GeminiAdapterService(IAFoodAnalyzerService):
     def __init__(self):
         genai.configure(api_key=Config.GEMINI_API_KEY)
-        self.model = genai.GenerativeModel("gemini-2.5-pro-exp-03-25")
+        self.model = genai.GenerativeModel("gemini-2.5-pro-preview-03-25")
 
     def _parse_response_text(self, text: str):
         clean_text = text.strip()
