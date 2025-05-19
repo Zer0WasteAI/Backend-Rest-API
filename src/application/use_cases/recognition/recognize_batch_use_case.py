@@ -1,16 +1,21 @@
 import uuid
 from datetime import datetime, timezone
-
 from src.domain.models.recognition import Recognition
-from typing import List, IO
+from typing import List
 
 
 class RecognizeBatchUseCase:
-    def __init__(self, ai_service, recognition_repository):
+    def __init__(self, ai_service, recognition_repository, storage_adapter):
         self.ai_service = ai_service
         self.recognition_repository = recognition_repository
+        self.storage_adapter = storage_adapter
 
-    def execute(self,user_uid: str, images_files: List[IO[bytes]], images_paths: List[str]) -> dict:
+    def execute(self,user_uid: str, images_paths: List[str]) -> dict:
+        images_files = []
+        for path in images_paths:
+            file = self.storage_adapter.get_image(path)
+            images_files.append(file)
+
         result = self.ai_service.recognize_batch(images_files)
         recognition = Recognition(
             uid=str(uuid.uuid4()),

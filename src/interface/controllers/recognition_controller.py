@@ -1,8 +1,5 @@
 from flask import Blueprint, request, jsonify
-from PIL import Image
 from flask_jwt_extended import jwt_required, get_jwt_identity
-
-from src.infrastructure.firebase.firebase_storage_adapter import get_image_from_firebase
 from src.infrastructure.db.base import db
 from src.application.factories.recognition_usecase_factory import (
     make_recognize_ingredients_use_case,
@@ -22,14 +19,8 @@ def recognize_ingredients():
         return jsonify({"error": "Debe proporcionar una lista válida en 'images_paths'"}), 400
 
     try:
-        images_files = []
-        for path in images_paths:
-            file = get_image_from_firebase(path)
-            Image.open(file)
-            file.seek(0)
-            images_files.append(file)
         use_case = make_recognize_ingredients_use_case(db)
-        result = use_case.execute(user_uid=user_uid, images_files=images_files, images_paths=images_paths)
+        result = use_case.execute(user_uid=user_uid, images_paths=images_paths)
         return jsonify(result), 200
 
     except Exception as e:
@@ -45,16 +36,10 @@ def recognize_foods():
         return jsonify({"error": "Debe proporcionar una lista válida en 'images_paths'"}), 400
 
     try:
-        images_files = []
-        for path in images_paths:
-            file = get_image_from_firebase(path)
-            Image.open(file)
-            file.seek(0)
-            images_files.append(file)
-
         use_case = make_recognize_foods_use_case(db)
-        result = use_case.execute(user_uid=user_uid, images_files=images_files, images_paths=images_paths)
+        result = use_case.execute(user_uid=user_uid, images_paths=images_paths)
         return jsonify(result), 200
+
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
@@ -69,15 +54,8 @@ def recognize_batch():
         return jsonify({"error": "Debe proporcionar una lista válida en 'images_paths'"}), 400
 
     try:
-        images_files = []
-        for path in images_paths:
-            file = get_image_from_firebase(path)
-            Image.open(file)
-            file.seek(0)
-            images_files.append(file)
-
         use_case = make_recognize_batch_use_case(db)
-        result = use_case.execute(user_uid=user_uid, images_files=images_files, images_paths=images_paths)
+        result = use_case.execute(user_uid=user_uid, images_paths=images_paths)
         return jsonify(result), 200
 
     except Exception as e:
