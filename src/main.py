@@ -13,6 +13,7 @@ from src.config.swagger_config import swagger_config, swagger_template
 from src.interface.controllers.image_management_controller import image_management_bp
 from src.interface.controllers.user_controller import user_bp
 from src.interface.controllers.recognition_controller import recognition_bp
+from src.shared.exceptions.base import AppException
 
 
 def create_app():
@@ -27,6 +28,12 @@ def create_app():
     application.register_blueprint(user_bp, url_prefix='/api/user')
     application.register_blueprint(recognition_bp, url_prefix='/api/recognition')
     application.register_blueprint(image_management_bp, url_prefix='/api/image_management')
+
+    @application.errorhandler(AppException)
+    def handle_app_exception(error):
+        response = jsonify(error.to_dict())
+        response.status_code = error.status_code
+        return response
 
     @application.route('/')
     def welcome():
