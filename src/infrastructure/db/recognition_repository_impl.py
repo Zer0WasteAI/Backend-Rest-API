@@ -13,7 +13,6 @@ class RecognitionRepositoryImpl(RecognitionRepository):
         stmt = insert(RecognitionORM).values(
             uid=recognition.uid,
             user_uid=recognition.user_uid,
-            image_path=recognition.image_path,
             images_paths=recognition.images_paths,
             recognized_at=recognition.recognized_at,
             raw_result=recognition.raw_result,
