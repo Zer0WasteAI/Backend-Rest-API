@@ -16,5 +16,5 @@ class ImageReferenceRepository(ABC):
         pass
 
     @abstractmethod
-    def search_by_name_similarity(self, name_query: str) -> List[ImageReference]:
+    def find_by_name_similarity(self, name_query: str) -> List[ImageReference]:
         pass

@@ -6,12 +6,12 @@ class AssignImageReferenceUseCase:
         self.image_repository = image_repository
         self.fallback_name = fallback_name
 
-    def execute(self, name: str) -> Optional[ImageReference]:
-        exact = self.image_repository.find_by_name(name)
+    def execute(self, item_name: str) -> Optional[ImageReference]:
+        exact = self.image_repository.find_by_name(item_name)
         if exact:
             return exact
 
-        similars = self.image_repository.find_by_name_similarity(name)
+        similars = self.image_repository.find_by_name_similarity(item_name)
         if similars:
             return similars[0]
 
