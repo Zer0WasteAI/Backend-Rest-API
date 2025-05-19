@@ -22,3 +22,15 @@ class FirebaseStorageAdapter:
         if not blob.exists():
             raise FileNotFoundError(f"La imagen '{path_in_bucket}' no existe en el bucket.")
         return BytesIO(blob.download_as_bytes())
+
+    def list_blobs(self, prefix: str = "", valid_extensions=None, recursive=True):
+        blobs = self.bucket.list_blobs(prefix=prefix)
+
+        if not recursive:
+            prefix_depth = prefix.strip("/").count("/")
+            blobs = [b for b in blobs if b.name.strip("/").count("/") == prefix_depth]
+
+        if valid_extensions:
+            blobs = [blob for blob in blobs if any(blob.name.lower().endswith(ext) for ext in valid_extensions)]
+
+        return blobs
