@@ -14,30 +14,32 @@ image_management_bp = Blueprint('image_management', __name__)
 public_schema = ImageReferencePublicSchema()
 item_name_schema = ItemNameSchema()
 
-@image_management_bp.route("/assign_image", methods=["GET"])
-@jwt_required
+@image_management_bp.route("/assign_image", methods=["POST"])
+@jwt_required()
 def assign_image():
-    errors = item_name_schema.validate(request.args)
+    json_data = request.get_json()
+    errors = item_name_schema.validate(json_data)
     if errors:
         raise InvalidRequestDataException(details=errors)
 
-    item_name = request.args.get("item_name")
+    item_name = json_data["item_name"]
     use_case = make_assign_image_reference_use_case(db)
-    result = use_case.execute(similar_name=item_name)
+    result = use_case.execute(item_name=item_name)
 
     serialized = public_schema.dump(result)
     return jsonify(serialized), 200
 
-@image_management_bp.route("/search_similar_images", methods=["GET"])
+@image_management_bp.route("/search_similar_images", methods=["POST"])
 @jwt_required()
 def search_similar_images():
-    errors = item_name_schema.validate(request.args)
+    json_data = request.get_json()
+    errors = item_name_schema.validate(json_data)
     if errors:
-        return jsonify(errors), 400
+        raise InvalidRequestDataException(details=errors)
 
-    item_name = request.args.get("item_name")
+    item_name = json_data["item_name"]
     use_case = make_search_similar_images_use_case(db)
-    results = use_case.execute(similar_name=item_name)
+    results = use_case.execute(item_name=item_name)
 
     serialized_list = public_schema.dump(results, many=True)
     return jsonify(serialized_list), 200
