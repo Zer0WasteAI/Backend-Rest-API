@@ -6,9 +6,11 @@ from src.interface.serializers.image_reference_serializer import ImageReferenceP
 from src.interface.serializers.item_name_serializer import ItemNameSchema
 from src.application.factories.image_management_usecase_factory import (
     make_search_similar_images_use_case,
-    make_assign_image_reference_use_case
+    make_assign_image_reference_use_case,
+    make_sync_image_loader_use_case
 )
 from src.shared.exceptions.custom import InvalidRequestDataException
+from src.shared.decorators.internal_only import internal_only
 
 image_management_bp = Blueprint('image_management', __name__)
 public_schema = ImageReferencePublicSchema()
@@ -22,7 +24,7 @@ def assign_image():
     if errors:
         raise InvalidRequestDataException(details=errors)
 
-    item_name = json_data["item_name"]
+    item_name = json_data.get("item_name")
     use_case = make_assign_image_reference_use_case(db)
     result = use_case.execute(item_name=item_name)
 
@@ -37,7 +39,7 @@ def search_similar_images():
     if errors:
         raise InvalidRequestDataException(details=errors)
 
-    item_name = json_data["item_name"]
+    item_name = json_data.get("item_name")
     use_case = make_search_similar_images_use_case(db)
     results = use_case.execute(item_name=item_name)
 
@@ -45,6 +47,12 @@ def search_similar_images():
     return jsonify(serialized_list), 200
 
 #TODO: Register in db image already uploaded
+@image_management_bp.route("/sync_images", methods=["POST"])
+@internal_only
+def sync_images():
+    use_case = make_sync_image_loader_use_case(db)
+    added = use_case.execute()
+    return jsonify({"message": f"{added} imágenes sincronizadas"}), 200
 
 #TODO: Upload image with image
 
