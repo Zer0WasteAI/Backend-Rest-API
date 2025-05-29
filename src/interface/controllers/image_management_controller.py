@@ -46,7 +46,6 @@ def search_similar_images():
     serialized_list = public_schema.dump(results, many=True)
     return jsonify(serialized_list), 200
 
-#TODO: Register in db image already uploaded
 @image_management_bp.route("/sync_images", methods=["POST"])
 @internal_only
 def sync_images():
@@ -56,4 +55,3 @@ def sync_images():
 
 #TODO: Upload image with image
 
-#TODO: Se podrán mapear todas las imágenes de firebase y guardarlas en la db con todo y ruta? :')

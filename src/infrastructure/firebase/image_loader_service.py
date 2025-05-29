@@ -9,7 +9,6 @@ class ImageLoaderService:
 
     def sync_all_images(self):
         folders = {
-            "foods": "food",
             "ingredients": "ingredient",
             "default": "default"
         }

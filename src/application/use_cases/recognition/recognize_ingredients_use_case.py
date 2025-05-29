@@ -4,10 +4,12 @@ from typing import List
 from src.domain.models.recognition import Recognition
 
 class RecognizeIngredientsUseCase:
-    def __init__(self, ai_service, recognition_repository, storage_adapter):
+    def __init__(self, ai_service, recognition_repository, storage_adapter, image_repository, fallback_name: str = "imagen defecto"):
         self.ai_service = ai_service
         self.recognition_repository = recognition_repository
         self.storage_adapter = storage_adapter
+        self.image_repository = image_repository
+        self.fallback_name = fallback_name
 
     def execute(self, user_uid: str, images_paths: List[str]) -> dict:
         images_files = []
@@ -27,4 +29,12 @@ class RecognizeIngredientsUseCase:
             validated_at=None
         )
         self.recognition_repository.save(recognition)
+
+        for ingredient in result["ingredients"]:
+            similars = self.image_repository.find_by_name_similarity(ingredient["name"])
+            if similars:
+                ingredient["image_path"] = similars[0].image_path
+            else:
+                ingredient["image_path"] = self.image_repository.find_by_name(self.fallback_name).image_path
+
         return result

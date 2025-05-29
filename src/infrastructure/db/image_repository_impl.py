@@ -7,7 +7,8 @@ from src.infrastructure.db.models.image_reference_orm import ImageReferenceORM
 
 
 def normalize_name(name: str) -> str:
-    nfkd_form = unicodedata.normalize('NFKD', name)
+    cleaned = name.replace('-', ' ').replace('_', ' ')
+    nfkd_form = unicodedata.normalize('NFKD', cleaned)
     return ''.join([c for c in nfkd_form if not unicodedata.combining(c)]).lower()
 
 
