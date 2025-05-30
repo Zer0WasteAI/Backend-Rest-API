@@ -37,7 +37,28 @@ def create_app():
 
     @application.route('/')
     def welcome():
-        return "Welcome to the ZeroWasteAI API!"
+        return jsonify({
+            "message": "¡Bienvenido a ZeroWasteAI API! 🌱",
+            "description": "API para reconocimiento de alimentos y gestión de perfiles nutricionales",
+            "version": "1.0.0",
+            "features": [
+                "Autenticación con Firebase",
+                "Gestión de perfiles de usuario",
+                "Reconocimiento de alimentos con IA",
+                "Gestión de imágenes de referencia",
+                "Preferencias nutricionales personalizadas"
+            ],
+            "endpoints": {
+                "authentication": "/api/auth",
+                "user_profile": "/api/user",
+                "food_recognition": "/api/recognition",
+                "image_management": "/api/image_management",
+                "api_status": "/status",
+                "documentation": "/apidocs"
+            },
+            "team": "ZeroWasteAI Development Team",
+            "contact": "Desarrollado con ❤️ para reducir el desperdicio alimentario"
+        }), 200
 
     @application.route('/status', methods=['GET'])
     def status():
