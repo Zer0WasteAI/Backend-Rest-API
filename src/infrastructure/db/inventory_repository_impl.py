@@ -4,6 +4,7 @@ from src.domain.models.inventory import Inventory
 from src.domain.models.ingredient import Ingredient, IngredientStack
 from src.domain.models.food_item import FoodItem
 from src.domain.repositories.inventory_repository import InventoryRepository
+from src.infrastructure.db.models.ingredient_orm import IngredientORM
 from src.infrastructure.db.models.ingredient_stack_orm import IngredientStackORM
 from src.infrastructure.db.models.food_item_orm import FoodItemORM
 from src.infrastructure.db.models.inventory_orm import InventoryORM
@@ -15,39 +16,27 @@ class InventoryRepositoryImpl(InventoryRepository):
     def get_by_user_uid(self, user_uid: str) -> Optional[Inventory]:
         inventory = Inventory(user_uid)
 
-        # Ingredientes
-        stmt = select(IngredientStackORM).where(IngredientStackORM.inventory_user_uid == user_uid)
-        ingredient_stacks = self.db.session.execute(stmt).scalars().all()
-        for stack in ingredient_stacks:
-            inventory.add_ingredient_stack(
-                name=stack.ingredient_name,
-                stack=IngredientStack(stack.quantity, stack.expiration_date, stack.added_at),
-                type_unit=stack.type_unit,
-                storage_type=stack.storage_type,
-                tips=stack.tips,
-                image_path=stack.image_path
+        stmt = select(IngredientORM).where(IngredientORM.inventory_user_uid == user_uid)
+        ingredients = self.db.session.execute(stmt).scalars().all()
+
+        for ing in ingredients:
+            domain_ing = Ingredient(
+                name=ing.name,
+                type_unit=ing.type_unit,
+                storage_type=ing.storage_type,
+                tips=ing.tips,
+                image_path=ing.image_path
             )
 
-        # Platos
-        stmt = select(FoodItemORM).where(FoodItemORM.inventory_user_uid == user_uid)
-        food_items = self.db.session.execute(stmt).scalars().all()
-        for item in food_items:
-            food = FoodItem(
-                name=item.name,
-                main_ingredients=item.main_ingredients,
-                category=item.category,
-                calories=item.calories,
-                description=item.description,
-                storage_type=item.storage_type,
-                expiration_time=item.expiration_time,
-                time_unit=item.time_unit,
-                tips=item.tips,
-                serving_quantity=item.serving_quantity,
-                image_path=item.image_path,
-                added_at=item.added_at,
-                expiration_date=item.expiration_date
-            )
-            inventory.add_food_item(food)
+            for stack in ing.stacks:
+                domain_stack = IngredientStack(
+                    quantity=stack.quantity,
+                    expiration_date=stack.expiration_date,
+                    added_at=stack.added_at
+                )
+                domain_ing.add_stack(domain_stack)
+
+            inventory.ingredients[ing.name] = domain_ing
 
         return inventory
 
@@ -56,44 +45,58 @@ class InventoryRepositoryImpl(InventoryRepository):
             self.db.session.add(InventoryORM(user_uid=inventory.user_uid))
         self.db.session.commit()
 
-    def update(self, inventory: Inventory) -> None:
-        self._clear_existing(inventory.user_uid)
-        self._insert_new_data(inventory)
+    def add_ingredient_stack(self, user_uid: str, stack: IngredientStack, ingredient: Ingredient) -> None:
+
+        stmt = select(IngredientORM).where(
+            IngredientORM.name == ingredient.name,
+            IngredientORM.inventory_user_uid == user_uid
+        )
+        ingredient_orm = self.db.session.execute(stmt).scalar_one_or_none()
+
+        if not ingredient_orm:
+            ingredient_orm = IngredientORM(
+                name=ingredient.name,
+                type_unit=ingredient.type_unit,
+                storage_type=ingredient.storage_type,
+                tips=ingredient.tips,
+                image_path=ingredient.image_path,
+                inventory_user_uid=user_uid
+            )
+            self.db.session.add(ingredient_orm)
+        else:
+            ingredient_orm.type_unit = ingredient.type_unit
+            ingredient_orm.storage_type = ingredient.storage_type
+            ingredient_orm.tips = ingredient.tips
+            ingredient_orm.image_path = ingredient.image_path
+
+        stack_orm = IngredientStackORM(
+            ingredient_name=ingredient.name,
+            added_at=stack.added_at,
+            quantity=stack.quantity,
+            expiration_date=stack.expiration_date,
+            inventory_user_uid=user_uid
+        )
+        self.db.session.add(stack_orm)
         self.db.session.commit()
 
-    def _clear_existing(self, user_uid: str):
-        self.db.session.query(IngredientStackORM).filter_by(inventory_user_uid=user_uid).delete()
-        self.db.session.query(FoodItemORM).filter_by(inventory_user_uid=user_uid).delete()
+    def add_food_item(self, user_uid: str, food_item: FoodItem) -> None:
+        return None
 
-    def _insert_new_data(self, inventory: Inventory):
-        for ing in inventory.ingredients.values():
-            for stack in ing.stacks:
-                self.db.session.add(IngredientStackORM(
-                    inventory_user_uid=inventory.user_uid,
-                    ingredient_name=ing.name,
-                    quantity=stack.quantity,
-                    expiration_date=stack.expiration_date,
-                    added_at=stack.added_at,
-                    type_unit=ing.type_unit,
-                    storage_type=ing.storage_type,
-                    tips=ing.tips,
-                    image_path=ing.image_path
-                ))
+    def delete_ingredient_stack(self, user_uid: str, ingredient_name: str, added_at: str) -> None:
+        return None
 
-        for food in inventory.foods:
-            self.db.session.add(FoodItemORM(
-                inventory_user_uid=inventory.user_uid,
-                name=food.name,
-                main_ingredients=food.main_ingredients,
-                category=food.category,
-                calories=food.calories,
-                description=food.description,
-                storage_type=food.storage_type,
-                expiration_time=food.expiration_time,
-                time_unit=food.time_unit,
-                tips=food.tips,
-                serving_quantity=food.serving_quantity,
-                image_path=food.image_path,
-                added_at=food.added_at,
-                expiration_date=food.expiration_date
-            ))
+    def delete_food_item(self, user_uid: str, food_name: str, added_at: str) -> None:
+        return None
+
+    def update_food_item(self, user_uid: str, food_item: FoodItem) -> None:
+        return None
+
+    def update_ingredient_stack(self, user_uid: str, ingredient_name: str, added_at: str, new_stack: IngredientStack, new_meta: Ingredient) -> None:
+        return None
+
+    def get_inventory(self, user_uid: str) -> Optional[Inventory]:
+        return self.db.session.get(InventoryORM, user_uid)
+
+    def create_inventory(self, user_uid: str) -> None:
+        self.db.session.add(InventoryORM(user_uid=user_uid))
+        self.db.session.commit()

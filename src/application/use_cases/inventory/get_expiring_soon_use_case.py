@@ -1,6 +1,3 @@
-from src.domain.models.inventory import Inventory
-
-
 class GetExpiringSoonUseCase:
     def __init__(self, inventory_repository):
         self.inventory_repository = inventory_repository
