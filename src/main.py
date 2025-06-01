@@ -15,6 +15,7 @@ from src.interface.controllers.image_management_controller import image_manageme
 from src.interface.controllers.user_controller import user_bp
 from src.interface.controllers.recognition_controller import recognition_bp
 from src.interface.controllers.inventory_controller import inventory_bp
+from src.interface.controllers.recipe_controller import recipes_bp
 
 from src.shared.exceptions.base import AppException
 
@@ -32,6 +33,7 @@ def create_app():
     application.register_blueprint(recognition_bp, url_prefix='/api/recognition')
     application.register_blueprint(image_management_bp, url_prefix='/api/image_management')
     application.register_blueprint(inventory_bp, url_prefix='/api/inventory')
+    application.register_blueprint(recipes_bp, url_prefix='/api/recipes')
 
     @application.errorhandler(AppException)
     def handle_app_exception(error):

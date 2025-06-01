@@ -1,5 +1,3 @@
-# src/application/use_cases/inventory/get_inventory_content_use_case.py
-
 from typing import Optional
 from src.domain.models.inventory import Inventory
 from src.domain.repositories.inventory_repository import InventoryRepository
