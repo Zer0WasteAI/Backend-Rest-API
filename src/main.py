@@ -8,13 +8,10 @@ from flask_jwt_extended import JWTManager
 
 from src.config.config import Config
 from src.infrastructure.db.schemas.user_schema import db
-
-from src.interface.controllers.auth_controller import auth_bp
-from src.interface.controllers.admin_controller import admin_bp
-
 from src.config.swagger_config import swagger_config, swagger_template
 
 from src.interface.controllers.auth_controller import auth_bp
+from src.interface.controllers.admin_controller import admin_bp
 from src.interface.controllers.image_management_controller import image_management_bp
 from src.interface.controllers.user_controller import user_bp
 from src.interface.controllers.recognition_controller import recognition_bp
@@ -41,6 +38,7 @@ def create_app():
     jwt_manager = JWTManager(application)
     configure_jwt_callbacks(jwt_manager)
 
+    # Registrar blueprints de API
     application.register_blueprint(auth_bp, url_prefix='/api/auth')
     application.register_blueprint(user_bp, url_prefix='/api/user')
     application.register_blueprint(recognition_bp, url_prefix='/api/recognition')
@@ -59,25 +57,39 @@ def create_app():
     def welcome():
         return jsonify({
             "message": "¡Bienvenido a ZeroWasteAI API! 🌱",
-            "description": "API para reconocimiento de alimentos y gestión de perfiles nutricionales",
+            "description": "API para reconocimiento de alimentos y gestión de inventario inteligente",
             "version": "1.0.0",
+            "architecture": "Clean Architecture with Firebase Authentication + JWT",
             "features": [
-                "Autenticación con Firebase",
-                "Gestión de perfiles de usuario",
-                "Reconocimiento de alimentos con IA",
-                "Gestión de imágenes de referencia",
-                "Preferencias nutricionales personalizadas"
+                "🔥 Autenticación con Firebase + JWT",
+                "👤 Gestión de perfiles de usuario",
+                "🤖 Reconocimiento de alimentos con IA",
+                "📦 Gestión inteligente de inventario",
+                "🍳 Generación de recetas con IA",
+                "📸 Gestión de imágenes de referencia",
+                "🛡️ Seguridad empresarial con headers y token blacklisting"
             ],
             "endpoints": {
                 "authentication": "/api/auth",
                 "user_profile": "/api/user",
                 "food_recognition": "/api/recognition",
+                "inventory_management": "/api/inventory",
+                "recipe_generation": "/api/recipes",
                 "image_management": "/api/image_management",
+                "admin_panel": "/api/admin",
                 "api_status": "/status",
                 "documentation": "/apidocs"
             },
+            "security_features": [
+                "Firebase Authentication integration",
+                "JWT with token blacklisting",
+                "Security headers middleware",
+                "Refresh token tracking",
+                "Admin role-based access"
+            ],
             "team": "ZeroWasteAI Development Team",
-            "contact": "Desarrollado con ❤️ para reducir el desperdicio alimentario"
+            "mission": "Reducir el desperdicio alimentario a través de tecnología IA",
+            "contact": "Desarrollado con ❤️ para un futuro más sustentable 🌍"
         }), 200
 
     @application.route('/status', methods=['GET'])
@@ -115,17 +127,24 @@ def create_app():
 
                 return jsonify({
                     "status": "success",
-                    "message": "Conexión exitosa a la base de datos",
+                    "message": "✅ Conexión exitosa a la base de datos",
+                    "architecture": "Firebase Auth + JWT + Clean Architecture",
                     "database_name": database_name,
                     "database_info": db_info,
                     "known_tables": tables,
-                    "table_status": table_status
+                    "table_status": table_status,
+                    "security_status": {
+                        "jwt_security": "Active",
+                        "token_blacklisting": "Enabled",
+                        "security_headers": "Configured",
+                        "firebase_integration": "Active"
+                    }
                 }), 200
 
         except OperationalError as err:
             return jsonify({
                 "status": "error",
-                "message": f"Error de conexión a la base de datos: {str(err)}",
+                "message": f"❌ Error de conexión a la base de datos: {str(err)}",
                 "tables": [],
                 "database_name": None,
                 "database_info": {}
@@ -133,7 +152,7 @@ def create_app():
         except Exception as ex:
             return jsonify({
                 "status": "error",
-                "message": f"Error inesperado: {str(ex)}"
+                "message": f"❌ Error inesperado: {str(ex)}"
             }), 500
 
     return application
@@ -160,6 +179,9 @@ with app.app_context():
         exit(1)
     else:
         print("🎉 Inicialización exitosa: La base de datos está lista.")
+        print("🔥 Firebase Authentication + JWT Security: Activado")
+        print("🛡️ Security Headers: Configurados")
+        print("🌱 ZeroWasteAI API: Lista para reducir desperdicio alimentario!")
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=3000)
