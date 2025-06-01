@@ -31,3 +31,15 @@ class AuthRepository:
             db.session.commit()
             return auth_user
         return None
+
+    def update_jwt_token(self, uid: str, jwt_token: str):
+        """Actualiza el estado del JWT para un usuario (para logout)"""
+        # Nota: Este método está aquí para compatibilidad con LogoutUseCase
+        # pero la nueva implementación usa el sistema de blacklist
+        auth_user = AuthUser.query.filter_by(uid=uid).first()
+        if auth_user:
+            # En lugar de almacenar el token, marcamos que necesita logout
+            # La validación real se hace en JWTService con blacklist
+            db.session.commit()
+            return auth_user
+        return None

@@ -13,6 +13,9 @@ from src.application.factories.auth_usecase_factory import (
     make_profile_repository
 )
 from src.interface.middlewares.firebase_auth_decorator import verify_firebase_token
+from src.infrastructure.security.rate_limiter import auth_rate_limit, refresh_rate_limit, api_rate_limit
+from src.infrastructure.security.security_logger import security_logger, SecurityEventType
+from src.shared.exceptions.custom import InvalidTokenException
 from datetime import datetime, timezone
 import uuid
 
@@ -20,113 +23,141 @@ auth_bp = Blueprint("auth", __name__)
 
 @auth_bp.route("/refresh", methods=["POST"])
 @jwt_required(refresh=True)
+@refresh_rate_limit
 @swag_from({
     'tags': ['Auth'],
     'security': [{"Bearer": []}],
-    'summary': 'Renovación de token JWT',
+    'summary': 'Renovación de token JWT con rotación',
+    'description': 'Renueva tokens implementando rotación segura y detección de reutilización',
     'responses': {
-        200: {'description': 'Nuevo token generado'}
+        200: {'description': 'Nuevo token generado exitosamente'},
+        401: {'description': 'Token inválido o revocado'},
+        429: {'description': 'Demasiadas solicitudes - rate limit excedido'}
     }
 })
 def refresh_token():
-    current_user = get_jwt_identity()
-    use_case = make_refresh_token_use_case()
-    result = use_case.execute(identity=current_user)
-    return jsonify(result), 200
+    try:
+        current_user = get_jwt_identity()
+        use_case = make_refresh_token_use_case()
+        result = use_case.execute(identity=current_user)
+        
+        # Log éxito en rotación
+        security_logger.log_security_event(
+            SecurityEventType.REFRESH_TOKEN_ROTATED,
+            {"user_uid": current_user, "status": "success"}
+        )
+        
+        return jsonify(result), 200
+        
+    except InvalidTokenException as e:
+        security_logger.log_security_event(
+            SecurityEventType.INVALID_TOKEN_ATTEMPT,
+            {"endpoint": "refresh", "reason": "token_validation_failed"}
+        )
+        return jsonify({"error": "Invalid or expired token"}), 401
+        
+    except Exception as e:
+        security_logger.log_security_event(
+            SecurityEventType.AUTHENTICATION_FAILED,
+            {"endpoint": "refresh", "reason": "unexpected_error"}
+        )
+        return jsonify({"error": "Authentication failed"}), 401
 
 @auth_bp.route("/logout", methods=["POST"])
 @jwt_required()
+@api_rate_limit
 @swag_from({
     'tags': ['Auth'],
-    'summary': 'Cerrar sesión (logout)',
+    'summary': 'Cerrar sesión (logout) seguro',
+    'description': 'Cierra sesión invalidando todos los tokens del usuario',
     'security': [{'Bearer': []}],
     'responses': {
-        200: {'description': 'Sesión cerrada'}
+        200: {'description': 'Sesión cerrada exitosamente'},
+        401: {'description': 'Token inválido'},
+        429: {'description': 'Demasiadas solicitudes'}
     }
 })
 def logout():
-    uid = get_jwt_identity()
-    use_case = make_logout_use_case()
-    result = use_case.execute(uid)
-    return jsonify(result), 200
+    try:
+        uid = get_jwt_identity()
+        use_case = make_logout_use_case()
+        result = use_case.execute(uid)
+        
+        # Log logout exitoso
+        security_logger.log_authentication_attempt(uid, success=True, reason="logout")
+        
+        return jsonify(result), 200
+        
+    except Exception as e:
+        security_logger.log_security_event(
+            SecurityEventType.AUTHENTICATION_FAILED,
+            {"endpoint": "logout", "reason": "logout_failed"}
+        )
+        return jsonify({"error": "Logout failed"}), 500
 
 @auth_bp.route("/firebase-signin", methods=["POST"])
 @verify_firebase_token
+@auth_rate_limit
 @swag_from({
     'tags': ['Auth'],
     'summary': 'Sign in with Firebase ID Token and sync user',
+    'description': 'Autentica con Firebase y sincroniza datos del usuario de forma segura',
     'security': [{"Bearer": []}],
     'responses': {
         200: {'description': 'Firebase sign-in successful, user synced, app tokens returned'},
-        400: {'description': 'User data missing from Firebase token or other error'},
-        401: {'description': 'Invalid or missing Firebase ID Token'}
+        400: {'description': 'Invalid request data'},
+        401: {'description': 'Invalid or missing Firebase ID Token'},
+        429: {'description': 'Too many authentication attempts'}
     }
 })
 def firebase_signin():
-    firebase_user_data = g.firebase_user
-    firebase_uid = firebase_user_data.get("uid")
-    email = firebase_user_data.get("email")
-    name = firebase_user_data.get("name", "")
-    picture = firebase_user_data.get("picture", "")
-    email_verified = firebase_user_data.get("email_verified", False)
-    # Obtener el proveedor de inicio de sesión real de Firebase
-    firebase_info = firebase_user_data.get("firebase", {})
-    sign_in_provider = firebase_info.get("sign_in_provider", "unknown") # Por defecto 'unknown' si no está presente
+    try:
+        firebase_user_data = g.firebase_user
+        firebase_uid = firebase_user_data.get("uid")
+        email = firebase_user_data.get("email")
+        name = firebase_user_data.get("name", "")
+        picture = firebase_user_data.get("picture", "")
+        email_verified = firebase_user_data.get("email_verified", False)
+        # Obtener el proveedor de inicio de sesión real de Firebase
+        firebase_info = firebase_user_data.get("firebase", {})
+        sign_in_provider = firebase_info.get("sign_in_provider", "unknown") # Por defecto 'unknown' si no está presente
 
-    if not firebase_uid:
-        return jsonify({"error": "Firebase UID not found in token"}), 400
-    
-    if not email:
-        return jsonify({"error": "Email not found in Firebase token"}), 400
-
-    user_repo = make_user_repository()
-    auth_repo = make_auth_repository()
-    profile_repo = make_profile_repository()
-    jwt_service = make_jwt_service()
-
-    user = user_repo.find_by_uid(firebase_uid)
-
-    if not user:
-        user = user_repo.create({
-            "uid": firebase_uid,
-            "email": email,
-            "created_at": datetime.now(timezone.utc),
-            "updated_at": datetime.now(timezone.utc)
-        })
-
-        auth_repo.create({
-            "uid": firebase_uid, 
-            "auth_provider": sign_in_provider, # Usar el proveedor real
-            "is_verified": email_verified,
-            "is_active": True
-        })
-
-        profile_repo.create({
-            "uid": firebase_uid,
-            "name": name,
-            "phone": "",
-            "photo_url": picture,
-            "prefs": {}
-        })
-    else:
-        if user.email != email:
-            user_repo.update(firebase_uid, {"email": email, "updated_at": datetime.now(timezone.utc)})
-            user.email = email
+        if not firebase_uid:
+            security_logger.log_security_event(
+                SecurityEventType.AUTHENTICATION_FAILED,
+                {"reason": "missing_firebase_uid", "endpoint": "firebase-signin"}
+            )
+            return jsonify({"error": "Authentication failed"}), 400
         
-        auth_entry = auth_repo.find_by_uid_and_provider(firebase_uid, sign_in_provider) # Usar el proveedor real
-        if not auth_entry:
-            auth_repo.create({
+        if not email:
+            security_logger.log_security_event(
+                SecurityEventType.AUTHENTICATION_FAILED,
+                {"reason": "missing_email", "endpoint": "firebase-signin", "uid": firebase_uid}
+            )
+            return jsonify({"error": "Authentication failed"}), 400
+
+        user_repo = make_user_repository()
+        auth_repo = make_auth_repository()
+        profile_repo = make_profile_repository()
+        jwt_service = make_jwt_service()
+
+        user = user_repo.find_by_uid(firebase_uid)
+
+        if not user:
+            user = user_repo.create({
                 "uid": firebase_uid,
+                "email": email,
+                "created_at": datetime.now(timezone.utc),
+                "updated_at": datetime.now(timezone.utc)
+            })
+
+            auth_repo.create({
+                "uid": firebase_uid, 
                 "auth_provider": sign_in_provider, # Usar el proveedor real
                 "is_verified": email_verified,
                 "is_active": True
             })
-        else: # Actualizar estado de verificación si cambió
-            if auth_entry.is_verified != email_verified:
-                 auth_repo.update(firebase_uid, sign_in_provider, {"is_verified": email_verified})
 
-        profile = profile_repo.find_by_uid(firebase_uid)
-        if not profile:
             profile_repo.create({
                 "uid": firebase_uid,
                 "name": name,
@@ -134,28 +165,74 @@ def firebase_signin():
                 "photo_url": picture,
                 "prefs": {}
             })
-        else:
-            profile_update_data = {}
-            if profile.name != name:
-                profile_update_data["name"] = name
-            if profile.photo_url != picture:
-                profile_update_data["photo_url"] = picture
             
-            if profile_update_data:
-                profile_repo.update(firebase_uid, profile_update_data)
+            # Log nuevo usuario
+            security_logger.log_security_event(
+                SecurityEventType.SUSPICIOUS_LOGIN,
+                {"reason": "new_user_creation", "uid": firebase_uid, "provider": sign_in_provider}
+            )
+        else:
+            if user.email != email:
+                user_repo.update(firebase_uid, {"email": email, "updated_at": datetime.now(timezone.utc)})
+                user.email = email
+            
+            auth_entry = auth_repo.find_by_uid_and_provider(firebase_uid, sign_in_provider) # Usar el proveedor real
+            if not auth_entry:
+                auth_repo.create({
+                    "uid": firebase_uid,
+                    "auth_provider": sign_in_provider, # Usar el proveedor real
+                    "is_verified": email_verified,
+                    "is_active": True
+                })
+            else: # Actualizar estado de verificación si cambió
+                if auth_entry.is_verified != email_verified:
+                     auth_repo.update(firebase_uid, sign_in_provider, {"is_verified": email_verified})
 
-    app_tokens = jwt_service.create_tokens(identity=firebase_uid)
+            profile = profile_repo.find_by_uid(firebase_uid)
+            if not profile:
+                profile_repo.create({
+                    "uid": firebase_uid,
+                    "name": name,
+                    "phone": "",
+                    "photo_url": picture,
+                    "prefs": {}
+                })
+            else:
+                profile_update_data = {}
+                if profile.name != name:
+                    profile_update_data["name"] = name
+                if profile.photo_url != picture:
+                    profile_update_data["photo_url"] = picture
+                
+                if profile_update_data:
+                    profile_repo.update(firebase_uid, profile_update_data)
 
-    final_profile = profile_repo.find_by_uid(firebase_uid)
-    final_user = user_repo.find_by_uid(firebase_uid)
+        app_tokens = jwt_service.create_tokens(identity=firebase_uid)
 
-    return jsonify({
-        **app_tokens,
-        "user": {
-            "uid": final_user.uid,
-            "email": final_user.email,
-            "name": final_profile.name if final_profile else name,
-            "photo_url": final_profile.photo_url if final_profile else picture,
-            "email_verified": email_verified
-        }
-    }), 200
+        final_profile = profile_repo.find_by_uid(firebase_uid)
+        final_user = user_repo.find_by_uid(firebase_uid)
+        
+        # Log autenticación exitosa
+        security_logger.log_authentication_attempt(
+            firebase_uid, 
+            success=True, 
+            reason=f"firebase_signin_{sign_in_provider}"
+        )
+
+        return jsonify({
+            **app_tokens,
+            "user": {
+                "uid": final_user.uid,
+                "email": final_user.email,
+                "name": final_profile.name if final_profile else name,
+                "photo_url": final_profile.photo_url if final_profile else picture,
+                "email_verified": email_verified
+            }
+        }), 200
+        
+    except Exception as e:
+        security_logger.log_security_event(
+            SecurityEventType.AUTHENTICATION_FAILED,
+            {"endpoint": "firebase-signin", "reason": "unexpected_error", "error": str(type(e).__name__)}
+        )
+        return jsonify({"error": "Authentication failed"}), 500
