@@ -59,6 +59,7 @@ def sync_images():
     added = use_case.execute()
     return jsonify({"message": f"{added} imágenes sincronizadas"}), 200
 
+
 @image_management_bp.route("/upload_image", methods=["POST"])
 @jwt_required()
 @swag_from({

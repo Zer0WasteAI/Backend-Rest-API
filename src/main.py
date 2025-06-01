@@ -8,12 +8,19 @@ from flask_jwt_extended import JWTManager
 
 from src.config.config import Config
 from src.infrastructure.db.schemas.user_schema import db
+
 from src.interface.controllers.auth_controller import auth_bp
 from src.interface.controllers.admin_controller import admin_bp
+
 from src.config.swagger_config import swagger_config, swagger_template
+
+from src.interface.controllers.auth_controller import auth_bp
 from src.interface.controllers.image_management_controller import image_management_bp
 from src.interface.controllers.user_controller import user_bp
 from src.interface.controllers.recognition_controller import recognition_bp
+from src.interface.controllers.inventory_controller import inventory_bp
+from src.interface.controllers.recipe_controller import recipes_bp
+
 from src.shared.exceptions.base import AppException
 from src.infrastructure.auth.jwt_callbacks import configure_jwt_callbacks
 from src.infrastructure.security.security_headers import add_security_headers
@@ -39,6 +46,8 @@ def create_app():
     application.register_blueprint(recognition_bp, url_prefix='/api/recognition')
     application.register_blueprint(image_management_bp, url_prefix='/api/image_management')
     application.register_blueprint(admin_bp, url_prefix='/api/admin')
+    application.register_blueprint(inventory_bp, url_prefix='/api/inventory')
+    application.register_blueprint(recipes_bp, url_prefix='/api/recipes')
 
     @application.errorhandler(AppException)
     def handle_app_exception(error):

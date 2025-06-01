@@ -2,7 +2,7 @@ from typing import Optional
 from src.domain.models.image_reference import ImageReference
 
 class AssignImageReferenceUseCase:
-    def __init__(self, image_repository, fallback_name: str = "imagen_defecto") -> None:
+    def __init__(self, image_repository, fallback_name: str = "imagen-defecto") -> None:
         self.image_repository = image_repository
         self.fallback_name = fallback_name
 
