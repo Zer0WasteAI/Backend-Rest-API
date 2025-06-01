@@ -1,411 +1,238 @@
-from flasgger import swag_from
-from flask import Blueprint, request, jsonify, redirect
-from flask_jwt_extended import get_jwt_identity, jwt_required
+from flasgger import swag_from # type: ignore
+from flask import Blueprint, request, jsonify, redirect, g
+from flask_jwt_extended import get_jwt_identity, jwt_required # type: ignore
 
 from src.config.config import Config
-from src.interface.serializers.register_serializer import RegisterUserSchema
-from src.interface.serializers.login_serializer import LoginUserSchema
-from src.interface.serializers.reset_password_serializer import SendPasswordResetCodeSchema, \
-    VerifyPasswordResetCodeSchema
-from src.interface.serializers.sms_otp_serializer import SendSMSOtpSchema, VerifySMSOtpSchema
-from src.interface.serializers.oauth_serializer import OAuthCodeSchema
-from src.interface.serializers.change_password_serializer import ChangePasswordSchema
-from src.shared.dtos.user.user_dto import RegisterUserDTO
-
 
 from src.application.factories.auth_usecase_factory import (
-    make_register_user_use_case,
-    make_login_email_use_case,
-    make_change_password_use_case,
-    make_send_sms_otp_use_case,
-    make_verify_sms_otp_use_case,
-    make_login_google_use_case,
-    make_login_facebook_use_case,
-    make_login_apple_use_case,
     make_logout_use_case,
     make_refresh_token_use_case,
-    make_send_email_reset_code_use_case,
-    make_verify_email_reset_code_use_case,
+    make_jwt_service,
+    make_user_repository,
+    make_auth_repository,
+    make_profile_repository
 )
+from src.interface.middlewares.firebase_auth_decorator import verify_firebase_token
+from src.infrastructure.security.rate_limiter import auth_rate_limit, refresh_rate_limit, api_rate_limit
+from src.infrastructure.security.security_logger import security_logger, SecurityEventType
+from src.shared.exceptions.custom import InvalidTokenException
+from datetime import datetime, timezone
+import uuid
 
 auth_bp = Blueprint("auth", __name__)
 
-@auth_bp.route("/register", methods=["POST"])
-@swag_from({
-    'tags': ['Auth'],
-    'summary': 'Registro de usuario',
-    'parameters': [
-        {
-            'name': 'body',
-            'in': 'body',
-            'required': True,
-            'schema': {
-                'properties': {
-                    'email': {'type': 'string'},
-                    'password': {'type': 'string'},
-                    'name': {'type': 'string'},
-                    'phone': {'type': 'string'}
-                }
-            }
-        }
-    ],
-    'responses': {
-        201: {'description': 'Registro exitoso'},
-        400: {'description': 'Error de validación'}
-    }
-})
-def register():
-    data = request.get_json()
-    errors = RegisterUserSchema().validate(data)
-    if errors:
-        return jsonify(errors), 400
-
-    dto = RegisterUserDTO(**data)
-    use_case = make_register_user_use_case()
-    result = use_case.execute(dto)
-    return jsonify(result), 201
-
-@auth_bp.route("/login", methods=["POST"])
-@swag_from({
-    'tags': ['Auth'],
-    'summary': 'Inicio de sesión con email y contraseña',
-    'parameters': [
-        {
-            'name': 'body',
-            'in': 'body',
-            'required': True,
-            'schema': {
-                'properties': {
-                    'email': {'type': 'string'},
-                    'password': {'type': 'string'}
-                }
-            }
-        }
-    ],
-    'responses': {
-        200: {'description': 'Login exitoso'},
-        400: {'description': 'Error de validación'}
-    }
-})
-def login():
-    data = request.get_json()
-    errors = LoginUserSchema().validate(data)
-    if errors:
-        return jsonify(errors), 400
-
-    use_case = make_login_email_use_case()
-    result = use_case.execute(data["email"], data["password"])
-    return jsonify(result), 200
-
-@auth_bp.route("/password/change", methods=["POST"])
-@swag_from({
-    'tags': ['Auth'],
-    'summary': 'Cambiar contraseña (requiere verificación previa)',
-    'parameters': [
-        {
-            'name': 'body',
-            'in': 'body',
-            'required': True,
-            'schema': {
-                'properties': {
-                    'email': {'type': 'string'},
-                    'new_password': {'type': 'string'}
-                }
-            }
-        }
-    ],
-    'responses': {
-        200: {'description': 'Contraseña actualizada'},
-        400: {'description': 'Error de validación o verificación'}
-    }
-})
-def change_password():
-    data = request.get_json()
-    errors = ChangePasswordSchema().validate(data)
-    if errors:
-        return jsonify(errors), 400
-
-    use_case = make_change_password_use_case()
-    result = use_case.execute(data["email"], data["new_password"])
-    return jsonify(result), 200
-
-@auth_bp.route("/sms/send", methods=["POST"])
-def send_sms():
-    data = request.get_json()
-    errors = SendSMSOtpSchema().validate(data)
-    if errors:
-        return jsonify(errors), 400
-
-    use_case = make_send_sms_otp_use_case()
-    result = use_case.execute(data["phone"])
-    return jsonify(result), 200
-
-@auth_bp.route("/sms/verify", methods=["POST"])
-def verify_sms():
-    data = request.get_json()
-    errors = VerifySMSOtpSchema().validate(data)
-    if errors:
-        return jsonify(errors), 400
-
-    use_case = make_verify_sms_otp_use_case()
-    result = use_case.execute(data["phone"], data["code"])
-    return jsonify(result), 200
-
-@auth_bp.route("/login/google", methods=["POST"])
-@swag_from({
-    'tags': ['Auth'],
-    'summary': 'Inicio de sesión con Google',
-    'parameters': [
-        {
-            'name': 'body',
-            'in': 'body',
-            'required': True,
-            'schema': {
-                'properties': {
-                    'code': {'type': 'string'}
-                }
-            }
-        }
-    ],
-    'responses': {
-        200: {'description': 'Login exitoso con Google'},
-        400: {'description': 'Código inválido'}
-    }
-})
-def login_google():
-    data = request.get_json()
-    errors = OAuthCodeSchema().validate(data)
-    if errors:
-        return jsonify(errors), 400
-
-    use_case = make_login_google_use_case()
-    result = use_case.execute(data["code"])
-    return jsonify(result), 200
-
-@auth_bp.route("/login/facebook", methods=["POST"])
-@swag_from({
-    'tags': ['Auth'],
-    'summary': 'Inicio de sesión con Facebook',
-    'parameters': [
-        {
-            'name': 'body',
-            'in': 'body',
-            'required': True,
-            'schema': {
-                'properties': {
-                    'code': {'type': 'string'}
-                }
-            }
-        }
-    ],
-    'responses': {
-        200: {'description': 'Login exitoso con Facebook'},
-        400: {'description': 'Código inválido'}
-    }
-})
-def login_facebook():
-    data = request.get_json()
-    errors = OAuthCodeSchema().validate(data)
-    if errors:
-        return jsonify(errors), 400
-
-    use_case = make_login_facebook_use_case()
-    result = use_case.execute(data["code"])
-    return jsonify(result), 200
-
-@auth_bp.route("/login/apple", methods=["POST"])
-@swag_from({
-    'tags': ['Auth'],
-    'summary': 'Inicio de sesión con Apple',
-    'parameters': [
-        {
-            'name': 'body',
-            'in': 'body',
-            'required': True,
-            'schema': {
-                'properties': {
-                    'code': {'type': 'string'}
-                }
-            }
-        }
-    ],
-    'responses': {
-        200: {'description': 'Login exitoso con Apple'},
-        400: {'description': 'Código inválido'}
-    }
-})
-def login_apple():
-    data = request.get_json()
-    errors = OAuthCodeSchema().validate(data)
-    if errors:
-        return jsonify(errors), 400
-
-    use_case = make_login_apple_use_case()
-    result = use_case.execute(data["code"])
-    return jsonify(result), 200
-
 @auth_bp.route("/refresh", methods=["POST"])
 @jwt_required(refresh=True)
+@refresh_rate_limit
 @swag_from({
     'tags': ['Auth'],
     'security': [{"Bearer": []}],
-    'summary': 'Renovación de token JWT',
+    'summary': 'Renovación de token JWT con rotación',
+    'description': 'Renueva tokens implementando rotación segura y detección de reutilización',
     'responses': {
-        200: {'description': 'Nuevo token generado'}
+        200: {'description': 'Nuevo token generado exitosamente'},
+        401: {'description': 'Token inválido o revocado'},
+        429: {'description': 'Demasiadas solicitudes - rate limit excedido'}
     }
 })
 def refresh_token():
-    current_user = get_jwt_identity()
-    use_case = make_refresh_token_use_case()
-    result = use_case.execute(identity=current_user)
-    return jsonify(result), 200
+    try:
+        current_user = get_jwt_identity()
+        use_case = make_refresh_token_use_case()
+        result = use_case.execute(identity=current_user)
+        
+        # Log éxito en rotación
+        security_logger.log_security_event(
+            SecurityEventType.REFRESH_TOKEN_ROTATED,
+            {"user_uid": current_user, "status": "success"}
+        )
+        
+        return jsonify(result), 200
+        
+    except InvalidTokenException as e:
+        security_logger.log_security_event(
+            SecurityEventType.INVALID_TOKEN_ATTEMPT,
+            {"endpoint": "refresh", "reason": "token_validation_failed"}
+        )
+        return jsonify({"error": "Invalid or expired token"}), 401
+        
+    except Exception as e:
+        security_logger.log_security_event(
+            SecurityEventType.AUTHENTICATION_FAILED,
+            {"endpoint": "refresh", "reason": "unexpected_error"}
+        )
+        return jsonify({"error": "Authentication failed"}), 401
 
 @auth_bp.route("/logout", methods=["POST"])
 @jwt_required()
+@api_rate_limit
 @swag_from({
     'tags': ['Auth'],
-    'summary': 'Cerrar sesión (logout)',
+    'summary': 'Cerrar sesión (logout) seguro',
+    'description': 'Cierra sesión invalidando todos los tokens del usuario',
     'security': [{'Bearer': []}],
     'responses': {
-        200: {'description': 'Sesión cerrada'}
+        200: {'description': 'Sesión cerrada exitosamente'},
+        401: {'description': 'Token inválido'},
+        429: {'description': 'Demasiadas solicitudes'}
     }
 })
 def logout():
-    uid = get_jwt_identity()
-    use_case = make_logout_use_case()
-    result = use_case.execute(uid)
-    return jsonify(result), 200
+    try:
+        uid = get_jwt_identity()
+        use_case = make_logout_use_case()
+        result = use_case.execute(uid)
+        
+        # Log logout exitoso
+        security_logger.log_authentication_attempt(uid, success=True, reason="logout")
+        
+        return jsonify(result), 200
+        
+    except Exception as e:
+        security_logger.log_security_event(
+            SecurityEventType.AUTHENTICATION_FAILED,
+            {"endpoint": "logout", "reason": "logout_failed"}
+        )
+        return jsonify({"error": "Logout failed"}), 500
 
-@auth_bp.route("/email/send-password-reset-code", methods=["POST"])
+@auth_bp.route("/firebase-signin", methods=["POST"])
+@verify_firebase_token
+@auth_rate_limit
 @swag_from({
     'tags': ['Auth'],
-    'summary': 'Enviar OTP al correo para cambio de contraseña',
-    'parameters': [
-        {
-            'name': 'body',
-            'in': 'body',
-            'required': True,
-            'schema': {
-                'properties': {
-                    'email': {'type': 'string'}
-                }
-            }
-        }
-    ],
+    'summary': 'Sign in with Firebase ID Token and sync user',
+    'description': 'Autentica con Firebase y sincroniza datos del usuario de forma segura',
+    'security': [{"Bearer": []}],
     'responses': {
-        200: {'description': 'Código enviado'}
+        200: {'description': 'Firebase sign-in successful, user synced, app tokens returned'},
+        400: {'description': 'Invalid request data'},
+        401: {'description': 'Invalid or missing Firebase ID Token'},
+        429: {'description': 'Too many authentication attempts'}
     }
 })
-def send_password_reset_code():
-    data = request.get_json()
-    errors = SendPasswordResetCodeSchema().validate(data)
-    if errors:
-        return jsonify(errors), 400
+def firebase_signin():
+    try:
+        firebase_user_data = g.firebase_user
+        firebase_uid = firebase_user_data.get("uid")
+        email = firebase_user_data.get("email")
+        name = firebase_user_data.get("name", "")
+        picture = firebase_user_data.get("picture", "")
+        email_verified = firebase_user_data.get("email_verified", False)
+        # Obtener el proveedor de inicio de sesión real de Firebase
+        firebase_info = firebase_user_data.get("firebase", {})
+        sign_in_provider = firebase_info.get("sign_in_provider", "unknown") # Por defecto 'unknown' si no está presente
 
-    use_case = make_send_email_reset_code_use_case()
-    result = use_case.execute(data["email"])
-    return jsonify(result), 200
+        if not firebase_uid:
+            security_logger.log_security_event(
+                SecurityEventType.AUTHENTICATION_FAILED,
+                {"reason": "missing_firebase_uid", "endpoint": "firebase-signin"}
+            )
+            return jsonify({"error": "Authentication failed"}), 400
+        
+        if not email:
+            security_logger.log_security_event(
+                SecurityEventType.AUTHENTICATION_FAILED,
+                {"reason": "missing_email", "endpoint": "firebase-signin", "uid": firebase_uid}
+            )
+            return jsonify({"error": "Authentication failed"}), 400
 
-@auth_bp.route("/email/verify-password-reset-code", methods=["POST"])
-@swag_from({
-    'tags': ['Auth'],
-    'summary': 'Verificar OTP del correo',
-    'parameters': [
-        {
-            'name': 'body',
-            'in': 'body',
-            'required': True,
-            'schema': {
-                'properties': {
-                    'email': {'type': 'string'},
-                    'code': {'type': 'string'}
-                }
+        user_repo = make_user_repository()
+        auth_repo = make_auth_repository()
+        profile_repo = make_profile_repository()
+        jwt_service = make_jwt_service()
+
+        user = user_repo.find_by_uid(firebase_uid)
+
+        if not user:
+            user = user_repo.create({
+                "uid": firebase_uid,
+                "email": email,
+                "created_at": datetime.now(timezone.utc),
+                "updated_at": datetime.now(timezone.utc)
+            })
+
+            auth_repo.create({
+                "uid": firebase_uid, 
+                "auth_provider": sign_in_provider, # Usar el proveedor real
+                "is_verified": email_verified,
+                "is_active": True
+            })
+
+            profile_repo.create({
+                "uid": firebase_uid,
+                "name": name,
+                "phone": "",
+                "photo_url": picture,
+                "prefs": {}
+            })
+            
+            # Log nuevo usuario
+            security_logger.log_security_event(
+                SecurityEventType.SUSPICIOUS_LOGIN,
+                {"reason": "new_user_creation", "uid": firebase_uid, "provider": sign_in_provider}
+            )
+        else:
+            if user.email != email:
+                user_repo.update(firebase_uid, {"email": email, "updated_at": datetime.now(timezone.utc)})
+                user.email = email
+            
+            auth_entry = auth_repo.find_by_uid_and_provider(firebase_uid, sign_in_provider) # Usar el proveedor real
+            if not auth_entry:
+                auth_repo.create({
+                    "uid": firebase_uid,
+                    "auth_provider": sign_in_provider, # Usar el proveedor real
+                    "is_verified": email_verified,
+                    "is_active": True
+                })
+            else: # Actualizar estado de verificación si cambió
+                if auth_entry.is_verified != email_verified:
+                     auth_repo.update(firebase_uid, sign_in_provider, {"is_verified": email_verified})
+
+            profile = profile_repo.find_by_uid(firebase_uid)
+            if not profile:
+                profile_repo.create({
+                    "uid": firebase_uid,
+                    "name": name,
+                    "phone": "",
+                    "photo_url": picture,
+                    "prefs": {}
+                })
+            else:
+                profile_update_data = {}
+                if profile.name != name:
+                    profile_update_data["name"] = name
+                if profile.photo_url != picture:
+                    profile_update_data["photo_url"] = picture
+                
+                if profile_update_data:
+                    profile_repo.update(firebase_uid, profile_update_data)
+
+        app_tokens = jwt_service.create_tokens(identity=firebase_uid)
+
+        final_profile = profile_repo.find_by_uid(firebase_uid)
+        final_user = user_repo.find_by_uid(firebase_uid)
+        
+        # Log autenticación exitosa
+        security_logger.log_authentication_attempt(
+            firebase_uid, 
+            success=True, 
+            reason=f"firebase_signin_{sign_in_provider}"
+        )
+
+        return jsonify({
+            **app_tokens,
+            "user": {
+                "uid": final_user.uid,
+                "email": final_user.email,
+                "name": final_profile.name if final_profile else name,
+                "photo_url": final_profile.photo_url if final_profile else picture,
+                "email_verified": email_verified
             }
-        }
-    ],
-    'responses': {
-        200: {'description': 'Código verificado'}
-    }
-})
-def verify_password_reset_code():
-    data = request.get_json()
-    errors = VerifyPasswordResetCodeSchema().validate(data)
-    if errors:
-        return jsonify(errors), 400
-
-    use_case = make_verify_email_reset_code_use_case()
-    result = use_case.execute(data["email"], data["code"])
-    return jsonify(result), 200
-
-@auth_bp.route("/google/callback")
-def google_callback():
-    code = request.args.get("code")
-    if not code:
-        return jsonify({"error": "No se recibió el código"}), 400
-
-    use_case = make_login_google_use_case()
-    result = use_case.execute(code)
-
-    return jsonify(result), 200
-
-@auth_bp.route("/facebook/callback")
-def facebook_callback():
-    code = request.args.get("code")
-    if not code:
-        return jsonify({"error": "No se recibió el código de Facebook"}), 400
-
-    use_case = make_login_facebook_use_case()
-    result = use_case.execute(code)
-
-    return jsonify(result), 200
-
-
-@auth_bp.route("/google/initiate")
-def google_initiate():
-    redirect_uri = Config.GOOGLE_REDIRECT_URI
-    auth_url = (
-        "https://accounts.google.com/o/oauth2/v2/auth"
-        f"?client_id={Config.GOOGLE_CLIENT_ID}"
-        f"&redirect_uri={redirect_uri}"
-        f"&response_type=code"
-        f"&scope=openid%20email%20profile"
-        f"&access_type=offline"
-        f"&prompt=consent"
-    )
-    return redirect(auth_url)
-
-@auth_bp.route("/facebook/initiate")
-def facebook_initiate():
-    redirect_uri = Config.FACEBOOK_REDIRECT_URI
-    auth_url = (
-        "https://www.facebook.com/v18.0/dialog/oauth"
-        f"?client_id={Config.FACEBOOK_CLIENT_ID}"
-        f"&redirect_uri={redirect_uri}"
-        f"&scope=email,public_profile"
-        f"&response_type=code"
-    )
-    return redirect(auth_url)
-
-@auth_bp.route("/apple/initiate")
-def apple_initiate():
-    redirect_uri = Config.APPLE_REDIRECT_URI
-    auth_url = (
-        "https://appleid.apple.com/auth/authorize"
-        f"?client_id={Config.APPLE_CLIENT_ID}"
-        f"&redirect_uri={redirect_uri}"
-        f"&response_type=code"
-        f"&scope=name%20email"
-        f"&response_mode=form_post"
-    )
-    return redirect(auth_url)
-
-@auth_bp.route("/apple/callback", methods=["GET", "POST"])
-def apple_callback():
-    code = request.values.get("code")
-    if not code:
-        return jsonify({"error": "No se recibió el código de Apple"}), 400
-
-    use_case = make_login_apple_use_case()
-    result = use_case.execute(code)
-
-    return jsonify(result), 200
+        }), 200
+        
+    except Exception as e:
+        security_logger.log_security_event(
+            SecurityEventType.AUTHENTICATION_FAILED,
+            {"endpoint": "firebase-signin", "reason": "unexpected_error", "error": str(type(e).__name__)}
+        )
+        return jsonify({"error": "Authentication failed"}), 500

@@ -31,6 +31,18 @@ class UserRepository:
         return User.query.filter_by(uid=uid).first()
 
     @staticmethod
+    def update(uid: str, data: dict):
+        user = User.query.filter_by(uid=uid).first()
+        if user:
+            for key, value in data.items():
+                if hasattr(user, key):
+                    setattr(user, key, value)
+            user.updated_at = datetime.now(timezone.utc)
+            db.session.commit()
+            return user
+        return None
+
+    @staticmethod
     def update_email(uid: str, new_email: str):
         user = User.query.filter_by(uid=uid).first()
         if user:

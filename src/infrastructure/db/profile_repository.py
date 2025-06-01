@@ -9,7 +9,7 @@ class ProfileRepository:
             name=data["name"],
             phone=data["phone"],
             photo_url=data.get("photo_url", ""),
-            prefs=data.get("prefs", [])
+            prefs=data.get("prefs", {})
         )
         db.session.add(profile)
         db.session.commit()
@@ -18,13 +18,12 @@ class ProfileRepository:
     def find_by_uid(self, uid: str):
         return ProfileUser.query.filter_by(uid=uid).first()
 
-    def update_profile(self, uid: str, data: dict):
+    def update(self, uid: str, data: dict):
         profile = ProfileUser.query.filter_by(uid=uid).first()
         if profile:
-            profile.name = data.get("name", profile.name)
-            profile.phone = data.get("phone", profile.phone)
-            profile.photo_url = data.get("photo_url", profile.photo_url)
-            profile.prefs = data.get("prefs", profile.prefs)
+            for key, value in data.items():
+                if hasattr(profile, key):
+                    setattr(profile, key, value)
             db.session.commit()
             return profile
         return None
