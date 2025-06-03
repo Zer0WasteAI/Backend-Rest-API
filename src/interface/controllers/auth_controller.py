@@ -10,7 +10,8 @@ from src.application.factories.auth_usecase_factory import (
     make_jwt_service,
     make_user_repository,
     make_auth_repository,
-    make_profile_repository
+    make_profile_repository,
+    make_firestore_profile_service
 )
 from src.interface.middlewares.firebase_auth_decorator import verify_firebase_token
 from src.infrastructure.security.rate_limiter import auth_rate_limit, refresh_rate_limit, api_rate_limit
@@ -18,6 +19,7 @@ from src.infrastructure.security.security_logger import security_logger, Securit
 from src.shared.exceptions.custom import InvalidTokenException
 from datetime import datetime, timezone
 import uuid
+import traceback
 
 auth_bp = Blueprint("auth", __name__)
 
@@ -141,53 +143,30 @@ def firebase_signin():
         profile_repo = make_profile_repository()
         jwt_service = make_jwt_service()
 
+        # Verificar si el usuario existe por UID
         user = user_repo.find_by_uid(firebase_uid)
-
-        if not user:
-            user = user_repo.create({
-                "uid": firebase_uid,
-                "email": email,
-                "created_at": datetime.now(timezone.utc),
-                "updated_at": datetime.now(timezone.utc)
-            })
-
-            auth_repo.create({
-                "uid": firebase_uid, 
-                "auth_provider": sign_in_provider, # Usar el proveedor real
-                "is_verified": email_verified,
-                "is_active": True
-            })
-
-            profile_repo.create({
-                "uid": firebase_uid,
-                "name": name,
-                "phone": "",
-                "photo_url": picture,
-                "prefs": {}
-            })
-            
-            # Log nuevo usuario
-            security_logger.log_security_event(
-                SecurityEventType.SUSPICIOUS_LOGIN,
-                {"reason": "new_user_creation", "uid": firebase_uid, "provider": sign_in_provider}
-            )
-        else:
+        
+        if user:
+            # Usuario encontrado por UID - actualizar información si es necesario
             if user.email != email:
                 user_repo.update(firebase_uid, {"email": email, "updated_at": datetime.now(timezone.utc)})
                 user.email = email
             
-            auth_entry = auth_repo.find_by_uid_and_provider(firebase_uid, sign_in_provider) # Usar el proveedor real
+            # Verificar si ya existe auth_users para este UID y proveedor
+            auth_entry = auth_repo.find_by_uid_and_provider(firebase_uid, sign_in_provider)
             if not auth_entry:
                 auth_repo.create({
                     "uid": firebase_uid,
-                    "auth_provider": sign_in_provider, # Usar el proveedor real
+                    "auth_provider": sign_in_provider,
                     "is_verified": email_verified,
                     "is_active": True
                 })
-            else: # Actualizar estado de verificación si cambió
+            else:
+                # Actualizar la entrada existente si es necesario
                 if auth_entry.is_verified != email_verified:
-                     auth_repo.update(firebase_uid, sign_in_provider, {"is_verified": email_verified})
-
+                    auth_repo.update(firebase_uid, sign_in_provider, {"is_verified": email_verified})
+            
+            # Verificar/crear profile si es necesario
             profile = profile_repo.find_by_uid(firebase_uid)
             if not profile:
                 profile_repo.create({
@@ -198,6 +177,7 @@ def firebase_signin():
                     "prefs": {}
                 })
             else:
+                # Actualizar profile si es necesario
                 profile_update_data = {}
                 if profile.name != name:
                     profile_update_data["name"] = name
@@ -206,10 +186,128 @@ def firebase_signin():
                 
                 if profile_update_data:
                     profile_repo.update(firebase_uid, profile_update_data)
+        
+        # Si no existe por UID, verificar si existe por email
+        elif not user:
+            # Verificar si ya existe un usuario con este email
+            existing_user_by_email = user_repo.find_by_email(email)
+            if existing_user_by_email:
+                # Usuario existe con mismo email pero diferente UID
+                # Usar el usuario existente y su UID original, pero actualizar datos de Firebase
+                user = existing_user_by_email
+                firebase_uid = user.uid  # Usar el UID original del usuario existente
+                
+                # Actualizar información del usuario si es necesario
+                if user.email != email:
+                    user_repo.update(user.uid, {"email": email, "updated_at": datetime.now(timezone.utc)})
+                
+                # Verificar si ya existe auth_users para este UID y proveedor
+                auth_entry = auth_repo.find_by_uid_and_provider(firebase_uid, sign_in_provider)
+                if not auth_entry:
+                    auth_repo.create({
+                        "uid": firebase_uid,
+                        "auth_provider": sign_in_provider,
+                        "is_verified": email_verified,
+                        "is_active": True
+                    })
+                else:
+                    # Actualizar la entrada existente si es necesario
+                    if auth_entry.is_verified != email_verified:
+                        auth_repo.update(firebase_uid, sign_in_provider, {"is_verified": email_verified})
+                
+                # Verificar/crear profile si es necesario
+                profile = profile_repo.find_by_uid(firebase_uid)
+                if not profile:
+                    profile_repo.create({
+                        "uid": firebase_uid,
+                        "name": name,
+                        "phone": "",
+                        "photo_url": picture,
+                        "prefs": {}
+                    })
+                else:
+                    # Actualizar profile si es necesario
+                    profile_update_data = {}
+                    if profile.name != name:
+                        profile_update_data["name"] = name
+                    if profile.photo_url != picture:
+                        profile_update_data["photo_url"] = picture
+                    
+                    if profile_update_data:
+                        profile_repo.update(firebase_uid, profile_update_data)
+            else:
+                # Usuario completamente nuevo
+                user = user_repo.create({
+                    "uid": firebase_uid,
+                    "email": email,
+                    "created_at": datetime.now(timezone.utc),
+                    "updated_at": datetime.now(timezone.utc)
+                })
+
+                auth_repo.create({
+                    "uid": firebase_uid, 
+                    "auth_provider": sign_in_provider,
+                    "is_verified": email_verified,
+                    "is_active": True
+                })
+
+                profile_repo.create({
+                    "uid": firebase_uid,
+                    "name": name,
+                    "phone": "",
+                    "photo_url": picture,
+                    "prefs": {}
+                })
+                
+                # Log nuevo usuario
+                security_logger.log_security_event(
+                    SecurityEventType.SUSPICIOUS_LOGIN,
+                    {"reason": "new_user_creation", "uid": firebase_uid, "provider": sign_in_provider}
+                )
+        
+        if user:
+            # Usar el UID del usuario (original o nuevo)
+            firebase_uid = user.uid
+            
+            # Usuario existe - solo actualizar email si es diferente
+            if user.email != email:
+                user_repo.update(firebase_uid, {"email": email, "updated_at": datetime.now(timezone.utc)})
+                user.email = email
 
         app_tokens = jwt_service.create_tokens(identity=firebase_uid)
 
-        final_profile = profile_repo.find_by_uid(firebase_uid)
+        # Obtener perfil completo desde Firestore (fuente de verdad)
+        firestore_service = make_firestore_profile_service()
+        firestore_profile = firestore_service.get_profile(firebase_uid)
+        
+        # Si no existe perfil en Firestore, crear uno básico con información de Firebase
+        if not firestore_profile:
+            basic_profile_data = {
+                "displayName": name,
+                "email": email,
+                "photoURL": picture,
+                "emailVerified": email_verified,
+                "authProvider": sign_in_provider,
+                "language": "es",  # Por defecto
+                "cookingLevel": "beginner",  # Por defecto
+                "measurementUnit": "metric",  # Por defecto
+                "allergies": [],
+                "allergyItems": [],
+                "preferredFoodTypes": [],
+                "specialDietItems": [],
+                "favoriteRecipes": [],
+                "initialPreferencesCompleted": False
+            }
+            firestore_profile = firestore_service.update_profile(firebase_uid, basic_profile_data)
+        
+        # Sincronizar con MySQL para caché/performance
+        try:
+            mysql_profile_repo = make_profile_repository()
+            firestore_service.sync_with_mysql(firebase_uid, mysql_profile_repo)
+        except Exception as sync_error:
+            # No fallar si hay error en sincronización, solo loguearlo
+            print(f"⚠️ Warning: MySQL sync failed: {sync_error}")
+
         final_user = user_repo.find_by_uid(firebase_uid)
         
         # Log autenticación exitosa
@@ -224,15 +322,29 @@ def firebase_signin():
             "user": {
                 "uid": final_user.uid,
                 "email": final_user.email,
-                "name": final_profile.name if final_profile else name,
-                "photo_url": final_profile.photo_url if final_profile else picture,
+                "name": firestore_profile.get("displayName", name),
+                "photo_url": firestore_profile.get("photoURL", picture),
                 "email_verified": email_verified
-            }
+            },
+            "profile": firestore_profile  # Incluir perfil completo desde Firestore
         }), 200
         
     except Exception as e:
+        # Log más detallado para debug
+        error_details = {
+            "endpoint": "firebase-signin", 
+            "reason": "unexpected_error", 
+            "error": str(type(e).__name__),
+            "message": str(e),
+            "traceback": traceback.format_exc()
+        }
         security_logger.log_security_event(
             SecurityEventType.AUTHENTICATION_FAILED,
-            {"endpoint": "firebase-signin", "reason": "unexpected_error", "error": str(type(e).__name__)}
+            error_details
         )
+        
+        # También imprimir el error completo
+        print(f"🚨 ERROR EN FIREBASE-SIGNIN: {str(e)}")
+        print(f"🚨 TRACEBACK: {traceback.format_exc()}")
+        
         return jsonify({"error": "Authentication failed"}), 500

@@ -53,5 +53,19 @@ class UserRepository:
         return None
 
     @staticmethod
+    def update_uid(old_uid: str, new_uid: str):
+        """
+        Actualiza el UID de un usuario existente.
+        Útil cuando Firebase asigna un nuevo UID al mismo usuario.
+        """
+        user = User.query.filter_by(uid=old_uid).first()
+        if user:
+            user.uid = new_uid
+            user.updated_at = datetime.now(timezone.utc)
+            db.session.commit()
+            return user
+        return None
+
+    @staticmethod
     def find_user_with_auth_by_email(email: str):
         return User.query.options(joinedload(User.auth)).filter_by(email=email).first()

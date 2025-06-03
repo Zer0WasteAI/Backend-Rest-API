@@ -22,6 +22,15 @@ from src.shared.exceptions.base import AppException
 from src.infrastructure.auth.jwt_callbacks import configure_jwt_callbacks
 from src.infrastructure.security.security_headers import add_security_headers
 
+# Importar modelos ORM para que se creen las tablas
+from src.infrastructure.db.models.recipe_orm import RecipeORM
+from src.infrastructure.db.models.inventory_orm import InventoryORM
+from src.infrastructure.db.models.ingredient_orm import IngredientORM
+from src.infrastructure.db.models.ingredient_stack_orm import IngredientStackORM
+from src.infrastructure.db.models.food_item_orm import FoodItemORM
+from src.infrastructure.db.models.image_reference_orm import ImageReferenceORM
+from src.infrastructure.db.models.recognition_orm import RecognitionORM
+
 
 def create_app():
     application = Flask(__name__)

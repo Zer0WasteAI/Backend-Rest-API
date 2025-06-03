@@ -35,6 +35,17 @@ class RecognizeIngredientsUseCase:
             if similars:
                 ingredient["image_path"] = similars[0].image_path
             else:
-                ingredient["image_path"] = self.image_repository.find_by_name(self.fallback_name).image_path
+                fallback_image = self.image_repository.find_by_name(self.fallback_name)
+                if fallback_image:
+                    ingredient["image_path"] = fallback_image.image_path
+                else:
+                    ingredient["image_path"] = self._get_default_image_path()
 
         return result
+    
+    def _get_default_image_path(self) -> str:
+        """
+        Retorna una imagen por defecto cuando no se encuentra ninguna referencia.
+        Puede ser una URL de imagen placeholder o None.
+        """
+        return "https://via.placeholder.com/150x150/cccccc/666666?text=No+Image"

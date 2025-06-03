@@ -5,7 +5,8 @@ from src.infrastructure.db.base import db
 
 from src.interface.serializers.inventory_serializers import (
 AddIngredientsBatchSchema,
-InventorySchema
+InventorySchema,
+UpdateIngredientSchema
 )
 
 from src.application.factories.inventory_usecase_factory import (
@@ -59,4 +60,50 @@ def get_inventory():
     })
 
     return jsonify(result), 200
+
+@inventory_bp.route("/ingredients/<ingredient_name>/<added_at>", methods=["PUT"])
+@jwt_required()
+def update_ingredient(ingredient_name, added_at):
+    user_uid = get_jwt_identity()
+    schema = UpdateIngredientSchema()
+    json_data = request.get_json()
+
+    errors = schema.validate(json_data)
+    if errors:
+        raise InvalidRequestDataException(details=errors)
+
+    use_case = make_update_ingredient_stack_use_case(db)
+    use_case.execute(
+        user_uid=user_uid,
+        ingredient_name=ingredient_name,
+        added_at=added_at,
+        updated_data=json_data
+    )
+
+    return jsonify({"message": "Ingrediente actualizado exitosamente"}), 200
+
+@inventory_bp.route("/ingredients/<ingredient_name>/<added_at>", methods=["DELETE"])
+@jwt_required()
+def delete_ingredient(ingredient_name, added_at):
+    user_uid = get_jwt_identity()
+    
+    use_case = make_delete_ingredient_stack_use_case(db)
+    use_case.execute(user_uid, ingredient_name, added_at)
+
+    return jsonify({"message": "Ingrediente eliminado exitosamente"}), 200
+
+@inventory_bp.route("/expiring", methods=["GET"])
+@jwt_required()
+def get_expiring_items():
+    user_uid = get_jwt_identity()
+    within_days = request.args.get('days', 3, type=int)
+    
+    use_case = make_get_expiring_soon_use_case(db)
+    expiring_items = use_case.execute(user_uid, within_days)
+
+    return jsonify({
+        "expiring_items": expiring_items,
+        "within_days": within_days,
+        "count": len(expiring_items)
+    }), 200
 

@@ -31,7 +31,8 @@ class UploadImageUseCase:
         # 2. Subir archivo
         storage_path, public_url = self.upload_service.upload_image(
             request.image_file, 
-            request.image_type
+            request.image_type,
+            request.user_uid
         )
         
         # 3. Crear referencia en BD

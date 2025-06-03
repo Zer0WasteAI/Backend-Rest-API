@@ -1,0 +1,32 @@
+import uuid
+from datetime import datetime
+from src.domain.models.recipe import Recipe
+from src.shared.exceptions.custom import InvalidRequestDataException
+
+class SaveRecipeUseCase:
+    def __init__(self, recipe_repository):
+        self.recipe_repository = recipe_repository
+
+    def execute(self, user_uid: str, recipe_data: dict) -> Recipe:
+        # Validar que no exista ya una receta con el mismo título para el usuario
+        if self.recipe_repository.exists_by_user_and_title(user_uid, recipe_data["title"]):
+            raise InvalidRequestDataException("Ya tienes una receta guardada con este título")
+
+        # Crear la receta
+        recipe = Recipe(
+            uid=str(uuid.uuid4()),
+            user_uid=user_uid,
+            title=recipe_data["title"],
+            duration=recipe_data["duration"],
+            difficulty=recipe_data["difficulty"],
+            ingredients=recipe_data["ingredients"],
+            steps=recipe_data["steps"],
+            footer=recipe_data.get("footer", ""),
+            is_custom=recipe_data.get("is_custom", False),
+            saved_at=datetime.now()
+        )
+
+        # Guardar en el repositorio
+        self.recipe_repository.save(recipe)
+        
+        return recipe 
