@@ -6,12 +6,31 @@ from src.infrastructure.db.recognition_repository_impl import RecognitionReposit
 from src.infrastructure.db.image_repository_impl import ImageRepositoryImpl
 from src.infrastructure.ai.gemini_adapter_service import GeminiAdapterService
 from src.infrastructure.firebase.firebase_storage_adapter import FirebaseStorageAdapter
+from src.application.factories.ingredient_image_generator_factory import make_ingredient_image_generator_service
+from src.infrastructure.inventory.inventory_calcularor_impl import InventoryCalculatorImpl
 
 def make_recognize_ingredients_use_case(db):
-    return RecognizeIngredientsUseCase(GeminiAdapterService(), RecognitionRepositoryImpl(db), FirebaseStorageAdapter(), ImageRepositoryImpl(db))
+    return RecognizeIngredientsUseCase(
+        ai_service=GeminiAdapterService(), 
+        recognition_repository=RecognitionRepositoryImpl(db), 
+        storage_adapter=FirebaseStorageAdapter(), 
+        image_repository=ImageRepositoryImpl(db),
+        ingredient_image_generator_service=make_ingredient_image_generator_service(db),
+        calculator_service=InventoryCalculatorImpl()
+    )
 
 def make_recognize_foods_use_case(db):
-    return RecognizeFoodsUseCase(GeminiAdapterService(), RecognitionRepositoryImpl(db), FirebaseStorageAdapter())
+    return RecognizeFoodsUseCase(
+        ai_service=GeminiAdapterService(), 
+        recognition_repository=RecognitionRepositoryImpl(db), 
+        storage_adapter=FirebaseStorageAdapter(),
+        calculator_service=InventoryCalculatorImpl()
+    )
 
 def make_recognize_batch_use_case(db):
-    return RecognizeBatchUseCase(GeminiAdapterService(), RecognitionRepositoryImpl(db), FirebaseStorageAdapter())
+    return RecognizeBatchUseCase(
+        ai_service=GeminiAdapterService(), 
+        recognition_repository=RecognitionRepositoryImpl(db), 
+        storage_adapter=FirebaseStorageAdapter(),
+        calculator_service=InventoryCalculatorImpl()
+    )

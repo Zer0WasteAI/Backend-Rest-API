@@ -17,6 +17,7 @@ class UpdateIngredientStackUseCase:
 
         new_stack = IngredientStack(
             quantity=updated_data["quantity"],
+            type_unit=updated_data["type_unit"],
             added_at=updated_data["added_at"],
             expiration_date=new_expiration
         )

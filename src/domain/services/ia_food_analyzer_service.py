@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
+from io import BytesIO
 
 class IAFoodAnalyzerService(ABC):
     @abstractmethod
@@ -41,5 +42,18 @@ class IAFoodAnalyzerService(ABC):
     def match_allergens(self, food_name: str, user_allergens: List[str]) -> List[str]:
         """
         Detecta si un alimento contiene alérgenos que coinciden con una lista de alérgenos del usuario.
+        """
+        pass
+
+    @abstractmethod
+    def generate_ingredient_image(self, ingredient_name: str) -> Optional[BytesIO]:
+        """
+        Genera una imagen para un ingrediente usando AI.
+        
+        Args:
+            ingredient_name: Nombre del ingrediente
+            
+        Returns:
+            BytesIO object con los datos de la imagen generada, o None si falla
         """
         pass

@@ -2,13 +2,14 @@ from datetime import datetime
 from typing import List, Optional
 
 class IngredientStack:
-    def __init__(self, quantity: float, expiration_date: datetime, added_at: datetime):
+    def __init__(self, quantity: float, type_unit: str, expiration_date: datetime, added_at: datetime):
         self.quantity = quantity
+        self.type_unit = type_unit
         self.expiration_date = expiration_date
         self.added_at = added_at
 
     def __repr__(self):
-        return f"IngredientStack(quantity={self.quantity}, added_at={self.added_at.date()}, expiration_date={self.expiration_date.date()})"
+        return f"IngredientStack(quantity={self.quantity} {self.type_unit}, added_at={self.added_at.date()}, expiration_date={self.expiration_date.date()})"
 
 class Ingredient:
     def __init__(

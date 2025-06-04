@@ -6,7 +6,7 @@ class IngredientInputSchema(Schema):
     expiration_time = fields.Integer(required=True)
     time_unit = fields.String(
         required=True,
-        validate=validate.OneOf(["Días", "Semanas", "Meses"])
+        validate=validate.OneOf(["Días", "Semanas", "Meses", "Años"])
     )
     type_unit = fields.String(required=True)
     storage_type = fields.String(required=True)
@@ -21,7 +21,7 @@ class UpdateIngredientSchema(Schema):
     expiration_time = fields.Integer(required=True)
     time_unit = fields.String(
         required=True,
-        validate=validate.OneOf(["Días", "Semanas", "Meses"])
+        validate=validate.OneOf(["Días", "Semanas", "Meses", "Años"])
     )
     type_unit = fields.String(required=True)
     storage_type = fields.String(required=True)
@@ -31,6 +31,7 @@ class UpdateIngredientSchema(Schema):
 
 class IngredientStackSchema(Schema):
     quantity = fields.Float(required=True)
+    type_unit = fields.String(required=True)
     expiration_date = fields.DateTime(required=True)
     added_at = fields.DateTime(required=True)
 
