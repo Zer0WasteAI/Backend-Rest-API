@@ -3,11 +3,19 @@ from marshmallow import Schema, fields, validate
 class IngredientInputSchema(Schema):
     name = fields.String(required=True)
     quantity = fields.Float(required=True)
-    expiration_time = fields.Integer(required=True)
+    
+    # ⭐ NUEVO: Soportar ambos formatos para compatibilidad
+    # Formato viejo: expiration_time + time_unit (para cálculo manual)
+    expiration_time = fields.Integer(required=False, allow_none=True)
     time_unit = fields.String(
-        required=True,
+        required=False,
+        allow_none=True,
         validate=validate.OneOf(["Días", "Semanas", "Meses", "Años"])
     )
+    
+    # Formato nuevo: expiration_date pre-calculada (desde reconocimiento)
+    expiration_date = fields.DateTime(required=False, allow_none=True)
+    
     type_unit = fields.String(required=True)
     storage_type = fields.String(required=True)
     tips = fields.String(required=True)
@@ -18,11 +26,16 @@ class AddIngredientsBatchSchema(Schema):
 
 class UpdateIngredientSchema(Schema):
     quantity = fields.Float(required=True)
-    expiration_time = fields.Integer(required=True)
+    
+    # ⭐ NUEVO: Soportar ambos formatos para compatibilidad
+    expiration_time = fields.Integer(required=False, allow_none=True)
     time_unit = fields.String(
-        required=True,
+        required=False,
+        allow_none=True,
         validate=validate.OneOf(["Días", "Semanas", "Meses", "Años"])
     )
+    expiration_date = fields.DateTime(required=False, allow_none=True)
+    
     type_unit = fields.String(required=True)
     storage_type = fields.String(required=True)
     tips = fields.String(required=True)

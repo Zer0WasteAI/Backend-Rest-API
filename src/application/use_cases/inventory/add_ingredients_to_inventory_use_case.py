@@ -26,26 +26,35 @@ class AddIngredientsToInventoryUseCase:
             tips = item["tips"]
             image_path = item["image_path"]
             quantity = item["quantity"]
-            expiration_time = item["expiration_time"]
-            time_unit = item["time_unit"]
 
             print(f"📦 [ADD INGREDIENTS {i+1}] Processing: {name}")
             print(f"   └─ Quantity: {quantity} {type_unit}")
             print(f"   └─ Storage: {storage_type}")
-            print(f"   └─ Expiration: {expiration_time} {time_unit}")
             print(f"   └─ Image: {image_path[:50]}..." if len(image_path) > 50 else f"   └─ Image: {image_path}")
 
             try:
+                # ⭐ MEJORADO: Manejar ambos formatos de fecha de vencimiento
                 if "expiration_date" in item and item["expiration_date"]:
-                    expiration_date = datetime.fromisoformat(item["expiration_date"].replace('Z', '+00:00'))
+                    # Formato de reconocimiento: usar fecha pre-calculada
+                    expiration_date_str = item["expiration_date"]
+                    if expiration_date_str.endswith('Z'):
+                        expiration_date_str = expiration_date_str.replace('Z', '+00:00')
+                    expiration_date = datetime.fromisoformat(expiration_date_str)
                     print(f"   └─ ✅ Using pre-calculated expiration: {expiration_date}")
-                else:
+                elif "expiration_time" in item and "time_unit" in item:
+                    # Formato manual: calcular fecha de vencimiento
+                    expiration_time = item["expiration_time"]
+                    time_unit = item["time_unit"]
+                    print(f"   └─ Expiration: {expiration_time} {time_unit}")
                     expiration_date = self.calculator.calculate_expiration_date(
                         added_at=now,
                         time_value=expiration_time,
                         time_unit=time_unit
                     )
                     print(f"   └─ ⏳ Calculated new expiration: {expiration_date}")
+                else:
+                    # Error: falta información de vencimiento
+                    raise ValueError(f"Ingredient '{name}' requires either 'expiration_date' or both 'expiration_time' and 'time_unit'")
 
                 ingredient = Ingredient(
                     name=name,
