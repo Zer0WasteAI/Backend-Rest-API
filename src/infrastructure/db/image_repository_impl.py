@@ -38,12 +38,18 @@ class ImageRepositoryImpl(ImageReferenceRepository):
         result = self.db.session.execute(stmt).scalar_one_or_none()
         return self._to_domain(result) if result else None
 
-    def find_best_match_name(self, name: str) -> Optional[List[ImageReference]]:
+    def find_best_match_name(self, name: str) -> Optional[ImageReference]:
         normalized_name = normalize_name(name)
-        stmt = select(ImageReferenceORM).where(
-            self.db.func.lower(ImageReferenceORM.name).like(f"%{normalized_name}%")
-        )
+
+        # Obteniendo los names de la db
+        stmt = select(ImageReferenceORM)
         results = self.db.session.execute(stmt).scalars().all()
+
+        if not results:
+            return None
+
+        # AAAAaaa
+
         return [self._to_domain(result) for result in results] if results else None
 
     def _to_domain(self, row: ImageReferenceORM) -> ImageReference:
