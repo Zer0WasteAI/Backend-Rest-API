@@ -23,6 +23,37 @@ import traceback
 
 auth_bp = Blueprint("auth", __name__)
 
+@auth_bp.route("/firebase-debug", methods=["GET"])
+def firebase_debug():
+    """Endpoint de debug para verificar la configuración de Firebase"""
+    import firebase_admin
+    from pathlib import Path
+    
+    debug_info = {
+        "firebase_apps": len(firebase_admin._apps),
+        "credentials_path": Config.FIREBASE_CREDENTIALS_PATH,
+        "storage_bucket": Config.FIREBASE_STORAGE_BUCKET,
+        "credentials_exists": False,
+        "project_id": None
+    }
+    
+    try:
+        cred_path = Path(Config.FIREBASE_CREDENTIALS_PATH).resolve()
+        debug_info["credentials_exists"] = cred_path.exists()
+        debug_info["credentials_path_resolved"] = str(cred_path)
+        
+        if cred_path.exists():
+            import json
+            with open(cred_path, 'r') as f:
+                creds_data = json.load(f)
+                debug_info["project_id"] = creds_data.get("project_id")
+                debug_info["client_email"] = creds_data.get("client_email")
+        
+    except Exception as e:
+        debug_info["error"] = str(e)
+    
+    return jsonify(debug_info), 200
+
 @auth_bp.route("/refresh", methods=["POST"])
 @jwt_required(refresh=True)
 @refresh_rate_limit
@@ -124,6 +155,13 @@ def firebase_signin():
         firebase_info = firebase_user_data.get("firebase", {})
         sign_in_provider = firebase_info.get("sign_in_provider", "unknown") # Por defecto 'unknown' si no está presente
 
+        print(f"🔍 FIREBASE SIGNIN DEBUG:")
+        print(f"🔍 UID: {firebase_uid}")
+        print(f"🔍 Email: {email}")
+        print(f"🔍 Provider: {sign_in_provider}")
+        print(f"🔍 Name: {name}")
+        print(f"🔍 Email verified: {email_verified}")
+
         if not firebase_uid:
             security_logger.log_security_event(
                 SecurityEventType.AUTHENTICATION_FAILED,
@@ -131,12 +169,17 @@ def firebase_signin():
             )
             return jsonify({"error": "Authentication failed"}), 400
         
-        if not email:
+        # Para usuarios anónimos, email puede ser None
+        if not email and sign_in_provider != "anonymous":
             security_logger.log_security_event(
                 SecurityEventType.AUTHENTICATION_FAILED,
-                {"reason": "missing_email", "endpoint": "firebase-signin", "uid": firebase_uid}
+                {"reason": "missing_email", "endpoint": "firebase-signin", "uid": firebase_uid, "provider": sign_in_provider}
             )
             return jsonify({"error": "Authentication failed"}), 400
+        
+        # Para usuarios anónimos, usar email vacío por defecto
+        if not email and sign_in_provider == "anonymous":
+            email = ""
 
         user_repo = make_user_repository()
         auth_repo = make_auth_repository()
@@ -187,10 +230,13 @@ def firebase_signin():
                 if profile_update_data:
                     profile_repo.update(firebase_uid, profile_update_data)
         
-        # Si no existe por UID, verificar si existe por email
+        # Si no existe por UID, verificar si existe por email (solo para usuarios no anónimos)
         elif not user:
-            # Verificar si ya existe un usuario con este email
-            existing_user_by_email = user_repo.find_by_email(email)
+            # Verificar si ya existe un usuario con este email (skip para usuarios anónimos)
+            existing_user_by_email = None
+            if email and sign_in_provider != "anonymous":
+                existing_user_by_email = user_repo.find_by_email(email)
+            
             if existing_user_by_email:
                 # Usuario existe con mismo email pero diferente UID
                 # Usar el usuario existente y su UID original, pero actualizar datos de Firebase
@@ -282,6 +328,7 @@ def firebase_signin():
         
         # Si no existe perfil en Firestore, crear uno básico con información de Firebase
         if not firestore_profile:
+            print(f"🔍 Creando nuevo perfil en Firestore para UID: {firebase_uid}")
             basic_profile_data = {
                 "displayName": name,
                 "email": email,
@@ -298,7 +345,8 @@ def firebase_signin():
                 "favoriteRecipes": [],
                 "initialPreferencesCompleted": False
             }
-            firestore_profile = firestore_service.update_profile(firebase_uid, basic_profile_data)
+            firestore_profile = firestore_service.create_profile(firebase_uid, basic_profile_data)
+            print(f"✅ Perfil creado exitosamente en Firestore")
         
         # Sincronizar con MySQL para caché/performance
         try:

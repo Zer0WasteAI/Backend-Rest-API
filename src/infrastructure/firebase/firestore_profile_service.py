@@ -75,7 +75,8 @@ class FirestoreProfileService:
             doc_ref.set(firestore_data)
             logger.info(f"Profile created in Firestore for UID: {uid}")
             
-            return self._format_profile_response(firestore_data, uid)
+            # Obtener el perfil recién creado (esto resuelve los SERVER_TIMESTAMP)
+            return self.get_profile(uid)
             
         except Exception as e:
             logger.error(f"Error creating profile in Firestore for UID {uid}: {str(e)}")
@@ -85,6 +86,19 @@ class FirestoreProfileService:
         """
         Formatea la respuesta del perfil para el API
         """
+        def format_timestamp(timestamp):
+            """Convierte timestamp de Firestore a string ISO"""
+            if timestamp is None:
+                return None
+            # Si es un timestamp de Firestore, convertir a string
+            if hasattr(timestamp, 'isoformat'):
+                return timestamp.isoformat()
+            elif hasattr(timestamp, 'timestamp'):
+                from datetime import datetime
+                return datetime.fromtimestamp(timestamp.timestamp()).isoformat()
+            else:
+                return str(timestamp)
+        
         return {
             "uid": uid,
             "displayName": firestore_data.get("displayName", ""),
@@ -101,8 +115,8 @@ class FirestoreProfileService:
             "specialDietItems": firestore_data.get("specialDietItems", []),
             "favoriteRecipes": firestore_data.get("favoriteRecipes", []),
             "initialPreferencesCompleted": firestore_data.get("initialPreferencesCompleted", False),
-            "createdAt": firestore_data.get("createdAt"),
-            "lastLoginAt": firestore_data.get("lastLoginAt")
+            "createdAt": format_timestamp(firestore_data.get("createdAt")),
+            "lastLoginAt": format_timestamp(firestore_data.get("lastLoginAt"))
         }
 
     def _prepare_firestore_data(self, update_data: dict) -> dict:
