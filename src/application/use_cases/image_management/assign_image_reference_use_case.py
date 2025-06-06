@@ -15,4 +15,5 @@ class AssignImageReferenceUseCase:
         if similars:
             return similars[0]
 
-        return self.image_repository.find_by_name(self.fallback_name)
+        return None # Si es none se habilita el usecase generar img
+    # El usecase genera la img y la guarda en la db
