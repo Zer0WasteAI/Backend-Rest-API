@@ -30,29 +30,24 @@ class GeminiAdapterService(IAFoodAnalyzerService):
         except Exception as e:
             raise InvalidResponseFormatException(f"No se pudo parsear:\n{clean_text}") from e
 
-    def generate_ingredient_image(self, ingredient_name: str) -> Optional[BytesIO]:
+    def generate_ingredient_image(self, ingredient_name: str, descripcion: str = "") -> Optional[BytesIO]:
         """
         Generate an image for an ingredient using Gemini's image generation capabilities.
         
         Args:
             ingredient_name: Name of the ingredient to generate an image for
+            descripcion: Description of the ingredient's characteristics
             
         Returns:
             BytesIO object containing the generated image data, or None if generation fails
         """
         try:
-            # Create a detailed prompt for high-quality ingredient images using the user's specific template
-            prompt = f"""Genera una ilustración digital de alta calidad en un distintivo estilo de animación de: {ingredient_name}, directamente de Perú.
-
-Enfócate en una representación visualmente atractiva y detallada del ingrediente. El {ingredient_name} debe ser el protagonista absoluto, mostrando sus colores naturales más vibrantes, texturas características (ej. la piel, la pulpa, las semillas si son visibles), y su forma tridimensional de manera clara y definida.
-
-Composición: Presenta el {ingredient_name} de forma limpia y apetitosa. Considera una composición que muestre uno o varios ejemplares del ingrediente, posiblemente con uno de ellos cortado o seccionado para revelar su interior de forma interesante (si esto es común o visualmente revelador para el {ingredient_name}).
-
-Estilo de Animación: Busca una estética similar a la ilustración de alta calidad para películas de animación o libros ilustrados premium. Debe ser estilizado pero reconocible, con contornos nítidos, sombreado suave que dé volumen, y un ligero brillo o realce que lo haga parecer fresco y apetecible. Evita un look 'cartoon' demasiado simplista o exagerado, apunta a una elegancia animada.
-
-Iluminación y Fondo: Utiliza una iluminación de estudio suave pero clara, que resalte las texturas y los colores sin crear sombras duras. El fondo debe ser simple, quizás un degradado sutil de color neutro o un blanco/gris muy claro, o una textura muy sutil y desenfocada que no compita con el {ingredient_name}.
-
-Detalles Adicionales: La imagen debe evocar la frescura y la esencia única del {ingredient_name}. Calidad de renderizado fotorrealista dentro del estilo de animación (es decir, creíble y detallado, aunque no sea una foto real). Sin textos ni elementos ajenos al ingrediente, a menos que el nombre del ingrediente lo sugiera intrínsecamente (ej. 'mazorca de maíz')."""
+            # Create a detailed prompt for high-quality ingredient images using Pixar style
+            prompt = f"""Ilustración 3D de alta definición de: {ingredient_name}, un ingrediente icónico de Perú.
+Enfócate en representar fielmente sus características únicas basándote en esta descripción: "{descripcion}".
+El estilo visual debe ser el de la comida en las películas de animación de Pixar: detallado, apetitoso y con volumen, usando colores vibrantes y texturas definidas.
+Composición: Muestra un {ingredient_name} entero junto a otro cortado limpiamente por la mitad para revelar su interior.
+Iluminación y Fondo: Utiliza una iluminación de estudio suave que resalte la frescura. El fondo debe ser minimalista, de un color gris claro neutro y desenfocado."""
 
             generation_config = {
                 "response_modalities": ["TEXT", "IMAGE"],
@@ -113,6 +108,7 @@ Detalles Adicionales: La imagen debe evocar la frescura y la esencia única del 
         Recibirás una **lista de imágenes** que puede contener uno o varios ingredientes.
         Considera estos datos para los campos de cada ingrediente:
         - name: nombre del ingrediente  
+        - description: descripción detallada de las características físicas del ingrediente (color, textura, forma, tamaño, etc.)
         - quantity: cantidad aproximada  
         - type_unit: unidad de medida ('unidades', 'gramos', 'kilos', etc.)  
         - storage_type: tipo de almacenamiento ideal ('Refrigerado', 'Congelado' o 'Ambiente')  
@@ -124,6 +120,7 @@ Detalles Adicionales: La imagen debe evocar la frescura y la esencia única del 
           "ingredients": [
             {
               "name": "string",
+              "description": "string",
               "quantity": number,
               "type_unit": "string",
               "storage_type": "string",
@@ -215,6 +212,7 @@ Detalles Adicionales: La imagen debe evocar la frescura y la esencia única del 
         
         — **ingredients**: para cada ingrediente detectado, incluye:
           - name: nombre del ingrediente  
+          - description: descripción detallada de las características físicas del ingrediente (color, textura, forma, tamaño, etc.)
           - quantity: cantidad aproximada  
           - type_unit: unidad de medida ('unidades', 'gramos', 'kilos', etc.)  
           - storage_type: tipo de almacenamiento ideal ('Refrigerado', 'Congelado' o 'Ambiente')  
@@ -240,6 +238,7 @@ Detalles Adicionales: La imagen debe evocar la frescura y la esencia única del 
           "ingredients": [
             {
               "name": "string",
+              "description": "string",
               "quantity": number,
               "type_unit": "string",
               "storage_type": "string",

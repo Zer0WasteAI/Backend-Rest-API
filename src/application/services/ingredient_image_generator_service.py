@@ -20,13 +20,14 @@ class IngredientImageGeneratorService:
         self.storage_adapter = storage_adapter
         self.image_repository = image_repository
         
-    def get_or_generate_ingredient_image(self, ingredient_name: str, user_uid: str) -> str:
+    def get_or_generate_ingredient_image(self, ingredient_name: str, user_uid: str, descripcion: str = "") -> str:
         """
         Gets or generates an image for an ingredient following the storage strategy.
         
         Args:
             ingredient_name: Name of the ingredient
             user_uid: User's unique identifier
+            descripcion: Description of the ingredient characteristics
             
         Returns:
             String: URL path to the ingredient image
@@ -43,7 +44,7 @@ class IngredientImageGeneratorService:
             else:
                 print(f"🆕 No existing image for {ingredient_name}, generating new one")
                 # Step 3: Generate new image and save to both locations
-                return self._generate_and_save_image(ingredient_name, user_uid)
+                return self._generate_and_save_image(ingredient_name, user_uid, descripcion)
                 
         except Exception as e:
             print(f"🚨 Error in get_or_generate_ingredient_image for {ingredient_name}: {str(e)}")
@@ -113,13 +114,14 @@ class IngredientImageGeneratorService:
             print(f"🚨 Error copying image for {ingredient_name}: {str(e)}")
             return self._get_fallback_image()
     
-    def _generate_and_save_image(self, ingredient_name: str, user_uid: str) -> str:
+    def _generate_and_save_image(self, ingredient_name: str, user_uid: str, descripcion: str = "") -> str:
         """
         Generate a new image using Gemini and save to both global and user folders.
         
         Args:
             ingredient_name: Name of the ingredient
             user_uid: User's unique identifier
+            descripcion: Description of the ingredient characteristics
             
         Returns:
             str: URL to the generated image in user's folder
@@ -127,7 +129,7 @@ class IngredientImageGeneratorService:
         try:
             # Generate image using Gemini
             print(f"🎨 Generating image for {ingredient_name} using Gemini...")
-            generated_image = self.ai_service.generate_ingredient_image(ingredient_name)
+            generated_image = self.ai_service.generate_ingredient_image(ingredient_name, descripcion)
             
             if not generated_image:
                 print(f"❌ Failed to generate image for {ingredient_name}")

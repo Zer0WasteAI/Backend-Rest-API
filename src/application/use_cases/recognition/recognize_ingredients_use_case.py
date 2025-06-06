@@ -49,7 +49,8 @@ class RecognizeIngredientsUseCase:
                 try:
                     ingredient["image_path"] = self.ingredient_image_generator_service.get_or_generate_ingredient_image(
                         ingredient_name=ingredient["name"],
-                        user_uid=user_uid
+                        user_uid=user_uid,
+                        descripcion=ingredient.get("description", "")
                     )
                 except Exception as e:
                     print(f"🚨 Error generating image for {ingredient['name']}: {str(e)}")

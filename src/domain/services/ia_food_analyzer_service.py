@@ -46,12 +46,13 @@ class IAFoodAnalyzerService(ABC):
         pass
 
     @abstractmethod
-    def generate_ingredient_image(self, ingredient_name: str) -> Optional[BytesIO]:
+    def generate_ingredient_image(self, ingredient_name: str, descripcion: str = "") -> Optional[BytesIO]:
         """
         Genera una imagen para un ingrediente usando AI.
         
         Args:
             ingredient_name: Nombre del ingrediente
+            descripcion: Descripción de las características del ingrediente
             
         Returns:
             BytesIO object con los datos de la imagen generada, o None si falla
