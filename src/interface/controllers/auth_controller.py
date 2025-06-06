@@ -177,9 +177,9 @@ def firebase_signin():
             )
             return jsonify({"error": "Authentication failed"}), 400
         
-        # Para usuarios anónimos, usar email vacío por defecto
+        # Para usuarios anónimos, usar NULL en lugar de string vacío para evitar duplicates
         if not email and sign_in_provider == "anonymous":
-            email = ""
+            email = None
 
         user_repo = make_user_repository()
         auth_repo = make_auth_repository()
@@ -331,7 +331,7 @@ def firebase_signin():
             print(f"🔍 Creando nuevo perfil en Firestore para UID: {firebase_uid}")
             basic_profile_data = {
                 "displayName": name,
-                "email": email,
+                "email": email or "",  # Firestore usa string vacío en lugar de NULL
                 "photoURL": picture,
                 "emailVerified": email_verified,
                 "authProvider": sign_in_provider,
@@ -369,7 +369,7 @@ def firebase_signin():
             **app_tokens,
             "user": {
                 "uid": final_user.uid,
-                "email": final_user.email,
+                "email": final_user.email or "",  # Convertir NULL a string vacío para response
                 "name": firestore_profile.get("displayName", name),
                 "photo_url": firestore_profile.get("photoURL", picture),
                 "email_verified": email_verified

@@ -4,7 +4,7 @@ from src.infrastructure.db.base import db
 class User(db.Model):
     __tablename__ = "users"
     uid = db.Column(db.String(128), primary_key=True)
-    email = db.Column(db.String(120), unique=True, nullable=False)
+    email = db.Column(db.String(120), unique=True, nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.now(timezone.utc))
     updated_at = db.Column(db.DateTime, default=datetime.now(timezone.utc))
 
