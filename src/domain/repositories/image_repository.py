@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import List, Optional
+from typing import Optional
 from src.domain.models.image_reference import ImageReference
 
 class ImageReferenceRepository(ABC):

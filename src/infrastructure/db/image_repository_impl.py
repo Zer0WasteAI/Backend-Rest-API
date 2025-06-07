@@ -1,5 +1,6 @@
 import unicodedata
-from typing import List, Optional
+from rapidfuzz import process
+from typing import Optional
 from sqlalchemy import select
 from src.domain.models.image_reference import ImageReference
 from src.domain.repositories.image_repository import ImageReferenceRepository
@@ -48,9 +49,15 @@ class ImageRepositoryImpl(ImageReferenceRepository):
         if not results:
             return None
 
-        # AAAAaaa
-
-        return [self._to_domain(result) for result in results] if results else None
+        options = [(r.name, r) for r in results]
+        best_match_name, score, _ = process.extractOne(
+            normalized_name,
+            [n for n, _ in options]
+        )
+        if score < 80:  # Umbral de confianza
+            return None
+        mejor_resultado = next(r for n, r in options if n == best_match_name)
+        return self._to_domain(mejor_resultado)
 
     def _to_domain(self, row: ImageReferenceORM) -> ImageReference:
         return ImageReference(

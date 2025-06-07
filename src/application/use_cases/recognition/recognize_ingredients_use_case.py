@@ -31,9 +31,9 @@ class RecognizeIngredientsUseCase:
         self.recognition_repository.save(recognition)
 
         for ingredient in result["ingredients"]:
-            similars = self.image_repository.find_by_name_similarity(ingredient["name"])
-            if similars:
-                ingredient["image_path"] = similars[0].image_path
+            similar = self.image_repository.find_best_match_name(ingredient["name"])
+            if similar:
+                ingredient["image_path"] = similar.image_path
             else:
                 ingredient["image_path"] = self.image_repository.find_by_name(self.fallback_name).image_path
 

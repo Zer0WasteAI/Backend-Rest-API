@@ -11,9 +11,8 @@ class AssignImageReferenceUseCase:
         if exact:
             return exact
 
-        similars = self.image_repository.find_by_name_similarity(item_name)
-        if similars:
-            return similars[0]
+        similar = self.image_repository.find_best_match_name(item_name)
+        if similar:
+            return similar
 
-        return None # Si es none se habilita el usecase generar img
-    # El usecase genera la img y la guarda en la db
+        return None
