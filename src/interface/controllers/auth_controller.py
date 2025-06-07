@@ -170,7 +170,9 @@ def firebase_signin():
             return jsonify({"error": "Authentication failed"}), 400
         
         # Para usuarios anónimos, email puede ser None
-        if not email and sign_in_provider != "anonymous":
+        # Aceptar tanto 'anonymous' como 'custom' para usuarios anónimos (custom tokens se convierten en 'custom')
+        anonymous_providers = ["anonymous", "custom"]
+        if not email and sign_in_provider not in anonymous_providers:
             security_logger.log_security_event(
                 SecurityEventType.AUTHENTICATION_FAILED,
                 {"reason": "missing_email", "endpoint": "firebase-signin", "uid": firebase_uid, "provider": sign_in_provider}
@@ -178,7 +180,7 @@ def firebase_signin():
             return jsonify({"error": "Authentication failed"}), 400
         
         # Para usuarios anónimos, usar NULL en lugar de string vacío para evitar duplicates
-        if not email and sign_in_provider == "anonymous":
+        if not email and sign_in_provider in anonymous_providers:
             email = None
 
         user_repo = make_user_repository()
@@ -234,7 +236,7 @@ def firebase_signin():
         elif not user:
             # Verificar si ya existe un usuario con este email (skip para usuarios anónimos)
             existing_user_by_email = None
-            if email and sign_in_provider != "anonymous":
+            if email and sign_in_provider not in anonymous_providers:
                 existing_user_by_email = user_repo.find_by_email(email)
             
             if existing_user_by_email:

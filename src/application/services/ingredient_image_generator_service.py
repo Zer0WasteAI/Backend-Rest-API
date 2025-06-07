@@ -1,218 +1,214 @@
-import uuid
-import os
-from io import BytesIO
+"""
+Servicio simplificado para generar y gestionar imágenes de ingredientes.
+Solo usa la carpeta /ingredients/ y almacena URLs directamente.
+"""
+import re
 from pathlib import Path
 from typing import Optional
-
-from src.domain.models.image_reference import ImageReference
+import time
 
 
 class IngredientImageGeneratorService:
     """
-    Service to handle ingredient image generation with strategic storage:
-    1. Check if image exists in global 'images_ingredients' folder
-    2. If exists: copy to user's personal folder
-    3. If doesn't exist: generate new image with Gemini, save to both locations
+    Servicio para obtener o generar imágenes de ingredientes.
+    
+    Flujo simplificado:
+    1. Buscar imagen existente en /ingredients/
+    2. Si no existe, generar nueva imagen
+    3. Retornar URL directa
     """
     
-    def __init__(self, ai_service, storage_adapter, image_repository):
+    def __init__(self, ai_service, storage_adapter):
         self.ai_service = ai_service
         self.storage_adapter = storage_adapter
-        self.image_repository = image_repository
-        
+        self.ingredients_folder = "ingredients"
+    
     def get_or_generate_ingredient_image(self, ingredient_name: str, user_uid: str, descripcion: str = "") -> str:
         """
-        Gets or generates an image for an ingredient following the storage strategy.
+        Obtiene o genera una imagen para un ingrediente.
         
         Args:
-            ingredient_name: Name of the ingredient
-            user_uid: User's unique identifier
-            descripcion: Description of the ingredient characteristics
+            ingredient_name: Nombre del ingrediente
+            user_uid: UID del usuario (para logs)
+            descripcion: Descripción del ingrediente (opcional)
             
         Returns:
-            String: URL path to the ingredient image
+            str: URL de la imagen
         """
-        try:
-            # Step 1: Check if image exists in global folder
-            global_image_path = self._check_global_ingredient_image(ingredient_name)
-            
-            if global_image_path:
-                print(f"📸 Found existing image for {ingredient_name} in global folder")
-                # Step 2: Copy to user's personal folder
-                user_image_path = self._copy_to_user_folder(global_image_path, ingredient_name, user_uid)
-                return user_image_path
-            else:
-                print(f"🆕 No existing image for {ingredient_name}, generating new one")
-                # Step 3: Generate new image and save to both locations
-                return self._generate_and_save_image(ingredient_name, user_uid, descripcion)
-                
-        except Exception as e:
-            print(f"🚨 Error in get_or_generate_ingredient_image for {ingredient_name}: {str(e)}")
-            return self._get_fallback_image()
-    
-    def _check_global_ingredient_image(self, ingredient_name: str) -> Optional[str]:
-        """
-        Check if an image exists in the global 'images_ingredients' folder.
+        print(f"🔍 Getting/generating image for ingredient: {ingredient_name}")
         
-        Returns:
-            Optional[str]: Path to the global image if it exists, None otherwise
-        """
-        try:
-            # Look for existing image in global folder
-            global_path_jpg = f"images_ingredients/{self._normalize_filename(ingredient_name)}.jpg"
-            global_path_png = f"images_ingredients/{self._normalize_filename(ingredient_name)}.png"
-            
-            # Check both JPG and PNG extensions
-            for global_path in [global_path_jpg, global_path_png]:
-                try:
-                    blob = self.storage_adapter.bucket.blob(global_path)
-                    if blob.exists():
-                        return global_path
-                except Exception:
-                    continue
-                    
-            return None
-            
-        except Exception as e:
-            print(f"🚨 Error checking global image for {ingredient_name}: {str(e)}")
-            return None
-    
-    def _copy_to_user_folder(self, global_image_path: str, ingredient_name: str, user_uid: str) -> str:
-        """
-        Copy an existing image from global folder to user's personal folder.
+        # 1. Buscar imagen existente
+        existing_image_url = self._check_existing_ingredient_image(ingredient_name)
+        if existing_image_url:
+            print(f"✅ Found existing image: {existing_image_url}")
+            return existing_image_url
         
-        Args:
-            global_image_path: Path to the existing global image
-            ingredient_name: Name of the ingredient
-            user_uid: User's unique identifier
-            
-        Returns:
-            str: URL to the copied image in user's folder
-        """
+        # 2. Generar nueva imagen si no existe
+        print(f"🎨 Generating new image for: {ingredient_name}")
         try:
-            # Get the file extension from global path
-            file_extension = Path(global_image_path).suffix
-            
-            # Define user's personal image path
-            user_image_path = f"uploads/{user_uid}/ingredient/{self._normalize_filename(ingredient_name)}{file_extension}"
-            
-            # Get the source blob
-            source_blob = self.storage_adapter.bucket.blob(global_image_path)
-            
-            # Copy to user's folder
-            destination_blob = self.storage_adapter.bucket.blob(user_image_path)
-            destination_blob.upload_from_string(
-                source_blob.download_as_bytes(),
-                content_type=source_blob.content_type
-            )
-            destination_blob.make_public()
-            
-            print(f"📋 Copied image from {global_image_path} to {user_image_path}")
-            return destination_blob.public_url
-            
-        except Exception as e:
-            print(f"🚨 Error copying image for {ingredient_name}: {str(e)}")
-            return self._get_fallback_image()
-    
-    def _generate_and_save_image(self, ingredient_name: str, user_uid: str, descripcion: str = "") -> str:
-        """
-        Generate a new image using Gemini and save to both global and user folders.
-        
-        Args:
-            ingredient_name: Name of the ingredient
-            user_uid: User's unique identifier
-            descripcion: Description of the ingredient characteristics
-            
-        Returns:
-            str: URL to the generated image in user's folder
-        """
-        try:
-            # Generate image using Gemini
-            print(f"🎨 Generating image for {ingredient_name} using Gemini...")
-            generated_image = self.ai_service.generate_ingredient_image(ingredient_name, descripcion)
-            
-            if not generated_image:
-                print(f"❌ Failed to generate image for {ingredient_name}")
-                return self._get_fallback_image()
-            
-            # Read the image data once and create copies for both saves
-            image_bytes = generated_image.read()
-            generated_image.close()
-            
-            # Save to both global and user folders
-            global_image_url = self._save_to_global_folder(BytesIO(image_bytes), ingredient_name)
-            user_image_url = self._save_to_user_folder(BytesIO(image_bytes), ingredient_name, user_uid)
-            
-            # Register in image repository for future reference
-            self._register_image_in_repository(ingredient_name, global_image_url)
-            
-            print(f"✅ Successfully generated and saved image for {ingredient_name}")
-            return user_image_url
-            
+            return self._generate_new_ingredient_image(ingredient_name, descripcion)
         except Exception as e:
             print(f"🚨 Error generating image for {ingredient_name}: {str(e)}")
-            return self._get_fallback_image()
+            return self._get_fallback_image_url(ingredient_name)
     
-    def _save_to_global_folder(self, image_data: BytesIO, ingredient_name: str) -> str:
-        """Save generated image to global 'images_ingredients' folder."""
+    def _check_existing_ingredient_image(self, ingredient_name: str) -> Optional[str]:
+        """
+        Busca una imagen existente del ingrediente en Firebase Storage.
+        
+        Args:
+            ingredient_name: Nombre del ingrediente
+            
+        Returns:
+            Optional[str]: URL de la imagen si existe, None si no
+        """
+        normalized_name = self._normalize_ingredient_name(ingredient_name)
+        
+        # Intentar diferentes extensiones
+        extensions = ['jpg', 'jpeg', 'png', 'webp']
+        
+        for ext in extensions:
+            try:
+                # Ruta en el bucket: ingredients/nombre_normalizado.ext
+                image_path = f"{self.ingredients_folder}/{normalized_name}.{ext}"
+                
+                # Verificar si existe usando el storage adapter
+                blob = self.storage_adapter.bucket.blob(image_path)
+                if blob.exists():
+                    # Generar URL pública
+                    image_url = f"https://storage.googleapis.com/{self.storage_adapter.bucket.name}/{image_path}"
+                    print(f"✅ Found existing image: {image_path}")
+                    return image_url
+                    
+            except Exception as e:
+                print(f"⚠️ Error checking {image_path}: {str(e)}")
+                continue
+        
+        print(f"❌ No existing image found for: {ingredient_name}")
+        return None
+    
+    def _generate_new_ingredient_image(self, ingredient_name: str, descripcion: str = "") -> str:
+        """
+        Genera una nueva imagen para el ingrediente usando AI.
+        
+        Args:
+            ingredient_name: Nombre del ingrediente
+            descripcion: Descripción del ingrediente
+            
+        Returns:
+            str: URL de la imagen generada
+        """
+        print(f"🎨 Generating image for: {ingredient_name}")
+        
         try:
-            global_path = f"images_ingredients/{self._normalize_filename(ingredient_name)}.jpg"
+            # Generar imagen usando el servicio AI
+            image_buffer = self.ai_service.generate_ingredient_image(
+                ingredient_name=ingredient_name,
+                descripcion=descripcion
+            )
             
-            blob = self.storage_adapter.bucket.blob(global_path)
-            image_data.seek(0)  # Reset stream position
-            blob.upload_from_file(image_data, content_type="image/jpeg")
-            blob.make_public()
+            if image_buffer is None:
+                print(f"🚨 AI service failed to generate image for {ingredient_name}")
+                raise Exception("AI service returned None")
             
-            print(f"💾 Saved to global folder: {global_path}")
-            return blob.public_url
+            # Preparar nombre de archivo normalizado
+            normalized_name = self._normalize_ingredient_name(ingredient_name)
+            filename = f"{normalized_name}.jpg"
+            image_path = f"{self.ingredients_folder}/{filename}"
+            
+            # Subir a Firebase Storage desde el BytesIO buffer
+            blob = self.storage_adapter.bucket.blob(image_path)
+            image_buffer.seek(0)  # Reset buffer position
+            blob.upload_from_file(image_buffer, content_type='image/jpeg')
+            
+            # Generar URL pública
+            image_url = f"https://storage.googleapis.com/{self.storage_adapter.bucket.name}/{image_path}"
+            
+            print(f"✅ Image generated and saved: {image_path}")
+            return image_url
             
         except Exception as e:
-            print(f"🚨 Error saving to global folder: {str(e)}")
-            raise e
+            print(f"🚨 Error generating image: {str(e)}")
+            raise
     
-    def _save_to_user_folder(self, image_data: BytesIO, ingredient_name: str, user_uid: str) -> str:
-        """Save generated image to user's personal folder."""
+    def _normalize_ingredient_name(self, name: str) -> str:
+        """
+        Normaliza el nombre del ingrediente para usar como nombre de archivo.
+        
+        Args:
+            name: Nombre original del ingrediente
+            
+        Returns:
+            str: Nombre normalizado
+        """
+        # Convertir a minúsculas
+        normalized = name.lower()
+        
+        # Reemplazar caracteres especiales
+        replacements = {
+            'ñ': 'n', 'á': 'a', 'é': 'e', 'í': 'i', 'ó': 'o', 'ú': 'u',
+            'ü': 'u', 'ç': 'c'
+        }
+        
+        for char, replacement in replacements.items():
+            normalized = normalized.replace(char, replacement)
+        
+        # Reemplazar espacios y caracteres especiales con guiones bajos
+        normalized = re.sub(r'[^a-z0-9]', '_', normalized)
+        
+        # Eliminar guiones bajos múltiples
+        normalized = re.sub(r'_+', '_', normalized)
+        
+        # Eliminar guiones bajos al principio y final
+        normalized = normalized.strip('_')
+        
+        # Limitar longitud
+        if len(normalized) > 50:
+            normalized = normalized[:50].rstrip('_')
+        
+        return normalized
+    
+    def _get_fallback_image_url(self, ingredient_name: str) -> str:
+        """
+        Retorna una URL de imagen de fallback cuando no se puede generar.
+        
+        Args:
+            ingredient_name: Nombre del ingrediente
+            
+        Returns:
+            str: URL de imagen de fallback
+        """
+        # URL de placeholder con el nombre del ingrediente
+        encoded_name = ingredient_name.replace(' ', '+')
+        fallback_url = f"https://via.placeholder.com/300x300/f0f0f0/666666?text={encoded_name}"
+        
+        print(f"🔄 Using fallback image for: {ingredient_name}")
+        return fallback_url
+    
+    def list_existing_ingredients_images(self) -> list:
+        """
+        Lista todas las imágenes existentes en la carpeta ingredients.
+        Útil para debugging y monitoreo.
+        
+        Returns:
+            list: Lista de nombres de archivos de imágenes
+        """
         try:
-            user_path = f"uploads/{user_uid}/ingredient/{self._normalize_filename(ingredient_name)}.jpg"
+            images = []
+            blobs = self.storage_adapter.bucket.list_blobs(prefix=f"{self.ingredients_folder}/")
             
-            blob = self.storage_adapter.bucket.blob(user_path)
-            image_data.seek(0)  # Reset stream position
-            blob.upload_from_file(image_data, content_type="image/jpeg")
-            blob.make_public()
+            for blob in blobs:
+                if blob.name.endswith(('.jpg', '.jpeg', '.png', '.webp')):
+                    # Extraer solo el nombre del archivo
+                    filename = blob.name.split('/')[-1]
+                    images.append({
+                        'filename': filename,
+                        'path': blob.name,
+                        'url': f"https://storage.googleapis.com/{self.storage_adapter.bucket.name}/{blob.name}"
+                    })
             
-            print(f"💾 Saved to user folder: {user_path}")
-            return blob.public_url
+            print(f"📋 Found {len(images)} ingredient images")
+            return images
             
         except Exception as e:
-            print(f"🚨 Error saving to user folder: {str(e)}")
-            raise e
-    
-    def _register_image_in_repository(self, ingredient_name: str, image_url: str) -> None:
-        """Register the generated image in the image repository."""
-        try:
-            # Check if already exists to avoid duplicates
-            existing_image = self.image_repository.find_by_name(ingredient_name)
-            if not existing_image:
-                image_ref = ImageReference(
-                    uid=str(uuid.uuid4()),
-                    name=ingredient_name.lower(),
-                    image_path=image_url,
-                    image_type="ingredient"
-                )
-                self.image_repository.save(image_ref)
-                print(f"📝 Registered {ingredient_name} in image repository")
-            
-        except Exception as e:
-            print(f"🚨 Error registering image in repository: {str(e)}")
-            # Don't raise the error, as this is not critical
-    
-    def _normalize_filename(self, ingredient_name: str) -> str:
-        """Normalize ingredient name for filename."""
-        return ingredient_name.lower().replace(' ', '_').replace('-', '_')
-    
-    def _get_fallback_image(self) -> str:
-        """Return fallback image URL when generation fails."""
-        fallback_image = self.image_repository.find_by_name("imagen defecto")
-        if fallback_image:
-            return fallback_image.image_path
-        return "https://via.placeholder.com/150x150/cccccc/666666?text=No+Image" 
+            print(f"🚨 Error listing ingredient images: {str(e)}")
+            return [] 

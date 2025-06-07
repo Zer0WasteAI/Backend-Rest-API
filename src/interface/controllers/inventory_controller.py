@@ -95,6 +95,99 @@ def get_inventory():
         print(f"🚨 [INVENTORY GET] Error fetching inventory: {str(e)}")
         raise e
 
+@inventory_bp.route("/complete", methods=["GET"])
+@jwt_required()
+def get_inventory_complete():
+    """
+    Endpoint para obtener el inventario completo con toda la información:
+    - Datos básicos del inventario
+    - Impacto ambiental de cada ingrediente
+    - Ideas de aprovechamiento para cada ingrediente
+    """
+    user_uid = get_jwt_identity()
+    
+    print(f"📤 [INVENTORY GET COMPLETE] Fetching complete inventory for user: {user_uid}")
+    
+    try:
+        use_case = make_get_inventory_content_use_case(db)
+        inventory = use_case.execute(user_uid)
+
+        if not inventory:
+            print(f"❌ [INVENTORY GET COMPLETE] No inventory found for user: {user_uid}")
+            return jsonify({"message": "Inventario no encontrado"}), 404
+
+        print(f"📊 [INVENTORY GET COMPLETE] Found inventory with {len(inventory.ingredients)} ingredient types")
+        
+        # Enriquecer con información completa usando el servicio AI
+        from src.infrastructure.ai.gemini_adapter_service import GeminiAdapterService
+        ai_service = GeminiAdapterService()
+        
+        enriched_ingredients = []
+        
+        for name, ingredient in inventory.ingredients.items():
+            print(f"🔍 [INVENTORY GET COMPLETE] Enriching ingredient: {name}")
+            
+            # Serializar la información básica del ingrediente
+            basic_ingredient_data = {
+                "name": ingredient.name,
+                "type_unit": ingredient.type_unit,
+                "storage_type": ingredient.storage_type,
+                "tips": ingredient.tips,
+                "image_path": ingredient.image_path,
+                "stacks": [
+                    {
+                        "quantity": stack.quantity,
+                        "type_unit": ingredient.type_unit,
+                        "expiration_date": stack.expiration_date.isoformat(),
+                        "added_at": stack.added_at.isoformat()
+                    }
+                    for stack in ingredient.stacks
+                ]
+            }
+            
+            try:
+                # Obtener impacto ambiental
+                environmental_data = ai_service.analyze_environmental_impact(ingredient.name)
+                basic_ingredient_data.update(environmental_data)
+                
+                # Obtener ideas de aprovechamiento (usar tips como descripción)
+                utilization_data = ai_service.generate_utilization_ideas(ingredient.name, ingredient.tips)
+                basic_ingredient_data.update(utilization_data)
+                
+                print(f"✅ [INVENTORY GET COMPLETE] Enriched {ingredient.name} with complete data")
+                
+            except Exception as e:
+                print(f"⚠️ [INVENTORY GET COMPLETE] Error enriching {ingredient.name}: {str(e)}")
+                # Agregar datos por defecto en caso de error
+                basic_ingredient_data["environmental_impact"] = {
+                    "carbon_footprint": {"value": 0.0, "unit": "kg", "description": "CO2"},
+                    "water_footprint": {"value": 0, "unit": "l", "description": "agua"},
+                    "sustainability_message": "Consume de manera responsable y evita el desperdicio."
+                }
+                basic_ingredient_data["utilization_ideas"] = [
+                    {
+                        "title": "Consume fresco",
+                        "description": "Utiliza el ingrediente lo antes posible para aprovechar sus nutrientes.",
+                        "type": "conservación"
+                    }
+                ]
+            
+            enriched_ingredients.append(basic_ingredient_data)
+        
+        result = {
+            "ingredients": enriched_ingredients,
+            "food_items": [],  # Futuro
+            "total_ingredients": len(enriched_ingredients),
+            "enriched_with": ["environmental_impact", "utilization_ideas"]
+        }
+        
+        print(f"✅ [INVENTORY GET COMPLETE] Successfully enriched and serialized complete inventory")
+        return jsonify(result), 200
+        
+    except Exception as e:
+        print(f"🚨 [INVENTORY GET COMPLETE] Error fetching complete inventory: {str(e)}")
+        raise e
+
 @inventory_bp.route("/ingredients/<ingredient_name>/<added_at>", methods=["PUT"])
 @jwt_required()
 def update_ingredient(ingredient_name, added_at):

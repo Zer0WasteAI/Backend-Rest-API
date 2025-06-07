@@ -1,0 +1,13 @@
+# 🥕 Imágenes de Ingredientes Individuales
+#
+# Coloca aquí imágenes de ingredientes individuales para tests:
+# - Frutas: manzana.jpg, banana.png
+# - Verduras: tomate.jpg, cebolla.png  
+# - Granos: arroz.jpg, maiz.png
+# - Proteínas: pollo.jpg, pescado.png
+# - Lácteos: leche.jpg, queso.png
+#
+# Estas imágenes se usan para probar el reconocimiento de ingredientes básico
+# y completo (con datos ambientales e ideas de utilización).
+#
+# Formatos soportados: .jpg, .jpeg, .png, .bmp, .webp 

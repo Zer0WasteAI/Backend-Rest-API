@@ -5,7 +5,8 @@ from src.infrastructure.db.base import db
 from src.application.factories.recognition_usecase_factory import (
     make_recognize_ingredients_use_case,
     make_recognize_foods_use_case,
-    make_recognize_batch_use_case
+    make_recognize_batch_use_case,
+    make_recognize_ingredients_complete_use_case
 )
 from src.application.factories.auth_usecase_factory import make_firestore_profile_service
 
@@ -49,6 +50,61 @@ def recognize_ingredients():
     except Exception as e:
         # Log detallado del error
         error_msg = f"🚨 ERROR EN RECOGNIZE INGREDIENTS: {str(e)}"
+        error_traceback = f"🚨 TRACEBACK: {traceback.format_exc()}"
+        
+        print(error_msg)
+        print(error_traceback)
+        
+        return jsonify({
+            "error": str(e), 
+            "error_type": str(type(e).__name__),
+            "traceback": traceback.format_exc()
+        }), 500
+
+@recognition_bp.route("/ingredients/complete", methods=["POST"])
+@jwt_required()
+def recognize_ingredients_complete():
+    """
+    Endpoint para reconocimiento completo de ingredientes con toda la información:
+    - Datos básicos (nombre, cantidad, descripción, etc.)
+    - Impacto ambiental (CO2, agua)
+    - Ideas de aprovechamiento
+    """
+    user_uid = get_jwt_identity()
+    images_paths = request.json.get("images_paths")
+    
+    print(f"🔍 RECOGNIZE INGREDIENTS COMPLETE - User: {user_uid}")
+    print(f"🔍 Images paths: {images_paths}")
+
+    if not images_paths or not isinstance(images_paths, list):
+        print("❌ ERROR: Invalid images_paths")
+        return jsonify({"error": "Debe proporcionar una lista válida en 'images_paths'"}), 400
+
+    try:
+        # Obtener preferencias del usuario
+        print("🔍 Getting user profile from Firestore...")
+        firestore_service = make_firestore_profile_service()
+        user_profile = firestore_service.get_profile(user_uid)
+        print(f"🔍 User profile: {user_profile is not None}")
+        
+        print("🔍 Creating complete recognition use case...")
+        use_case = make_recognize_ingredients_complete_use_case(db)
+        
+        print("🔍 Executing complete recognition...")
+        result = use_case.execute(user_uid=user_uid, images_paths=images_paths)
+        print(f"🔍 Complete recognition result: {len(result.get('ingredients', []))} ingredients processed")
+        
+        # Verificar alergias en ingredientes reconocidos
+        if user_profile:
+            print("🔍 Checking allergies...")
+            result = _check_allergies_in_recognition(result, user_profile, "ingredients")
+        
+        print("✅ Complete recognition successful")
+        return jsonify(result), 200
+
+    except Exception as e:
+        # Log detallado del error
+        error_msg = f"🚨 ERROR EN RECOGNIZE INGREDIENTS COMPLETE: {str(e)}"
         error_traceback = f"🚨 TRACEBACK: {traceback.format_exc()}"
         
         print(error_msg)
