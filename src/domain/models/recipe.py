@@ -1,0 +1,44 @@
+from typing import List
+
+class RecipeIngredient:
+    def __init__(self, name: str, quantity: float, type_unit: str):
+        self.name = name
+        self.quantity = quantity
+        self.type_unit = type_unit
+
+class RecipeStep:
+    def __init__(self, step_order: int, description: str):
+        self.step_order = step_order
+        self.description = description
+
+class Recipe:
+    def __init__(
+        self,
+        uid: str,
+        user_uid: str,
+        title: str,
+        duration: str,
+        difficulty: str,
+        ingredients: List[RecipeIngredient],
+        steps: List[RecipeStep],
+        footer: str,
+        generated_by_ai: bool = True
+    ):
+        self.uid = uid
+        self.user_uid = user_uid
+        self.title = title
+        self.duration = duration
+        self.difficulty = difficulty
+        self.ingredients = ingredients
+        self.steps = steps
+        self.footer = footer
+        self.generated_by_ai = generated_by_ai
+
+    def add_recipe_ingredients(self, ingredients: List[RecipeIngredient]):
+        self.ingredients = ingredients
+
+    def add_recipe_steps(self, steps: List[RecipeStep]):
+        self.steps = steps
+
+    def get_ingredients_names(self):
+        return [ingredient.name for ingredient in self.ingredients]
