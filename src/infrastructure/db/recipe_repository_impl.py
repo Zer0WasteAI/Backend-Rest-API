@@ -5,7 +5,9 @@ class RecipeRepositoryImpl(RecipeRepository):
     def __init__(self, db):
         self.db = db
     def save(self, recipe: Recipe) -> str:
-        return a
+        return 'a'
+
+    # TODO: all that xd
 
     def find_by_uid(self, uid: str) -> Optional[Recipe]:
         return None
