@@ -1,5 +1,6 @@
 from typing import Union
 from datetime import datetime, timedelta
+from dateutil.relativedelta import relativedelta
 
 from src.domain.services.inventory_calculator import InventoryCalculator
 from src.domain.models.ingredient import Ingredient
@@ -8,13 +9,33 @@ from src.domain.models.food_item import FoodItem
 class InventoryCalculatorImpl(InventoryCalculator):
 
     def calculate_expiration_date(self, added_at: datetime, time_value: int, time_unit: str) -> datetime:
-        unit_map = {
-            "Días": "days",
-            "Semanas": "weeks",
-            "Meses": "days"  # 30 días por mes
-        }
-        kwargs = {unit_map[time_unit]: time_value if time_unit != "Meses" else time_value * 30}
-        return added_at + timedelta(**kwargs)
+        """
+        Calcula la fecha de caducidad basada en el tiempo y unidad especificados.
+        Maneja correctamente días, semanas, meses y años.
+        """
+        # Normalizar la unidad de tiempo para manejar singular/plural
+        time_unit_normalized = time_unit.lower().strip()
+        
+        print(f"🧮 Calculating expiration: {time_value} {time_unit} from {added_at}")
+        
+        if time_unit_normalized in ["día", "días", "dia", "dias"]:
+            result = added_at + timedelta(days=time_value)
+        elif time_unit_normalized in ["semana", "semanas"]:
+            result = added_at + timedelta(weeks=time_value)
+        elif time_unit_normalized in ["mes", "meses"]:
+            # Usar relativedelta para manejar meses correctamente
+            result = added_at + relativedelta(months=time_value)
+        elif time_unit_normalized in ["año", "años", "ano", "anos"]:
+            # Usar relativedelta para manejar años correctamente
+            result = added_at + relativedelta(years=time_value)
+        else:
+            # Fallback: si no reconoce la unidad, asumir días
+            print(f"⚠️ Warning: Unidad de tiempo no reconocida '{time_unit}', usando días como fallback")
+            result = added_at + timedelta(days=time_value)
+        
+        print(f"📅 Result: {result} (added {time_value} {time_unit})")
+        return result
+
     def calculate_value(self, item: Union[Ingredient, FoodItem]) -> dict:
         # Placeholder para huellas y costos, ajustar según data
         return {

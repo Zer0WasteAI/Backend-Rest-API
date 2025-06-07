@@ -11,8 +11,10 @@ class RecipeORM(db.Model):
     difficulty = db.Column(db.String(50), nullable=False)
     footer = db.Column(db.String(255), nullable=True)
     generated_by_ai = db.Column(db.Boolean, default=True)
+    is_custom = db.Column(db.Boolean, default=False)
+    saved_at = db.Column(db.DateTime, default=datetime.now(timezone.utc), nullable=False)
 
     ingredients = db.relationship("RecipeIngredientORM", back_populates="recipe", cascade="all, delete-orphan")
     steps = db.relationship("RecipeStepORM", back_populates="recipe", cascade="all, delete-orphan")
 
-    user = db.relationship("User", backref=db.backref("recipes", lazy=True))
+    user = db.relationship("User", backref=db.backref("saved_recipes", lazy=True))

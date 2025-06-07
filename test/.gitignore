@@ -1,0 +1,37 @@
+# Archivos de prueba temporales
+*.pyc
+__pycache__/
+*.pyo
+*.pyd
+.Python
+
+# Reportes de tests
+test_report_*.txt
+*.log
+
+# Imágenes de prueba (mantener las carpetas pero ignorar el contenido)
+images/ingredients/*
+images/foods/*
+!images/ingredients/.gitkeep
+!images/foods/.gitkeep
+!images/.gitkeep
+
+# Configuración local de tests
+local_config.py
+.env.test
+
+# Archivos temporales de OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Coverage reports
+.coverage
+htmlcov/
+.tox/
+.pytest_cache/ 

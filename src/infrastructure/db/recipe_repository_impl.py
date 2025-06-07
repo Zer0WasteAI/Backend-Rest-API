@@ -1,18 +1,10 @@
-from typing import Optional
-from sqlalchemy import select
-from src.domain.models.recipe import Recipe, RecipeIngredient, RecipeStep
 from src.domain.repositories.recipe_repository import RecipeRepository
 from src.infrastructure.db.models.recipe_orm import RecipeORM
-from src.infrastructure.db.models.recipe_ingredient_orm import RecipeIngredientORM
-from src.infrastructure.db.models.recipe_step_orm import RecipeStepORM
-from rapidfuzz import process
 
 class RecipeRepositoryImpl(RecipeRepository):
     def __init__(self, db):
         self.db = db
 
-    def save(self, recipe: Recipe) -> str:
-        # Crear y agregar la receta base
         recipe_orm = RecipeORM(
             uid=recipe.uid,
             title=recipe.title,
@@ -20,7 +12,9 @@ class RecipeRepositoryImpl(RecipeRepository):
             difficulty=recipe.difficulty,
             footer=recipe.footer,
             user_uid=recipe.user_uid,
-            generated_by_ai=recipe.generated_by_ai
+            generated_by_ai=recipe.generated_by_ai,
+            is_custom=recipe.is_custom,
+            saved_at=recipe.saved_at
         )
         self.db.session.add(recipe_orm)
 
@@ -90,3 +84,16 @@ class RecipeRepositoryImpl(RecipeRepository):
 
         matched_uid = next(uid for title, uid in options if title == best_match)
         return self.find_by_uid(matched_uid)
+
+    def delete(self, recipe_uid: str) -> None:
+        stmt = delete(RecipeORM).where(RecipeORM.uid == recipe_uid)
+        self.db.session.execute(stmt)
+        self.db.session.commit()
+
+    def exists_by_user_and_title(self, user_uid: str, title: str) -> bool:
+        stmt = select(RecipeORM).where(
+            RecipeORM.user_uid == user_uid,
+            RecipeORM.title == title
+        )
+        result = self.db.session.execute(stmt).scalar_one_or_none()
+        return result is not None

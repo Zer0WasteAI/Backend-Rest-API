@@ -1,0 +1,9 @@
+# Carpeta principal de imágenes para tests
+# 
+# Estructura:
+# images/
+# ├── ingredients/     # Imágenes de ingredientes individuales
+# ├── foods/          # Imágenes de comidas/platos completos
+# └── .gitkeep        # Este archivo
+#
+# Formatos soportados: .jpg, .jpeg, .png, .bmp, .webp 

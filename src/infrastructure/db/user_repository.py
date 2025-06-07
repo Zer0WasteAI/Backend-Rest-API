@@ -31,10 +31,36 @@ class UserRepository:
         return User.query.filter_by(uid=uid).first()
 
     @staticmethod
+    def update(uid: str, data: dict):
+        user = User.query.filter_by(uid=uid).first()
+        if user:
+            for key, value in data.items():
+                if hasattr(user, key):
+                    setattr(user, key, value)
+            user.updated_at = datetime.now(timezone.utc)
+            db.session.commit()
+            return user
+        return None
+
+    @staticmethod
     def update_email(uid: str, new_email: str):
         user = User.query.filter_by(uid=uid).first()
         if user:
             user.email = new_email
+            user.updated_at = datetime.now(timezone.utc)
+            db.session.commit()
+            return user
+        return None
+
+    @staticmethod
+    def update_uid(old_uid: str, new_uid: str):
+        """
+        Actualiza el UID de un usuario existente.
+        Útil cuando Firebase asigna un nuevo UID al mismo usuario.
+        """
+        user = User.query.filter_by(uid=old_uid).first()
+        if user:
+            user.uid = new_uid
             user.updated_at = datetime.now(timezone.utc)
             db.session.commit()
             return user

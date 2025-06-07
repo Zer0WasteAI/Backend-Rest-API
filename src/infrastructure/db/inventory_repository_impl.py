@@ -1,5 +1,6 @@
 from typing import Optional
-from sqlalchemy import select
+from sqlalchemy import select, delete, and_
+from datetime import datetime
 from src.domain.models.inventory import Inventory
 from src.domain.models.ingredient import Ingredient, IngredientStack
 from src.domain.models.food_item import FoodItem
@@ -14,12 +15,21 @@ class InventoryRepositoryImpl(InventoryRepository):
         self.db = db
 
     def get_by_user_uid(self, user_uid: str) -> Optional[Inventory]:
+        print(f"🔍 [INVENTORY REPO] Fetching inventory for user: {user_uid}")
+        
         inventory = Inventory(user_uid)
 
         stmt = select(IngredientORM).where(IngredientORM.inventory_user_uid == user_uid)
         ingredients = self.db.session.execute(stmt).scalars().all()
+        
+        print(f"📊 [INVENTORY REPO] Found {len(ingredients)} ingredient types in database")
 
         for ing in ingredients:
+            print(f"🥬 [INVENTORY REPO] Processing ingredient: {ing.name}")
+            print(f"   └─ Type unit: {ing.type_unit}")
+            print(f"   └─ Storage: {ing.storage_type}")
+            print(f"   └─ Stacks count: {len(ing.stacks)}")
+            
             domain_ing = Ingredient(
                 name=ing.name,
                 type_unit=ing.type_unit,
@@ -28,9 +38,11 @@ class InventoryRepositoryImpl(InventoryRepository):
                 image_path=ing.image_path
             )
 
-            for stack in ing.stacks:
+            for j, stack in enumerate(ing.stacks):
+                print(f"   └─ Stack {j+1}: {stack.quantity} units, expires: {stack.expiration_date}")
                 domain_stack = IngredientStack(
                     quantity=stack.quantity,
+                    type_unit=ing.type_unit,
                     expiration_date=stack.expiration_date,
                     added_at=stack.added_at
                 )
@@ -38,22 +50,39 @@ class InventoryRepositoryImpl(InventoryRepository):
 
             inventory.ingredients[ing.name] = domain_ing
 
+        print(f"✅ [INVENTORY REPO] Successfully loaded inventory with {len(inventory.ingredients)} ingredients")
         return inventory
 
     def save(self, inventory: Inventory) -> None:
+        print(f"💾 [INVENTORY REPO] Saving inventory for user: {inventory.user_uid}")
+        
         if not self.db.session.get(InventoryORM, inventory.user_uid):
+            print(f"📝 [INVENTORY REPO] Creating new inventory record")
             self.db.session.add(InventoryORM(user_uid=inventory.user_uid))
+        else:
+            print(f"📋 [INVENTORY REPO] Using existing inventory record")
+            
         self.db.session.commit()
+        print(f"✅ [INVENTORY REPO] Inventory saved successfully")
 
     def add_ingredient_stack(self, user_uid: str, stack: IngredientStack, ingredient: Ingredient) -> None:
-
+        print(f"📦 [INVENTORY REPO] Adding ingredient stack: {ingredient.name}")
+        print(f"   └─ User: {user_uid}")
+        print(f"   └─ Quantity: {stack.quantity}")
+        print(f"   └─ Expiration: {stack.expiration_date}")
+        
+        # Buscar si ya existe el ingrediente en el inventario
         stmt = select(IngredientORM).where(
-            IngredientORM.name == ingredient.name,
-            IngredientORM.inventory_user_uid == user_uid
+            and_(
+                IngredientORM.name == ingredient.name,
+                IngredientORM.inventory_user_uid == user_uid
+            )
         )
-        ingredient_orm = self.db.session.execute(stmt).scalar_one_or_none()
-
-        if not ingredient_orm:
+        existing_ingredient = self.db.session.execute(stmt).scalar_one_or_none()
+        
+        if not existing_ingredient:
+            print(f"   └─ 🆕 Creating new ingredient record for: {ingredient.name}")
+            # Crear nuevo ingrediente si no existe
             ingredient_orm = IngredientORM(
                 name=ingredient.name,
                 type_unit=ingredient.type_unit,
@@ -63,27 +92,73 @@ class InventoryRepositoryImpl(InventoryRepository):
                 inventory_user_uid=user_uid
             )
             self.db.session.add(ingredient_orm)
+            self.db.session.flush()  # Para obtener el ID
+            print(f"   └─ ✅ Created ingredient: {ingredient.name}")
         else:
-            ingredient_orm.type_unit = ingredient.type_unit
-            ingredient_orm.storage_type = ingredient.storage_type
-            ingredient_orm.tips = ingredient.tips
-            ingredient_orm.image_path = ingredient.image_path
-
+            print(f"   └─ 🔄 Updating existing ingredient record for: {ingredient.name}")
+            # Actualizar datos del ingrediente existente
+            existing_ingredient.type_unit = ingredient.type_unit
+            existing_ingredient.storage_type = ingredient.storage_type
+            existing_ingredient.tips = ingredient.tips
+            existing_ingredient.image_path = ingredient.image_path
+            print(f"   └─ ✅ Updated ingredient metadata: {ingredient.name}")
+        
+        # Agregar el nuevo stack
+        print(f"   └─ 📦 Adding new stack for: {ingredient.name}")
         stack_orm = IngredientStackORM(
             ingredient_name=ingredient.name,
-            added_at=stack.added_at,
+            inventory_user_uid=user_uid,
             quantity=stack.quantity,
             expiration_date=stack.expiration_date,
-            inventory_user_uid=user_uid
+            added_at=stack.added_at
         )
         self.db.session.add(stack_orm)
         self.db.session.commit()
+        print(f"   └─ ✅ Successfully added stack for: {ingredient.name}")
 
     def add_food_item(self, user_uid: str, food_item: FoodItem) -> None:
         return None
 
     def delete_ingredient_stack(self, user_uid: str, ingredient_name: str, added_at: str) -> None:
-        return None
+        # Convertir added_at string a datetime para comparar
+        try:
+            added_at_datetime = datetime.fromisoformat(added_at.replace('Z', '+00:00'))
+        except ValueError:
+            # Intentar otros formatos si falla
+            added_at_datetime = datetime.strptime(added_at, '%Y-%m-%d %H:%M:%S')
+        
+        # Eliminar el stack específico
+        stmt = delete(IngredientStackORM).where(
+            and_(
+                IngredientStackORM.ingredient_name == ingredient_name,
+                IngredientStackORM.inventory_user_uid == user_uid,
+                IngredientStackORM.added_at == added_at_datetime
+            )
+        )
+        self.db.session.execute(stmt)
+        
+        # Verificar si quedan otros stacks del mismo ingrediente
+        remaining_stacks = self.db.session.execute(
+            select(IngredientStackORM).where(
+                and_(
+                    IngredientStackORM.ingredient_name == ingredient_name,
+                    IngredientStackORM.inventory_user_uid == user_uid
+                )
+            )
+        ).scalars().all()
+        
+        # Si no quedan stacks, eliminar también el ingrediente
+        if not remaining_stacks:
+            self.db.session.execute(
+                delete(IngredientORM).where(
+                    and_(
+                        IngredientORM.name == ingredient_name,
+                        IngredientORM.inventory_user_uid == user_uid
+                    )
+                )
+            )
+        
+        self.db.session.commit()
 
     def delete_food_item(self, user_uid: str, food_name: str, added_at: str) -> None:
         return None
@@ -92,7 +167,45 @@ class InventoryRepositoryImpl(InventoryRepository):
         return None
 
     def update_ingredient_stack(self, user_uid: str, ingredient_name: str, added_at: str, new_stack: IngredientStack, new_meta: Ingredient) -> None:
-        return None
+        # Convertir added_at string a datetime
+        try:
+            added_at_datetime = datetime.fromisoformat(added_at.replace('Z', '+00:00'))
+        except ValueError:
+            added_at_datetime = datetime.strptime(added_at, '%Y-%m-%d %H:%M:%S')
+        
+        # Actualizar el ingrediente metadata
+        stmt = select(IngredientORM).where(
+            and_(
+                IngredientORM.name == ingredient_name,
+                IngredientORM.inventory_user_uid == user_uid
+            )
+        )
+        ingredient_orm = self.db.session.execute(stmt).scalar_one_or_none()
+        
+        if ingredient_orm:
+            ingredient_orm.type_unit = new_meta.type_unit
+            ingredient_orm.storage_type = new_meta.storage_type
+            ingredient_orm.tips = new_meta.tips
+            ingredient_orm.image_path = new_meta.image_path
+        
+        # Actualizar el stack específico
+        stack_stmt = select(IngredientStackORM).where(
+            and_(
+                IngredientStackORM.ingredient_name == ingredient_name,
+                IngredientStackORM.inventory_user_uid == user_uid,
+                IngredientStackORM.added_at == added_at_datetime
+            )
+        )
+        stack_orm = self.db.session.execute(stack_stmt).scalar_one_or_none()
+        
+        if stack_orm:
+            stack_orm.quantity = new_stack.quantity
+            stack_orm.expiration_date = new_stack.expiration_date
+            # Mantenemos el added_at original, pero actualizamos al nuevo si cambió
+            if new_stack.added_at != added_at_datetime:
+                stack_orm.added_at = new_stack.added_at
+        
+        self.db.session.commit()
 
     def get_inventory(self, user_uid: str) -> Optional[Inventory]:
         return self.db.session.get(InventoryORM, user_uid)
