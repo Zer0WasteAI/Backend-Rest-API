@@ -32,7 +32,12 @@ class RecognitionRepositoryImpl(RecognitionRepository):
     def find_by_uid(self, recognition_uid: str) -> Optional[Recognition]:
         stmt = select(RecognitionORM).where(RecognitionORM.uid==recognition_uid)
         result = self.db.session.execute(stmt)
-        return self._to_domain(result[0]) if result[0] else None
+        row = result.fetchone()
+        return self._to_domain(row[0]) if row else None
+    
+    def get_by_id(self, recognition_id: str) -> Optional[Recognition]:
+        """Alias para find_by_uid para compatibilidad con el controlador"""
+        return self.find_by_uid(recognition_id)
 
     def update_validation_status(self, recognition_uid: str, validated: bool) -> None:
         stmt = update(RecognitionORM).where(RecognitionORM.uid==recognition_uid).values(

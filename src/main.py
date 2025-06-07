@@ -30,6 +30,7 @@ from src.infrastructure.db.models.ingredient_stack_orm import IngredientStackORM
 from src.infrastructure.db.models.food_item_orm import FoodItemORM
 from src.infrastructure.db.models.image_reference_orm import ImageReferenceORM
 from src.infrastructure.db.models.recognition_orm import RecognitionORM
+from src.infrastructure.db.models.async_task_orm import AsyncTaskORM
 
 
 def create_app():

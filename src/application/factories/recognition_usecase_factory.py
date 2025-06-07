@@ -46,3 +46,20 @@ def make_recognize_batch_use_case(db):
         storage_adapter=FirebaseStorageAdapter(),
         calculator_service=InventoryCalculatorImpl()
     )
+
+# Factories individuales para componentes (usadas en async processing)
+def make_ai_service():
+    return GeminiAdapterService()
+
+def make_recognition_repository(db):
+    return RecognitionRepositoryImpl(db)
+
+def make_storage_adapter():
+    return FirebaseStorageAdapter()
+
+def make_ingredient_image_generator_service():
+    from src.application.factories.ingredient_image_generator_factory import make_ingredient_image_generator_service as _make_generator
+    return _make_generator(None)  # El servicio ya no necesita db
+
+def make_calculator_service():
+    return InventoryCalculatorImpl()
