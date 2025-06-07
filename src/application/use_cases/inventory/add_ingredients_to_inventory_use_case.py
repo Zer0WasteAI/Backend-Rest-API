@@ -1,10 +1,12 @@
 from datetime import datetime
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from src.domain.models.ingredient import Ingredient, IngredientStack
 
 class AddIngredientsToInventoryUseCase:
-    def __init__(self, repository, calculator):
+    def __init__(self, repository, calculator, ai_service=None):
         self.repository = repository
         self.calculator = calculator
+        self.ai_service = ai_service
 
     def execute(self, user_uid: str, ingredients_data: list[dict]):
         print(f"🏗️ [ADD INGREDIENTS USE CASE] Starting execution for user: {user_uid}")
@@ -18,6 +20,13 @@ class AddIngredientsToInventoryUseCase:
 
         now = datetime.now()
         print(f"⏰ [ADD INGREDIENTS USE CASE] Processing timestamp: {now}")
+        
+        # 🚀 NUEVA FUNCIONALIDAD: Generar environmental impact y utilization ideas solo para ingredientes que van al inventario
+        if self.ai_service:
+            print(f"🌱 [ADD INGREDIENTS USE CASE] Generating environmental impact and utilization ideas for {len(ingredients_data)} ingredients...")
+            self._enrich_ingredients_with_ai_data(ingredients_data)
+        else:
+            print(f"⚠️ [ADD INGREDIENTS USE CASE] AI service not available, skipping environmental/utilization data generation")
         
         for i, item in enumerate(ingredients_data):
             name = item["name"]
@@ -80,3 +89,70 @@ class AddIngredientsToInventoryUseCase:
                 raise e
         
         print(f"🎉 [ADD INGREDIENTS USE CASE] Successfully processed all {len(ingredients_data)} ingredients")
+
+    def _enrich_ingredients_with_ai_data(self, ingredients_data: list[dict]):
+        """
+        Enriquece los ingredientes con environmental impact y utilization ideas usando prompts separados
+        """
+        print(f"🧠 [AI ENRICHMENT] Starting parallel processing for {len(ingredients_data)} ingredients...")
+        
+        def enrich_ingredient(ingredient_data):
+            ingredient_name = ingredient_data["name"]
+            ingredient_description = ingredient_data.get("description", "")
+            
+            print(f"🔥 [AI Thread] Processing {ingredient_name}")
+            try:
+                # Environmental impact (prompt separado)
+                environmental_data = self.ai_service.analyze_environmental_impact(ingredient_name)
+                
+                # Utilization ideas (prompt separado)
+                utilization_data = self.ai_service.generate_utilization_ideas(ingredient_name, ingredient_description)
+                
+                print(f"✅ [AI Thread] Enriched {ingredient_name}")
+                return ingredient_name, {
+                    **environmental_data,  # environmental_impact
+                    **utilization_data     # utilization_ideas
+                }, None
+                
+            except Exception as e:
+                print(f"🚨 [AI Thread] Error enriching {ingredient_name}: {str(e)}")
+                # Datos por defecto en caso de error
+                return ingredient_name, {
+                    "environmental_impact": {
+                        "carbon_footprint": {"value": 0.0, "unit": "kg", "description": "CO2"},
+                        "water_footprint": {"value": 0, "unit": "l", "description": "agua"},
+                        "sustainability_message": "Consume de manera responsable y evita el desperdicio."
+                    },
+                    "utilization_ideas": [
+                        {
+                            "title": "Consume fresco",
+                            "description": "Utiliza el ingrediente lo antes posible para aprovechar sus nutrientes.",
+                            "type": "conservación"
+                        }
+                    ]
+                }, str(e)
+        
+        # Procesar en paralelo con máximo 3 threads
+        enriched_results = {}
+        with ThreadPoolExecutor(max_workers=3) as executor:
+            future_to_ingredient = {
+                executor.submit(enrich_ingredient, ingredient): ingredient["name"] 
+                for ingredient in ingredients_data
+            }
+            
+            for future in as_completed(future_to_ingredient):
+                ingredient_name, enriched_data, error = future.result()
+                enriched_results[ingredient_name] = enriched_data
+                if error:
+                    print(f"⚠️ [AI ENRICHMENT] Fallback used for {ingredient_name}")
+                else:
+                    print(f"🌱 [AI ENRICHMENT] Success for {ingredient_name}")
+        
+        # Aplicar los datos enriquecidos a cada ingrediente
+        for ingredient in ingredients_data:
+            ingredient_name = ingredient["name"]
+            if ingredient_name in enriched_results:
+                ingredient.update(enriched_results[ingredient_name])
+                print(f"💚 [AI ENRICHMENT] Added environmental + utilization data to {ingredient_name}")
+        
+        print(f"🎯 [AI ENRICHMENT] Completed enrichment for all {len(ingredients_data)} ingredients!")

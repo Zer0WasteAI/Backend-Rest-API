@@ -9,13 +9,18 @@ from src.application.use_cases.inventory.update_ingredient_stack_use_case import
 
 from src.infrastructure.db.inventory_repository_impl import InventoryRepositoryImpl
 from src.infrastructure.inventory.inventory_calcularor_impl import InventoryCalculatorImpl
+from src.infrastructure.ai.gemini_adapter_service import GeminiAdapterService
 
 def make_add_food_items_to_inventory_use_case(db):
     return None #AddFoodItemsToInventoryUseCase(InventoryRepositoryImpl(db), InventoryCalculatorImpl)
 def make_add_ingredients_and_foods_to_inventory_use_case(db):
     return AddIngredientsAndFoodsToInventoryUseCase(InventoryRepositoryImpl(db), InventoryCalculatorImpl())
 def make_add_ingredients_to_inventory_use_case(db):
-    return AddIngredientsToInventoryUseCase(InventoryRepositoryImpl(db), InventoryCalculatorImpl())
+    return AddIngredientsToInventoryUseCase(
+        InventoryRepositoryImpl(db), 
+        InventoryCalculatorImpl(), 
+        GeminiAdapterService()
+    )
 def make_delete_food_item_use_case(db):
     return DeleteFoodItemUseCase(InventoryRepositoryImpl(db))
 def make_delete_ingredient_stack_use_case(db):
