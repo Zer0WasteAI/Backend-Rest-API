@@ -117,7 +117,31 @@ class InventoryRepositoryImpl(InventoryRepository):
         print(f"   └─ ✅ Successfully added stack for: {ingredient.name}")
 
     def add_food_item(self, user_uid: str, food_item: FoodItem) -> None:
-        return None
+        print(f"🍽️ [INVENTORY REPO] Adding food item: {food_item.name}")
+        print(f"   └─ User: {user_uid}")
+        print(f"   └─ Serving quantity: {food_item.serving_quantity}")
+        print(f"   └─ Expiration: {food_item.expiration_date}")
+        
+        food_orm = FoodItemORM(
+            inventory_user_uid=user_uid,
+            name=food_item.name,
+            main_ingredients=food_item.main_ingredients,
+            category=food_item.category,
+            calories=food_item.calories,
+            description=food_item.description,
+            storage_type=food_item.storage_type,
+            expiration_time=food_item.expiration_time,
+            time_unit=food_item.time_unit,
+            tips=food_item.tips,
+            serving_quantity=food_item.serving_quantity,
+            image_path=food_item.image_path,
+            added_at=food_item.added_at,
+            expiration_date=food_item.expiration_date
+        )
+        
+        self.db.session.add(food_orm)
+        self.db.session.commit()
+        print(f"   └─ ✅ Successfully added food item: {food_item.name}")
 
     def delete_ingredient_stack(self, user_uid: str, ingredient_name: str, added_at: str) -> None:
         # Convertir added_at string a datetime para comparar
@@ -161,10 +185,50 @@ class InventoryRepositoryImpl(InventoryRepository):
         self.db.session.commit()
 
     def delete_food_item(self, user_uid: str, food_name: str, added_at: str) -> None:
-        return None
+        try:
+            added_at_datetime = datetime.fromisoformat(added_at.replace('Z', '+00:00'))
+        except ValueError:
+            added_at_datetime = datetime.strptime(added_at, '%Y-%m-%d %H:%M:%S')
+        
+        stmt = delete(FoodItemORM).where(
+            and_(
+                FoodItemORM.name == food_name,
+                FoodItemORM.inventory_user_uid == user_uid,
+                FoodItemORM.added_at == added_at_datetime
+            )
+        )
+        self.db.session.execute(stmt)
+        self.db.session.commit()
 
     def update_food_item(self, user_uid: str, food_item: FoodItem) -> None:
-        return None
+        try:
+            added_at_datetime = datetime.fromisoformat(food_item.added_at.isoformat().replace('Z', '+00:00'))
+        except ValueError:
+            added_at_datetime = food_item.added_at
+        
+        stmt = select(FoodItemORM).where(
+            and_(
+                FoodItemORM.name == food_item.name,
+                FoodItemORM.inventory_user_uid == user_uid,
+                FoodItemORM.added_at == added_at_datetime
+            )
+        )
+        food_orm = self.db.session.execute(stmt).scalar_one_or_none()
+        
+        if food_orm:
+            food_orm.main_ingredients = food_item.main_ingredients
+            food_orm.category = food_item.category
+            food_orm.calories = food_item.calories
+            food_orm.description = food_item.description
+            food_orm.storage_type = food_item.storage_type
+            food_orm.expiration_time = food_item.expiration_time
+            food_orm.time_unit = food_item.time_unit
+            food_orm.tips = food_item.tips
+            food_orm.serving_quantity = food_item.serving_quantity
+            food_orm.image_path = food_item.image_path
+            food_orm.expiration_date = food_item.expiration_date
+        
+        self.db.session.commit()
 
     def update_ingredient_stack(self, user_uid: str, ingredient_name: str, added_at: str, new_stack: IngredientStack, new_meta: Ingredient) -> None:
         # Convertir added_at string a datetime
@@ -213,3 +277,178 @@ class InventoryRepositoryImpl(InventoryRepository):
     def create_inventory(self, user_uid: str) -> None:
         self.db.session.add(InventoryORM(user_uid=user_uid))
         self.db.session.commit()
+
+    def get_ingredient_stack(self, user_uid: str, ingredient_name: str, added_at: str) -> dict:
+        """
+        Obtiene los datos de un stack específico de ingrediente.
+        
+        Returns:
+            dict: Datos del stack e ingrediente, o None si no se encuentra
+        """
+        try:
+            added_at_datetime = datetime.fromisoformat(added_at.replace('Z', '+00:00'))
+        except ValueError:
+            added_at_datetime = datetime.strptime(added_at, '%Y-%m-%d %H:%M:%S')
+        
+        # Obtener stack específico
+        stack_stmt = select(IngredientStackORM).where(
+            and_(
+                IngredientStackORM.ingredient_name == ingredient_name,
+                IngredientStackORM.inventory_user_uid == user_uid,
+                IngredientStackORM.added_at == added_at_datetime
+            )
+        )
+        stack_orm = self.db.session.execute(stack_stmt).scalar_one_or_none()
+        
+        if not stack_orm:
+            return None
+        
+        # Obtener metadata del ingrediente
+        ingredient_stmt = select(IngredientORM).where(
+            and_(
+                IngredientORM.name == ingredient_name,
+                IngredientORM.inventory_user_uid == user_uid
+            )
+        )
+        ingredient_orm = self.db.session.execute(ingredient_stmt).scalar_one_or_none()
+        
+        if not ingredient_orm:
+            return None
+        
+        return {
+            'quantity': stack_orm.quantity,
+            'type_unit': ingredient_orm.type_unit,
+            'expiration_date': stack_orm.expiration_date,
+            'added_at': stack_orm.added_at,
+            'storage_type': ingredient_orm.storage_type,
+            'tips': ingredient_orm.tips,
+            'image_path': ingredient_orm.image_path
+        }
+
+    def get_food_item(self, user_uid: str, food_name: str, added_at: str) -> dict:
+        """
+        Obtiene los datos de un food item específico.
+        
+        Returns:
+            dict: Datos del food item, o None si no se encuentra
+        """
+        try:
+            added_at_datetime = datetime.fromisoformat(added_at.replace('Z', '+00:00'))
+        except ValueError:
+            added_at_datetime = datetime.strptime(added_at, '%Y-%m-%d %H:%M:%S')
+        
+        stmt = select(FoodItemORM).where(
+            and_(
+                FoodItemORM.name == food_name,
+                FoodItemORM.inventory_user_uid == user_uid,
+                FoodItemORM.added_at == added_at_datetime
+            )
+        )
+        food_orm = self.db.session.execute(stmt).scalar_one_or_none()
+        
+        if not food_orm:
+            return None
+        
+        return {
+            'name': food_orm.name,
+            'main_ingredients': food_orm.main_ingredients,
+            'category': food_orm.category,
+            'calories': food_orm.calories,
+            'description': food_orm.description,
+            'storage_type': food_orm.storage_type,
+            'expiration_time': food_orm.expiration_time,
+            'time_unit': food_orm.time_unit,
+            'tips': food_orm.tips,
+            'serving_quantity': food_orm.serving_quantity,
+            'image_path': food_orm.image_path,
+            'added_at': food_orm.added_at,
+            'expiration_date': food_orm.expiration_date
+        }
+    
+    def get_all_food_items(self, user_uid: str) -> list:
+        """
+        Obtiene todos los food items del inventario de un usuario.
+        
+        Returns:
+            list: Lista de todos los food items del usuario
+        """
+        stmt = select(FoodItemORM).where(FoodItemORM.inventory_user_uid == user_uid)
+        food_items = self.db.session.execute(stmt).scalars().all()
+        
+        return [
+            {
+                'name': food_orm.name,
+                'main_ingredients': food_orm.main_ingredients,
+                'category': food_orm.category,
+                'calories': food_orm.calories,
+                'description': food_orm.description,
+                'storage_type': food_orm.storage_type,
+                'expiration_time': food_orm.expiration_time,
+                'time_unit': food_orm.time_unit,
+                'tips': food_orm.tips,
+                'serving_quantity': food_orm.serving_quantity,
+                'image_path': food_orm.image_path,
+                'added_at': food_orm.added_at,
+                'expiration_date': food_orm.expiration_date
+            }
+            for food_orm in food_items
+        ]
+
+    def get_all_ingredient_stacks(self, user_uid: str, ingredient_name: str) -> list:
+        """
+        Obtiene todos los stacks de un ingrediente específico.
+        
+        Returns:
+            list: Lista de stacks del ingrediente
+        """
+        stmt = select(IngredientStackORM).where(
+            and_(
+                IngredientStackORM.ingredient_name == ingredient_name,
+                IngredientStackORM.inventory_user_uid == user_uid
+            )
+        )
+        stacks = self.db.session.execute(stmt).scalars().all()
+        return [
+            {
+                'quantity': stack.quantity,
+                'added_at': stack.added_at,
+                'expiration_date': stack.expiration_date
+            }
+            for stack in stacks
+        ]
+
+    def delete_ingredient_complete(self, user_uid: str, ingredient_name: str) -> None:
+        """
+        Elimina un ingrediente completo (todos sus stacks) del inventario.
+        
+        Args:
+            user_uid: ID del usuario
+            ingredient_name: Nombre del ingrediente a eliminar
+        """
+        print(f"🗑️ [INVENTORY REPO] Deleting complete ingredient: {ingredient_name}")
+        print(f"   └─ User: {user_uid}")
+        
+        # Primero eliminar todos los stacks del ingrediente
+        stmt_stacks = delete(IngredientStackORM).where(
+            and_(
+                IngredientStackORM.ingredient_name == ingredient_name,
+                IngredientStackORM.inventory_user_uid == user_uid
+            )
+        )
+        result_stacks = self.db.session.execute(stmt_stacks)
+        deleted_stacks = result_stacks.rowcount
+        print(f"   └─ Deleted {deleted_stacks} stacks")
+        
+        # Luego eliminar el ingrediente principal
+        stmt_ingredient = delete(IngredientORM).where(
+            and_(
+                IngredientORM.name == ingredient_name,
+                IngredientORM.inventory_user_uid == user_uid
+            )
+        )
+        result_ingredient = self.db.session.execute(stmt_ingredient)
+        deleted_ingredients = result_ingredient.rowcount
+        print(f"   └─ Deleted {deleted_ingredients} ingredient record")
+        
+        self.db.session.commit()
+        print(f"✅ [INVENTORY REPO] Successfully deleted complete ingredient: {ingredient_name}")

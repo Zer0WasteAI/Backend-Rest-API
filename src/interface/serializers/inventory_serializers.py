@@ -59,3 +59,13 @@ class IngredientSchema(Schema):
 class InventorySchema(Schema):
     ingredients = fields.List(fields.Nested(IngredientSchema))
     food_items = fields.List(fields.Dict())  # Vacío por ahora
+
+# ===== SCHEMAS SIMPLES PARA ACTUALIZACIÓN DE CANTIDADES =====
+
+class UpdateIngredientQuantitySchema(Schema):
+    """Schema simple para actualizar solo la cantidad de un ingrediente"""
+    quantity = fields.Float(required=True, validate=validate.Range(min=0))
+
+class UpdateFoodQuantitySchema(Schema):
+    """Schema simple para actualizar solo la cantidad de porciones de comida"""
+    serving_quantity = fields.Integer(required=True, validate=validate.Range(min=1))

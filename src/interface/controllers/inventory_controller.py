@@ -6,20 +6,41 @@ from src.infrastructure.db.base import db
 from src.interface.serializers.inventory_serializers import (
 AddIngredientsBatchSchema,
 InventorySchema,
-UpdateIngredientSchema
+UpdateIngredientSchema,
+UpdateIngredientQuantitySchema,
+UpdateFoodQuantitySchema
+)
+
+from src.interface.serializers.add_item_serializer import AddItemToInventorySchema, AddItemResponseSchema
+from src.interface.serializers.mark_consumed_serializer import (
+    MarkIngredientConsumedSchema, 
+    MarkFoodConsumedSchema, 
+    ConsumedResponseSchema
 )
 
 from src.application.factories.inventory_usecase_factory import (
 make_add_food_items_to_inventory_use_case,
 make_add_ingredients_and_foods_to_inventory_use_case,
 make_add_ingredients_to_inventory_use_case,
+make_add_item_to_inventory_use_case,
 make_delete_food_item_use_case,
 make_delete_ingredient_stack_use_case,
+make_delete_ingredient_complete_use_case,
+make_get_ingredient_detail_use_case,
+make_get_food_detail_use_case,
+make_get_ingredients_list_use_case,
+make_get_foods_list_use_case,
 make_get_expiring_soon_use_case,
 make_get_inventory_content_use_case,
 make_update_food_item_use_case,
-make_update_ingredient_stack_use_case
+make_update_ingredient_stack_use_case,
+make_update_ingredient_quantity_use_case,
+make_update_food_quantity_use_case,
+make_mark_ingredient_stack_consumed_use_case,
+make_mark_food_item_consumed_use_case
 )
+
+from src.application.factories.inventory_image_upload_factory import make_upload_inventory_image_use_case
 
 from src.shared.exceptions.custom import InvalidRequestDataException
 
@@ -212,12 +233,35 @@ def update_ingredient(ingredient_name, added_at):
 @inventory_bp.route("/ingredients/<ingredient_name>/<added_at>", methods=["DELETE"])
 @jwt_required()
 def delete_ingredient(ingredient_name, added_at):
+    """
+    Elimina un stack específico de ingrediente del inventario.
+    Si es el último stack, elimina también el ingrediente completo.
+    
+    URL: DELETE /api/inventory/ingredients/Tomate/2025-01-01T10:00:00Z
+    """
     user_uid = get_jwt_identity()
     
-    use_case = make_delete_ingredient_stack_use_case(db)
-    use_case.execute(user_uid, ingredient_name, added_at)
+    print(f"🗑️ [DELETE INGREDIENT STACK] User: {user_uid}")
+    print(f"   └─ Ingredient: {ingredient_name}")
+    print(f"   └─ Stack added at: {added_at}")
 
-    return jsonify({"message": "Ingrediente eliminado exitosamente"}), 200
+    try:
+        use_case = make_delete_ingredient_stack_use_case(db)
+        use_case.execute(user_uid, ingredient_name, added_at)
+
+        print(f"✅ [DELETE INGREDIENT STACK] Successfully deleted stack for: {ingredient_name}")
+        return jsonify({
+            "message": "Stack de ingrediente eliminado exitosamente",
+            "ingredient": ingredient_name,
+            "deleted_stack_added_at": added_at,
+            "note": "Si era el último stack, el ingrediente fue eliminado completamente"
+        }), 200
+
+    except Exception as e:
+        print(f"❌ [DELETE INGREDIENT STACK] Error: {str(e)}")
+        return jsonify({
+            "error": f"Error eliminando stack del ingrediente '{ingredient_name}': {str(e)}"
+        }), 404
 
 @inventory_bp.route("/expiring", methods=["GET"])
 @jwt_required()
@@ -470,4 +514,519 @@ def get_inventory_simple():
     except Exception as e:
         print(f"🚨 [INVENTORY SIMPLE GET] Error fetching simple inventory: {str(e)}")
         raise e
+
+# ===============================================================================
+# 🔧 NUEVOS ENDPOINTS PARA ACTUALIZACIÓN SIMPLE DE CANTIDADES
+# ===============================================================================
+
+@inventory_bp.route("/ingredients/<ingredient_name>/<added_at>/quantity", methods=["PATCH"])
+@jwt_required()
+def update_ingredient_quantity(ingredient_name, added_at):
+    """
+    Actualiza únicamente la cantidad de un stack específico de ingrediente.
+    Mantiene todos los demás datos intactos.
+    
+    Body: { "quantity": 2.5 }
+    """
+    user_uid = get_jwt_identity()
+    schema = UpdateIngredientQuantitySchema()
+    json_data = request.get_json()
+
+    print(f"📦 [UPDATE INGREDIENT QUANTITY] User: {user_uid}")
+    print(f"   └─ Ingredient: {ingredient_name}")
+    print(f"   └─ Added at: {added_at}")
+    print(f"   └─ Request data: {json_data}")
+
+    errors = schema.validate(json_data)
+    if errors:
+        print(f"❌ [UPDATE INGREDIENT QUANTITY] Validation errors: {errors}")
+        raise InvalidRequestDataException(details=errors)
+
+    try:
+        use_case = make_update_ingredient_quantity_use_case(db)
+        use_case.execute(
+            user_uid=user_uid,
+            ingredient_name=ingredient_name,
+            added_at=added_at,
+            new_quantity=json_data["quantity"]
+        )
+
+        print(f"✅ [UPDATE INGREDIENT QUANTITY] Successfully updated quantity for {ingredient_name}")
+        return jsonify({
+            "message": "Cantidad de ingrediente actualizada exitosamente",
+            "ingredient": ingredient_name,
+            "new_quantity": json_data["quantity"]
+        }), 200
+
+    except ValueError as e:
+        print(f"❌ [UPDATE INGREDIENT QUANTITY] Stack not found: {str(e)}")
+        return jsonify({"error": str(e)}), 404
+    except Exception as e:
+        print(f"🚨 [UPDATE INGREDIENT QUANTITY] Unexpected error: {str(e)}")
+        raise e
+
+@inventory_bp.route("/foods/<food_name>/<added_at>/quantity", methods=["PATCH"])
+@jwt_required()
+def update_food_quantity(food_name, added_at):
+    """
+    Actualiza únicamente la cantidad de porciones de un food item específico.
+    Mantiene todos los demás datos intactos.
+    
+    Body: { "serving_quantity": 3 }
+    """
+    user_uid = get_jwt_identity()
+    schema = UpdateFoodQuantitySchema()
+    json_data = request.get_json()
+
+    print(f"🍽️ [UPDATE FOOD QUANTITY] User: {user_uid}")
+    print(f"   └─ Food: {food_name}")
+    print(f"   └─ Added at: {added_at}")
+    print(f"   └─ Request data: {json_data}")
+
+    errors = schema.validate(json_data)
+    if errors:
+        print(f"❌ [UPDATE FOOD QUANTITY] Validation errors: {errors}")
+        raise InvalidRequestDataException(details=errors)
+
+    try:
+        use_case = make_update_food_quantity_use_case(db)
+        use_case.execute(
+            user_uid=user_uid,
+            food_name=food_name,
+            added_at=added_at,
+            new_quantity=json_data["serving_quantity"]
+        )
+
+        print(f"✅ [UPDATE FOOD QUANTITY] Successfully updated quantity for {food_name}")
+        return jsonify({
+            "message": "Cantidad de comida actualizada exitosamente",
+            "food": food_name,
+            "new_serving_quantity": json_data["serving_quantity"]
+        }), 200
+
+    except ValueError as e:
+        print(f"❌ [UPDATE FOOD QUANTITY] Food item not found: {str(e)}")
+        return jsonify({"error": str(e)}), 404
+    except Exception as e:
+        print(f"🚨 [UPDATE FOOD QUANTITY] Unexpected error: {str(e)}")
+        raise e
+
+# ===============================================================================
+# 🗑️ ENDPOINTS PARA ELIMINACIÓN DE ITEMS DEL INVENTARIO
+# ===============================================================================
+
+@inventory_bp.route("/ingredients/<ingredient_name>", methods=["DELETE"])
+@jwt_required()
+def delete_ingredient_complete(ingredient_name):
+    """
+    Elimina un ingrediente completo del inventario (todos sus stacks).
+    
+    URL: DELETE /api/inventory/ingredients/Tomate
+    """
+    user_uid = get_jwt_identity()
+
+    print(f"🗑️ [DELETE INGREDIENT COMPLETE] User: {user_uid}")
+    print(f"   └─ Ingredient to delete: {ingredient_name}")
+
+    try:
+        use_case = make_delete_ingredient_complete_use_case(db)
+        use_case.execute(user_uid=user_uid, ingredient_name=ingredient_name)
+
+        print(f"✅ [DELETE INGREDIENT COMPLETE] Successfully deleted complete ingredient: {ingredient_name}")
+        return jsonify({
+            "message": "Ingrediente eliminado completamente del inventario",
+            "ingredient": ingredient_name,
+            "deleted": "all_stacks"
+        }), 200
+
+    except ValueError as e:
+        print(f"❌ [DELETE INGREDIENT COMPLETE] Ingredient not found: {str(e)}")
+        return jsonify({"error": str(e)}), 404
+    except Exception as e:
+        print(f"🚨 [DELETE INGREDIENT COMPLETE] Unexpected error: {str(e)}")
+        raise e
+
+
+
+@inventory_bp.route("/foods/<food_name>/<added_at>", methods=["DELETE"])
+@jwt_required()
+def delete_food_item(food_name, added_at):
+    """
+    Elimina un food item específico del inventario.
+    
+    URL: DELETE /api/inventory/foods/Pasta con Tomate/2025-01-01T10:00:00Z
+    """
+    user_uid = get_jwt_identity()
+
+    print(f"🗑️ [DELETE FOOD ITEM] User: {user_uid}")
+    print(f"   └─ Food: {food_name}")
+    print(f"   └─ Added at: {added_at}")
+
+    try:
+        use_case = make_delete_food_item_use_case(db)
+        use_case.execute(user_uid, food_name, added_at)
+
+        print(f"✅ [DELETE FOOD ITEM] Successfully deleted food item: {food_name}")
+        return jsonify({
+            "message": "Comida eliminada exitosamente del inventario",
+            "food": food_name,
+            "deleted_added_at": added_at
+        }), 200
+
+    except ValueError as e:
+        print(f"❌ [DELETE FOOD ITEM] Food item not found: {str(e)}")
+        return jsonify({"error": f"Food item not found for '{food_name}' added at '{added_at}'"}), 404
+    except Exception as e:
+        print(f"🚨 [DELETE FOOD ITEM] Unexpected error: {str(e)}")
+        raise e
+
+
+# ===============================================================================
+# 🍽️ ENDPOINTS PARA MARCAR COMO CONSUMIDO
+# ===============================================================================
+
+@inventory_bp.route("/ingredients/<ingredient_name>/<added_at>/consume", methods=["POST"])
+@jwt_required()
+def mark_ingredient_stack_consumed(ingredient_name, added_at):
+    """
+    Marca un stack específico de ingrediente como consumido.
+    Puede ser consumo parcial o total.
+    
+    URL: POST /api/inventory/ingredients/Tomate/2025-01-01T10:00:00Z/consume
+    Body: { "consumed_quantity": 2.5 } (opcional - por defecto consume todo)
+    """
+    user_uid = get_jwt_identity()
+
+    print(f"🍽️ [MARK INGREDIENT CONSUMED] User: {user_uid}")
+    print(f"   └─ Ingredient: {ingredient_name}")
+    print(f"   └─ Stack added at: {added_at}")
+
+    # Validar datos de entrada
+    schema = MarkIngredientConsumedSchema()
+    try:
+        validated_data = schema.load(request.get_json() or {})
+    except Exception as e:
+        print(f"❌ [MARK INGREDIENT CONSUMED] Validation error: {str(e)}")
+        return jsonify({"error": f"Invalid data: {str(e)}"}), 400
+
+    consumed_quantity = validated_data.get('consumed_quantity')
+    print(f"   └─ Consumed quantity: {consumed_quantity or 'ALL'}")
+
+    try:
+        use_case = make_mark_ingredient_stack_consumed_use_case(db)
+        result = use_case.execute(
+            user_uid=user_uid,
+            ingredient_name=ingredient_name,
+            added_at=added_at,
+            consumed_quantity=consumed_quantity
+        )
+
+        print(f"✅ [MARK INGREDIENT CONSUMED] Success: {result['action']}")
+        
+        # Serializar response
+        response_schema = ConsumedResponseSchema()
+        response_data = response_schema.dump(result)
+
+        return jsonify(response_data), 200
+
+    except ValueError as e:
+        print(f"❌ [MARK INGREDIENT CONSUMED] Validation error: {str(e)}")
+        return jsonify({"error": str(e)}), 404
+    except Exception as e:
+        print(f"🚨 [MARK INGREDIENT CONSUMED] Unexpected error: {str(e)}")
+        raise e
+
+
+@inventory_bp.route("/foods/<food_name>/<added_at>/consume", methods=["POST"])
+@jwt_required()
+def mark_food_item_consumed(food_name, added_at):
+    """
+    Marca un food item como consumido.
+    Puede ser consumo parcial o total.
+    
+    URL: POST /api/inventory/foods/Pasta con Tomate/2025-01-01T10:00:00Z/consume
+    Body: { "consumed_portions": 1.5 } (opcional - por defecto consume todo)
+    """
+    user_uid = get_jwt_identity()
+
+    print(f"🍽️ [MARK FOOD CONSUMED] User: {user_uid}")
+    print(f"   └─ Food: {food_name}")
+    print(f"   └─ Added at: {added_at}")
+
+    # Validar datos de entrada
+    schema = MarkFoodConsumedSchema()
+    try:
+        validated_data = schema.load(request.get_json() or {})
+    except Exception as e:
+        print(f"❌ [MARK FOOD CONSUMED] Validation error: {str(e)}")
+        return jsonify({"error": f"Invalid data: {str(e)}"}), 400
+
+    consumed_portions = validated_data.get('consumed_portions')
+    print(f"   └─ Consumed portions: {consumed_portions or 'ALL'}")
+
+    try:
+        use_case = make_mark_food_item_consumed_use_case(db)
+        result = use_case.execute(
+            user_uid=user_uid,
+            food_name=food_name,
+            added_at=added_at,
+            consumed_portions=consumed_portions
+        )
+
+        print(f"✅ [MARK FOOD CONSUMED] Success: {result['action']}")
+        
+        # Serializar response
+        response_schema = ConsumedResponseSchema()
+        response_data = response_schema.dump(result)
+
+        return jsonify(response_data), 200
+
+    except ValueError as e:
+        print(f"❌ [MARK FOOD CONSUMED] Validation error: {str(e)}")
+        return jsonify({"error": str(e)}), 404
+    except Exception as e:
+        print(f"🚨 [MARK FOOD CONSUMED] Unexpected error: {str(e)}")
+        raise e
+
+# ===============================================================================
+# 🔍 ENDPOINTS PARA OBTENER DETALLES INDIVIDUALES DE ITEMS
+# ===============================================================================
+
+@inventory_bp.route("/ingredients/<ingredient_name>/detail", methods=["GET"])
+@jwt_required()
+def get_ingredient_detail(ingredient_name):
+    """
+    Obtiene todos los detalles de un ingrediente específico del inventario,
+    incluyendo todos sus stacks, imagen, impacto ambiental, ideas de aprovechamiento y más.
+    
+    URL: GET /api/inventory/ingredients/Tomate/detail
+    """
+    user_uid = get_jwt_identity()
+
+    print(f"🔍 [GET INGREDIENT DETAIL] User: {user_uid}")
+    print(f"   └─ Ingredient: {ingredient_name}")
+
+    try:
+        use_case = make_get_ingredient_detail_use_case(db)
+        ingredient_detail = use_case.execute(user_uid=user_uid, ingredient_name=ingredient_name)
+
+        print(f"✅ [GET INGREDIENT DETAIL] Successfully fetched details for: {ingredient_name}")
+        return jsonify(ingredient_detail), 200
+
+    except ValueError as e:
+        print(f"❌ [GET INGREDIENT DETAIL] Ingredient not found: {str(e)}")
+        return jsonify({"error": str(e)}), 404
+    except Exception as e:
+        print(f"🚨 [GET INGREDIENT DETAIL] Unexpected error: {str(e)}")
+        return jsonify({"error": f"Error fetching ingredient details: {str(e)}"}), 500
+
+@inventory_bp.route("/foods/<food_name>/<added_at>/detail", methods=["GET"])
+@jwt_required()
+def get_food_detail(food_name, added_at):
+    """
+    Obtiene todos los detalles de un food item específico del inventario,
+    incluyendo información nutricional, consejos de consumo, ideas de acompañamiento y más.
+    
+    URL: GET /api/inventory/foods/Pasta con Tomate/2025-01-01T10:00:00Z/detail
+    """
+    user_uid = get_jwt_identity()
+
+    print(f"🍽️ [GET FOOD DETAIL] User: {user_uid}")
+    print(f"   └─ Food: {food_name}")
+    print(f"   └─ Added at: {added_at}")
+
+    try:
+        use_case = make_get_food_detail_use_case(db)
+        food_detail = use_case.execute(user_uid=user_uid, food_name=food_name, added_at=added_at)
+
+        print(f"✅ [GET FOOD DETAIL] Successfully fetched details for: {food_name}")
+        return jsonify(food_detail), 200
+
+    except ValueError as e:
+        print(f"❌ [GET FOOD DETAIL] Food item not found: {str(e)}")
+        return jsonify({"error": str(e)}), 404
+    except Exception as e:
+        print(f"🚨 [GET FOOD DETAIL] Unexpected error: {str(e)}")
+        return jsonify({"error": f"Error fetching food details: {str(e)}"}), 500
+
+# ===============================================================================
+# 📋 ENDPOINTS PARA LISTAR TIPOS ESPECÍFICOS DE ITEMS
+# ===============================================================================
+
+@inventory_bp.route("/ingredients/list", methods=["GET"])
+@jwt_required()
+def get_ingredients_list():
+    """
+    Obtiene únicamente la lista de ingredientes del inventario del usuario.
+    No incluye food items.
+    
+    URL: GET /api/inventory/ingredients/list
+    """
+    user_uid = get_jwt_identity()
+
+    print(f"📋 [GET INGREDIENTS LIST] User: {user_uid}")
+
+    try:
+        use_case = make_get_ingredients_list_use_case(db)
+        ingredients_result = use_case.execute(user_uid=user_uid)
+
+        print(f"✅ [GET INGREDIENTS LIST] Successfully fetched {ingredients_result['total_ingredients']} ingredients")
+        return jsonify(ingredients_result), 200
+
+    except Exception as e:
+        print(f"🚨 [GET INGREDIENTS LIST] Unexpected error: {str(e)}")
+        return jsonify({"error": f"Error fetching ingredients list: {str(e)}"}), 500
+
+@inventory_bp.route("/foods/list", methods=["GET"])
+@jwt_required()
+def get_foods_list():
+    """
+    Obtiene únicamente la lista de food items del inventario del usuario.
+    No incluye ingredientes.
+    
+    URL: GET /api/inventory/foods/list
+    """
+    user_uid = get_jwt_identity()
+
+    print(f"🍽️ [GET FOODS LIST] User: {user_uid}")
+
+    try:
+        use_case = make_get_foods_list_use_case(db)
+        foods_result = use_case.execute(user_uid=user_uid)
+
+        print(f"✅ [GET FOODS LIST] Successfully fetched {foods_result['total_foods']} food items")
+        return jsonify(foods_result), 200
+
+    except Exception as e:
+        print(f"🚨 [GET FOODS LIST] Unexpected error: {str(e)}")
+        return jsonify({"error": f"Error fetching foods list: {str(e)}"}), 500
+
+# ===============================================================================
+# 📤 ENDPOINT PARA UPLOAD DE IMÁGENES DEL INVENTARIO
+# ===============================================================================
+
+@inventory_bp.route("/upload_image", methods=["POST"])
+@jwt_required()
+def upload_inventory_image():
+    """
+    Sube una imagen específica para el inventario del usuario.
+    Organiza las imágenes en carpetas específicas según el tipo de uso.
+    
+    Estructura de carpetas:
+    - uploads/{user_uid}/recognitions/  - Imágenes para reconocimiento
+    - uploads/{user_uid}/items/         - Imágenes de ingredientes y comidas manuales
+    
+    URL: POST /api/inventory/upload_image
+    Form Data:
+    - image: archivo de imagen (required)
+    - upload_type: 'recognition', 'ingredient', 'food' (required)
+    - item_name: nombre del item (optional, para algunos tipos)
+    """
+    user_uid = get_jwt_identity()
+    
+    print(f"📤 [UPLOAD INVENTORY IMAGE] User: {user_uid}")
+    
+    try:
+        # Obtener datos del formulario
+        image_file = request.files.get('image')
+        upload_type = request.form.get('upload_type', '').strip()
+        item_name = request.form.get('item_name', '').strip() or None
+        
+        print(f"   └─ Upload type: {upload_type}")
+        print(f"   └─ Item name: {item_name or 'N/A'}")
+        print(f"   └─ File: {image_file.filename if image_file else 'None'}")
+        
+        # Validaciones básicas
+        if not image_file:
+            return jsonify({"error": "No image file provided"}), 400
+        
+        if not upload_type:
+            return jsonify({"error": "upload_type is required"}), 400
+        
+        # Ejecutar caso de uso
+        use_case = make_upload_inventory_image_use_case()
+        result = use_case.execute(
+            file=image_file,
+            upload_type=upload_type,
+            user_uid=user_uid,
+            item_name=item_name
+        )
+        
+        print(f"✅ [UPLOAD INVENTORY IMAGE] Successfully uploaded to: {result['upload_info']['folder']}")
+        return jsonify(result), 201
+        
+    except ValueError as e:
+        print(f"❌ [UPLOAD INVENTORY IMAGE] Validation error: {str(e)}")
+        return jsonify({"error": str(e)}), 400
+        
+    except Exception as e:
+        print(f"🚨 [UPLOAD INVENTORY IMAGE] Unexpected error: {str(e)}")
+        return jsonify({
+            "error": "Failed to upload inventory image",
+            "details": str(e)
+        }), 500
+
+# ===============================================================================
+# 🎯 ENDPOINT PARA AGREGAR ITEM AL INVENTARIO (UNIFICADO)
+# ===============================================================================
+
+@inventory_bp.route("/add_item", methods=["POST"])
+@jwt_required()
+def add_item_to_inventory():
+    """
+    Agrega un item (ingrediente o comida) al inventario del usuario.
+    Los datos básicos vienen del frontend y los faltantes se generan con IA.
+    
+    URL: POST /api/inventory/add_item
+    Body JSON:
+    - name: nombre del item (required)
+    - quantity: cantidad (required) 
+    - unit: unidad de cantidad (required)
+    - storage_type: tipo de almacenamiento (required)
+    - category: 'ingredient' o 'food' (required)
+    - image_url: URL de imagen (optional, nullable)
+    
+    Los campos generados automáticamente con IA:
+    - Para ingredientes: tips, tiempo de vencimiento, impacto ambiental, ideas de uso
+    - Para comidas: ingredientes principales, categoría, calorías, descripción, tips, análisis nutricional
+    """
+    user_uid = get_jwt_identity()
+    
+    print(f"🎯 [ADD ITEM] User: {user_uid}")
+    
+    try:
+        # Validar datos de entrada
+        json_data = request.get_json()
+        
+        if not json_data:
+            return jsonify({"error": "No JSON data provided"}), 400
+        
+        print(f"   └─ Request data: {json_data}")
+        
+        schema = AddItemToInventorySchema()
+        errors = schema.validate(json_data)
+        if errors:
+            print(f"❌ [ADD ITEM] Validation errors: {errors}")
+            return jsonify({"error": "Validation failed", "details": errors}), 400
+        
+        # Ejecutar caso de uso
+        use_case = make_add_item_to_inventory_use_case(db)
+        result = use_case.execute(
+            user_uid=user_uid,
+            item_data=json_data
+        )
+        
+        print(f"✅ [ADD ITEM] Successfully added {result['item_type']}: {json_data.get('name')}")
+        return jsonify(result), 201
+        
+    except ValueError as e:
+        print(f"❌ [ADD ITEM] Validation error: {str(e)}")
+        return jsonify({"error": str(e)}), 400
+        
+    except Exception as e:
+        print(f"🚨 [ADD ITEM] Unexpected error: {str(e)}")
+        return jsonify({
+            "error": "Failed to add item to inventory",
+            "details": str(e)
+        }), 500
 
