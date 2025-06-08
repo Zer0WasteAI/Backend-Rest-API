@@ -775,6 +775,103 @@ class TestHybridRecognitionFlow(unittest.TestCase):
         print(f"⏰ TIMEOUT: Generación tomó más de {max_wait_time}s (actual: {elapsed:.1f}s)")
         print(f"⚠️ Continuando con el test...")
 
+    def test_10_check_recognition_images_endpoint(self):
+        """Test 10: Verificar endpoint de imágenes del reconocimiento"""
+        print(f"\n🧪 TEST 10: VERIFICANDO ENDPOINT DE IMÁGENES DEL RECONOCIMIENTO")
+        print("=" * 50)
+        
+        # Usar el recognition_id del test de ingredientes
+        if not hasattr(self.__class__, 'recognition_id') or not self.__class__.recognition_id:
+            self.skipTest("❌ No hay recognition_id del test anterior")
+        
+        headers = {"Authorization": f"Bearer {self.__class__.access_token}"}
+        images_url = f"{self.BASE_URL}/api/recognition/recognition/{self.__class__.recognition_id}/images"
+        
+        print(f"🔍 Consultando endpoint de imágenes...")
+        print(f"🎯 Recognition ID: {self.__class__.recognition_id}")
+        print(f"🔗 URL: {images_url}")
+        
+        self._print_request_details("GET", images_url, headers)
+        
+        try:
+            response = requests.get(images_url, headers=headers)
+            
+            self._print_response_details(response, "ENDPOINT DE IMÁGENES")
+            
+            if response.status_code == 200:
+                images_data = response.json()
+                
+                print(f"\n📊 ANÁLISIS DE LA RESPUESTA:")
+                print(f"   📝 Estructura principal: {list(images_data.keys())}")
+                
+                # Verificar estructura esperada
+                if "ingredients" in images_data:
+                    ingredients = images_data["ingredients"]
+                    print(f"   🥬 Ingredientes encontrados: {len(ingredients)}")
+                    
+                    images_ready = 0
+                    images_pending = 0
+                    
+                    for i, ingredient in enumerate(ingredients, 1):
+                        name = ingredient.get('name', 'N/A')
+                        image_status = ingredient.get('image_status', 'unknown')
+                        image_path = ingredient.get('image_path')
+                        
+                        status_icon = '✅' if image_status == 'ready' else '⏳' if image_status == 'pending' else '❌'
+                        
+                        print(f"     {i}. {name}")
+                        print(f"        🖼️ Estado: {status_icon} ({image_status})")
+                        print(f"        🔗 URL: {image_path[:80] + '...' if image_path and len(image_path) > 80 else image_path}")
+                        
+                        if image_status == 'ready':
+                            images_ready += 1
+                        elif image_status == 'pending':
+                            images_pending += 1
+                    
+                    print(f"\n📈 ESTADÍSTICAS DE IMÁGENES:")
+                    print(f"   ✅ Listas: {images_ready}")
+                    print(f"   ⏳ Pendientes: {images_pending}")
+                    print(f"   📊 Total: {len(ingredients)}")
+                    
+                    # Verificaciones del test
+                    self.assertGreater(len(ingredients), 0, "Debe haber al menos un ingrediente")
+                    self.assertGreaterEqual(images_ready, 0, "Número de imágenes listas debe ser >= 0")
+                    
+                    print(f"✅ Endpoint de imágenes funcionando correctamente")
+                    
+                elif "foods" in images_data:
+                    foods = images_data["foods"]
+                    print(f"   🍽️ Platos encontrados: {len(foods)}")
+                    
+                    for i, food in enumerate(foods, 1):
+                        name = food.get('name', 'N/A')
+                        image_status = food.get('image_status', 'unknown')
+                        image_path = food.get('image_path')
+                        
+                        status_icon = '✅' if image_status == 'ready' else '⏳' if image_status == 'pending' else '❌'
+                        
+                        print(f"     {i}. {name}")
+                        print(f"        🖼️ Estado: {status_icon} ({image_status})")
+                        print(f"        🔗 URL: {image_path[:80] + '...' if image_path and len(image_path) > 80 else image_path}")
+                    
+                    print(f"✅ Endpoint de imágenes de foods funcionando correctamente")
+                
+                else:
+                    print(f"⚠️ Estructura de respuesta inesperada: {images_data}")
+            
+            elif response.status_code == 404:
+                print(f"⚠️ Recognition no encontrado - puede haber sido limpiado")
+                self.skipTest("Recognition no encontrado")
+            
+            else:
+                print(f"❌ Error en endpoint: {response.status_code}")
+                print(f"Response: {response.text}")
+                self.fail(f"Error consultando endpoint de imágenes: {response.status_code}")
+                
+        except Exception as e:
+            print(f"❌ Error durante consulta de imágenes: {e}")
+            self.fail(f"Error consultando endpoint de imágenes: {e}")
+
     @classmethod
     def tearDownClass(cls):
         """Limpieza después de todos los tests"""

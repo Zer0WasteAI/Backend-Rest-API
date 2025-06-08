@@ -309,9 +309,11 @@ class AsyncTaskService:
                     try:
                         # Obtener el reconocimiento original
                         from src.domain.models.recognition import Recognition
+                        print(f"🔍 [ASYNC IMAGES] Looking for recognition: {recognition_id}")
                         recognition = recognition_repository.find_by_uid(recognition_id)
                         
                         if recognition:
+                            print(f"✅ [ASYNC IMAGES] Found recognition, updating with {len(updated_ingredients)} ingredients")
                             # Actualizar el raw_result con las imágenes
                             updated_result = recognition.raw_result.copy()
                             updated_result['ingredients'] = updated_ingredients
@@ -319,12 +321,14 @@ class AsyncTaskService:
                             # Guardar actualización
                             recognition.raw_result = updated_result
                             recognition_repository.save(recognition)
-                            print(f"✅ [ASYNC IMAGES] Updated recognition {recognition_id} with images")
+                            print(f"✅ [ASYNC IMAGES] Successfully updated recognition {recognition_id} with images")
                         else:
                             print(f"⚠️ [ASYNC IMAGES] Recognition {recognition_id} not found for update")
                             
                     except Exception as e:
                         print(f"⚠️ [ASYNC IMAGES] Error updating recognition: {str(e)}")
+                        print(f"🔍 [ASYNC IMAGES] Recognition ID: {recognition_id}")
+                        print(f"🔍 [ASYNC IMAGES] Task ID: {task_id}")
                         # No fallar por esto, las imágenes están en el resultado de la tarea
                     
                     # Paso 5: Completar tarea con imágenes
@@ -433,9 +437,11 @@ class AsyncTaskService:
                     try:
                         # Obtener el reconocimiento original
                         from src.domain.models.recognition import Recognition
+                        print(f"🔍 [ASYNC FOOD IMAGES] Looking for recognition: {recognition_id}")
                         recognition = recognition_repository.find_by_uid(recognition_id)
                         
                         if recognition:
+                            print(f"✅ [ASYNC FOOD IMAGES] Found recognition, updating with {len(updated_foods)} foods")
                             # Actualizar el raw_result con las imágenes
                             updated_result = recognition.raw_result.copy()
                             updated_result['foods'] = updated_foods
@@ -443,12 +449,14 @@ class AsyncTaskService:
                             # Guardar actualización
                             recognition.raw_result = updated_result
                             recognition_repository.save(recognition)
-                            print(f"✅ [ASYNC FOOD IMAGES] Updated recognition {recognition_id} with food images")
+                            print(f"✅ [ASYNC FOOD IMAGES] Successfully updated recognition {recognition_id} with food images")
                         else:
                             print(f"⚠️ [ASYNC FOOD IMAGES] Recognition {recognition_id} not found for update")
                             
                     except Exception as e:
                         print(f"⚠️ [ASYNC FOOD IMAGES] Error updating recognition: {str(e)}")
+                        print(f"🔍 [ASYNC FOOD IMAGES] Recognition ID: {recognition_id}")
+                        print(f"🔍 [ASYNC FOOD IMAGES] Task ID: {task_id}")
                         # No fallar por esto, las imágenes están en el resultado de la tarea
                     
                     # Paso 5: Completar tarea con imágenes

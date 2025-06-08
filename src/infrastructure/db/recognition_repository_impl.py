@@ -10,19 +10,49 @@ class RecognitionRepositoryImpl(RecognitionRepository):
         self.db = db
 
     def save(self, recognition: Recognition) -> str:
-        stmt = insert(RecognitionORM).values(
-            uid=recognition.uid,
-            user_uid=recognition.user_uid,
-            images_paths=recognition.images_paths,
-            recognized_at=recognition.recognized_at,
-            raw_result=recognition.raw_result,
-            is_validated=recognition.is_validated,
-            validated_at=recognition.validated_at
-        )
-
-        self.db.session.execute(stmt)
-        self.db.session.commit()
-        return recognition.uid
+        """
+        Implementa UPSERT: INSERT si no existe, UPDATE si ya existe.
+        Esto previene errores de clave duplicada en operaciones asíncronas.
+        """
+        try:
+            # Verificar si ya existe el registro
+            existing = self.find_by_uid(recognition.uid)
+            
+            if existing:
+                # UPDATE: El registro ya existe, actualizarlo
+                stmt = update(RecognitionORM).where(
+                    RecognitionORM.uid == recognition.uid
+                ).values(
+                    user_uid=recognition.user_uid,
+                    images_paths=recognition.images_paths,
+                    recognized_at=recognition.recognized_at,
+                    raw_result=recognition.raw_result,
+                    is_validated=recognition.is_validated,
+                    validated_at=recognition.validated_at
+                )
+                self.db.session.execute(stmt)
+                print(f"✅ [RECOGNITION REPO] Updated existing recognition: {recognition.uid}")
+            else:
+                # INSERT: Nuevo registro
+                stmt = insert(RecognitionORM).values(
+                    uid=recognition.uid,
+                    user_uid=recognition.user_uid,
+                    images_paths=recognition.images_paths,
+                    recognized_at=recognition.recognized_at,
+                    raw_result=recognition.raw_result,
+                    is_validated=recognition.is_validated,
+                    validated_at=recognition.validated_at
+                )
+                self.db.session.execute(stmt)
+                print(f"✅ [RECOGNITION REPO] Inserted new recognition: {recognition.uid}")
+            
+            self.db.session.commit()
+            return recognition.uid
+            
+        except Exception as e:
+            self.db.session.rollback()
+            print(f"🚨 [RECOGNITION REPO] Error in save operation for {recognition.uid}: {str(e)}")
+            raise
 
     def find_by_user(self, user_uid: str) -> List[Recognition]:
         stmt = select(RecognitionORM).where(RecognitionORM.user_uid==user_uid)
