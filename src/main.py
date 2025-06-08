@@ -13,6 +13,7 @@ from src.config.swagger_config import swagger_config, swagger_template
 from src.interface.controllers.auth_controller import auth_bp
 from src.interface.controllers.admin_controller import admin_bp
 from src.interface.controllers.image_management_controller import image_management_bp
+from src.interface.controllers.planning_controller import planning_bp
 from src.interface.controllers.user_controller import user_bp
 from src.interface.controllers.recognition_controller import recognition_bp
 from src.interface.controllers.inventory_controller import inventory_bp
@@ -30,7 +31,7 @@ from src.infrastructure.db.models.ingredient_stack_orm import IngredientStackORM
 from src.infrastructure.db.models.food_item_orm import FoodItemORM
 from src.infrastructure.db.models.image_reference_orm import ImageReferenceORM
 from src.infrastructure.db.models.recognition_orm import RecognitionORM
-
+from src.infrastructure.db.models.daily_meal_plan_orm import DailyMealPlanORM
 
 def create_app():
     application = Flask(__name__)
@@ -55,6 +56,7 @@ def create_app():
     application.register_blueprint(admin_bp, url_prefix='/api/admin')
     application.register_blueprint(inventory_bp, url_prefix='/api/inventory')
     application.register_blueprint(recipes_bp, url_prefix='/api/recipes')
+    application.register_blueprint(planning_bp, url_prefix='/api/planning')
 
     @application.errorhandler(AppException)
     def handle_app_exception(error):

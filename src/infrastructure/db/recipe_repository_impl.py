@@ -1,5 +1,5 @@
 from typing import Optional
-from sqlalchemy import select, delete
+from sqlalchemy import select, delete, func
 from rapidfuzz import process
 from src.domain.models.recipe import Recipe, RecipeIngredient, RecipeStep
 from src.domain.repositories.recipe_repository import RecipeRepository
@@ -95,7 +95,7 @@ class RecipeRepositoryImpl(RecipeRepository):
         matched_uid = next(uid for title, uid in options if title == best_match)
         return self.find_by_uid(matched_uid)
 
-    def delete(self, recipe_uid: str) -> None:
+    def delete(self, recipe_uid: str, title: str) -> None:
         stmt = delete(RecipeORM).where(RecipeORM.uid == recipe_uid)
         recipe = self.db.session.execute(stmt).scalar_one_or_none()
         if not recipe:
@@ -154,3 +154,15 @@ class RecipeRepositoryImpl(RecipeRepository):
             category=recipe_row.category,
             image_path=recipe_row.image_path,
         )
+
+    def map_to_domain(self, orm_recipe: RecipeORM) -> Recipe:
+        return self._to_domain(orm_recipe)
+
+    def count_by_user_and_title_prefix(self, user_uid: str, title_prefix: str) -> int:
+        stmt = select(func.count()).select_from(RecipeORM).where(
+            RecipeORM.user_uid == user_uid,
+            RecipeORM.title.like(f"{title_prefix}%")
+        )
+        return self.db.session.execute(stmt).scalar()
+
+

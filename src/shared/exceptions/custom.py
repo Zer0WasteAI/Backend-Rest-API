@@ -53,3 +53,7 @@ class InvalidRequestDataException(AppException):
 class RecipeNotFoundException(AppException):
     def __init__(self, message="Recipe not found"):
         super().__init__(message, status_code=404)
+
+class MealPlanNotFoundException(AppException):
+    def __init__(self, message="Meal plan not found"):
+        super().__init__(message=message, status_code=404)
