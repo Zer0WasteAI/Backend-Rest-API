@@ -70,9 +70,9 @@ class PrepareRecipeGenerationDataUseCase:
         }
 
     def _is_allergic_to_ingredient(self, ingredient_name: str, user_profile: dict) -> bool:
-        """
-        Verifica si el usuario es alérgico a un ingrediente específico
-        """
+
+        #Verifica si el usuario es alérgico a un ingrediente específico
+
         allergies = user_profile.get("allergies", [])
         allergy_items = user_profile.get("allergyItems", [])
         

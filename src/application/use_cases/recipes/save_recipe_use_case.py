@@ -22,8 +22,8 @@ class SaveRecipeUseCase:
             ingredients=recipe_data["ingredients"],
             steps=recipe_data["steps"],
             footer=recipe_data.get("footer", ""),
-            is_custom=recipe_data.get("is_custom", False),
-            saved_at=datetime.now()
+            saved_at=datetime.now(),
+            generated_by_ai=recipe_data.get("generated_by_ai", True)
         )
 
         # Guardar en el repositorio

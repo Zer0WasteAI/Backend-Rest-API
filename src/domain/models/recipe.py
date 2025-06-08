@@ -1,6 +1,17 @@
 from datetime import datetime
 from typing import List, Optional
 
+class RecipeIngredient:
+    def __init__(self, name: str, quantity: float, type_unit: str):
+        self.name = name
+        self.quantity = quantity
+        self.type_unit = type_unit
+
+class RecipeStep:
+    def __init__(self, step_order: int, description: str):
+        self.step_order = step_order
+        self.description = description
+
 class Recipe:
     def __init__(
         self,
@@ -13,7 +24,6 @@ class Recipe:
         steps: List[RecipeStep],
         footer: str,
         generated_by_ai: bool = True,
-        is_custom: bool = False,
         saved_at: Optional[datetime] = None
     ):
         self.uid = uid
@@ -24,17 +34,14 @@ class Recipe:
         self.ingredients = ingredients
         self.steps = steps
         self.footer = footer
-        self.is_custom = is_custom
         self.saved_at = saved_at or datetime.now()
         self.generated_by_ai = generated_by_ai
-
-    def add_recipe_ingredients(self, ingredients: List[RecipeIngredient]):
-        self.ingredients = ingredients
 
     def __repr__(self):
         return f"Recipe(uid={self.uid}, title={self.title}, user_uid={self.user_uid})"
     def add_recipe_steps(self, steps: List[RecipeStep]):
         self.steps = steps
-
     def get_ingredients_names(self):
         return [ingredient.name for ingredient in self.ingredients]
+    def add_recipe_ingredients(self, ingredients: List[RecipeIngredient]):
+        self.ingredients = ingredients

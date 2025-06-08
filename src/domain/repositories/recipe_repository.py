@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+from typing import Optional
 from src.domain.models.recipe import Recipe
 
 class RecipeRepository(ABC):

@@ -51,9 +51,6 @@ class GeminiRecipeGeneratorService(IARecipeGeneratorService):
             raise ValueError("Error en la generación de recetas")
     
     def _parse_response_text(self, text: str):
-        """
-        Parsea la respuesta de texto de Gemini a JSON
-        """
         clean_text = text.strip()
         if clean_text.startswith("```"):
             clean_text = clean_text.strip("`").strip()
@@ -78,6 +75,7 @@ class GeminiRecipeGeneratorService(IARecipeGeneratorService):
         # Configurar idioma del prompt
         if language == "en":
             chef_nationality = "Peruvian chef expert in nutrition and waste-reduction cooking"
+            recipe_type = "Breakfast, "
             instruction_start = "You are a Peruvian chef expert in nutrition and waste-reduction cooking"
             json_instruction = "Return only a **JSON list** containing"
             different_recipes = "different recipes"
@@ -129,13 +127,18 @@ class GeminiRecipeGeneratorService(IARecipeGeneratorService):
           "duration": "20 min",
           "difficulty": "{difficulty_options}",
           "ingredients": [
-            "ingrediente 1: Al gusto {quantity_instruction}",
-            "ingrediente 2: 1 unidad",
+            {{
+              "name": "Nombre del ingrediente",
+              "quantity": 200,
+              "type_unit": "g"
+            }},         
             ...
           ],
           "steps": [
-            "{step_prefix} 1",
-            "{step_prefix} 2",
+            {{
+              "step_order": 1,
+              "description": "{step_prefix} 1: Describe el paso aquí"
+            }},
             ...
           ],
           "footer": "{awareness_message}"
@@ -161,8 +164,19 @@ class GeminiRecipeGeneratorService(IARecipeGeneratorService):
             "title": "Receta 2",
             "duration": "30 min",
             "difficulty": "Intermedio",
-            "ingredients": ["..."],
-            "steps": ["..."],
+            "ingredients": [
+              {{
+                "name": "Papa",
+                "quantity": 2,
+                "type_unit": "unidades"
+              }}
+            ],
+            "steps": [
+              {{
+                "step_order": 1,
+                "description": "Lavar las papas"
+              }}
+            ],
             "footer": "..."
           }}
         ]
