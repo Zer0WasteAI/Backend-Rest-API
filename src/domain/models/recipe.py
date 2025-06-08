@@ -23,8 +23,10 @@ class Recipe:
         ingredients: List[RecipeIngredient],
         steps: List[RecipeStep],
         footer: str,
+        category: str,
+        image_path: Optional[str],
         generated_by_ai: bool = True,
-        saved_at: Optional[datetime] = None
+        saved_at: Optional[datetime] = None,
     ):
         self.uid = uid
         self.user_uid = user_uid
@@ -36,6 +38,8 @@ class Recipe:
         self.footer = footer
         self.saved_at = saved_at or datetime.now()
         self.generated_by_ai = generated_by_ai
+        self.image_path = image_path
+        self.category = category
 
     def __repr__(self):
         return f"Recipe(uid={self.uid}, title={self.title}, user_uid={self.user_uid})"

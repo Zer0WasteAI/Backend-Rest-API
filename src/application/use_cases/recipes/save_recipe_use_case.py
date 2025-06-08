@@ -23,7 +23,9 @@ class SaveRecipeUseCase:
             steps=recipe_data["steps"],
             footer=recipe_data.get("footer", ""),
             saved_at=datetime.now(),
-            generated_by_ai=recipe_data.get("generated_by_ai", True)
+            generated_by_ai=recipe_data.get("generated_by_ai", True),
+            category=recipe_data.get("type", ""),
+            image_path=recipe_data.get("", None),
         )
 
         # Guardar en el repositorio

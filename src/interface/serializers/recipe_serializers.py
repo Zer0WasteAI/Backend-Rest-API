@@ -4,6 +4,8 @@ class CustomRecipeRequestSchema(Schema):
     ingredients = fields.List(fields.String(), required=True, validate=validate.Length(min=1))
     preferences = fields.List(fields.String(), missing=[])
     num_recipes = fields.Integer(missing=2, validate=validate.Range(min=1, max=5))
+    recipe_categories = fields.List(fields.String(), missing=[])
+
 
 from marshmallow import Schema, fields, validate
 
@@ -24,6 +26,8 @@ class SaveRecipeRequestSchema(Schema):
     steps = fields.List(fields.Nested(RecipeStepSchema), required=True, validate=validate.Length(min=1))
     footer = fields.String(missing="")
     generated_by_ai = fields.Boolean(required=True)
+    category = fields.String(required=True, validate=validate.OneOf(["desayuno", "almuerzo", "cena", "postre", "ensalada", "sopa"]))
+    image_path = fields.String(missing="")
 
 class RecipeSchema(Schema):
     title = fields.String(required=True)
@@ -34,3 +38,5 @@ class RecipeSchema(Schema):
     footer = fields.String(allow_none=True)
     generated_by_ai = fields.Boolean(required=True)
     saved_at = fields.DateTime(required=True)
+    category = fields.String(required=True)
+    image_path = fields.String(missing="")

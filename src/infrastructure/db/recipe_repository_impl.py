@@ -6,6 +6,7 @@ from src.domain.repositories.recipe_repository import RecipeRepository
 from src.infrastructure.db.models.recipe_orm import RecipeORM
 from src.infrastructure.db.models.recipe_ingredient_orm import RecipeIngredientORM
 from src.infrastructure.db.models.recipe_step_orm import RecipeStepORM
+from src.shared.exceptions.custom import RecipeNotFoundException
 
 class RecipeRepositoryImpl(RecipeRepository):
     def __init__(self, db):
@@ -19,6 +20,8 @@ class RecipeRepositoryImpl(RecipeRepository):
             duration=recipe.duration,
             difficulty=recipe.difficulty,
             footer=recipe.footer,
+            category=recipe.category,
+            image_path=recipe.image_path,
             generated_by_ai=recipe.generated_by_ai,
             saved_at=recipe.saved_at
         )
@@ -69,7 +72,9 @@ class RecipeRepositoryImpl(RecipeRepository):
             steps=domain_steps,
             footer=recipe_row.footer,
             generated_by_ai=recipe_row.generated_by_ai,
-            saved_at=recipe_row.saved_at
+            saved_at=recipe_row.saved_at,
+            category=recipe_row.category,
+            image_path=recipe_row.image_path,
         )
 
     def find_by_name(self, name: str) -> Optional[Recipe]:
@@ -93,9 +98,10 @@ class RecipeRepositoryImpl(RecipeRepository):
     def delete(self, recipe_uid: str) -> None:
         stmt = delete(RecipeORM).where(RecipeORM.uid == recipe_uid)
         recipe = self.db.session.execute(stmt).scalar_one_or_none()
-        if recipe:
-            self.db.session.delete(recipe)
-            self.db.session.commit()
+        if not recipe:
+            raise RecipeNotFoundException(f"Recipe with title '{title}' for user not found")
+        self.db.session.delete(recipe)
+        self.db.session.commit()
 
     def delete_by_user_and_title(self, user_uid: str, title: str) -> None:
         stmt = select(RecipeORM).where(
@@ -103,9 +109,10 @@ class RecipeRepositoryImpl(RecipeRepository):
             RecipeORM.title == title
         )
         recipe = self.db.session.execute(stmt).scalar_one_or_none()
-        if recipe:
-            self.db.session.delete(recipe)
-            self.db.session.commit()
+        if not recipe:
+            raise RecipeNotFoundException(f"Recipe with title '{title}' for user not found")
+        self.db.session.delete(recipe)
+        self.db.session.commit()
 
     def exists_by_user_and_title(self, user_uid: str, title: str) -> bool:
         stmt = select(RecipeORM).where(
@@ -143,5 +150,7 @@ class RecipeRepositoryImpl(RecipeRepository):
             steps=domain_steps,
             footer=recipe_row.footer,
             generated_by_ai=recipe_row.generated_by_ai,
-            saved_at=recipe_row.saved_at
+            saved_at=recipe_row.saved_at,
+            category=recipe_row.category,
+            image_path=recipe_row.image_path,
         )

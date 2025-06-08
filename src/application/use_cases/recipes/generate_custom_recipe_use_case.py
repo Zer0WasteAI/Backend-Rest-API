@@ -5,7 +5,7 @@ class GenerateCustomRecipeUseCase:
     def __init__(self, recipe_service):
         self.recipe_service = recipe_service
 
-    def execute(self, user_uid: str, custom_ingredients: List[str], preferences: List[str] = None, num_recipes: int = 2) -> Dict[str, Any]:
+    def execute(self, user_uid: str, custom_ingredients: List[str], preferences: List[str] = None, num_recipes: int = 2, recipe_categories: List[str] = None) -> Dict[str, Any]:
         # Obtener preferencias del usuario desde Firestore
         firestore_service = make_firestore_profile_service()
         user_profile = firestore_service.get_profile(user_uid)
@@ -58,7 +58,7 @@ class GenerateCustomRecipeUseCase:
             "user_profile": user_profile  # Incluir perfil para uso adicional (idioma, medidas, etc.)
         }
         
-        return self.recipe_service.generate_recipes(generation_data, num_recipes)
+        return self.recipe_service.generate_recipes(generation_data, num_recipes, recipe_categories)
     
     def _is_allergic_to_ingredient(self, ingredient_name: str, user_profile: dict) -> bool:
         """

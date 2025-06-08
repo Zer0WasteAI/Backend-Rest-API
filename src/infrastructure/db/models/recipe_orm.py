@@ -13,6 +13,8 @@ class RecipeORM(db.Model):
     footer = db.Column(db.String(255), nullable=True)
     generated_by_ai = db.Column(db.Boolean, default=True)
     saved_at = db.Column(db.DateTime, default=datetime.now(timezone.utc), nullable=False)
+    category = db.Column(db.String(50), nullable=False)
+    image_path = db.Column(db.String(255), nullable=True)
 
     ingredients = db.relationship("RecipeIngredientORM", back_populates="recipe", cascade="all, delete-orphan")
     steps = db.relationship("RecipeStepORM", back_populates="recipe", cascade="all, delete-orphan")

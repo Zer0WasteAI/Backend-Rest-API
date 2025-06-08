@@ -42,7 +42,7 @@ class InvalidResponseFormatException(AppException):
 
 class InvalidRequestDataException(AppException):
     def __init__(self, message="Invalid request data", details=None):
-        super().__init__(message=message, status_code=400)
+        super().__init__(message, status_code=400)
         self.details = details
 
     def to_dict(self):
@@ -50,3 +50,6 @@ class InvalidRequestDataException(AppException):
         if self.details:
             error_response["details"] = self.details
         return error_response
+class RecipeNotFoundException(AppException):
+    def __init__(self, message="Recipe not found"):
+        super().__init__(message, status_code=404)

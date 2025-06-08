@@ -52,7 +52,8 @@ def generate_custom_recipes():
         user_uid=user_uid,
         custom_ingredients=json_data["ingredients"],
         preferences=json_data.get("preferences", []),
-        num_recipes=json_data.get("num_recipes", 2)
+        num_recipes=json_data.get("num_recipes", 2),
+        recipe_categories=json_data.get("recipe_categories", [])
     )
 
     return jsonify(result), 200
@@ -121,10 +122,11 @@ def delete_user_recipe():
         raise InvalidRequestDataException(details={"title": "El campo 'title' es obligatorio."})
 
     title = data["title"]
-
     use_case = make_delete_user_recipe_use_case()
+
     use_case.execute(user_uid=user_uid, title=title)
 
     return jsonify({
         "message": f"Receta '{title}' eliminada exitosamente"
     }), 200
+
