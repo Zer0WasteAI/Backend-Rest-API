@@ -216,27 +216,130 @@ def recognize_ingredients_complete():
 @recognition_bp.route("/foods", methods=["POST"])
 @jwt_required()
 def recognize_foods():
+    """
+    🍽️ RECONOCIMIENTO HÍBRIDO DE COMIDA:
+    - Respuesta inmediata con datos de IA (síncrono)
+    - Generación de imágenes en segundo plano (asíncrono)
+    """
     user_uid = get_jwt_identity()
     images_paths = request.json.get("images_paths")
+    
+    print(f"🍽️ HYBRID FOOD RECOGNITION - User: {user_uid}")
+    print(f"🍽️ Images paths: {images_paths}")
 
     if not images_paths or not isinstance(images_paths, list):
+        print("❌ ERROR: Invalid images_paths")
         return jsonify({"error": "Debe proporcionar una lista válida en 'images_paths'"}), 400
 
     try:
-        # Obtener preferencias del usuario
+        # 1. PASO SÍNCRONO: Reconocimiento AI inmediato de platos
+        print("🔍 Loading images for AI food recognition...")
+        from src.application.factories.recognition_usecase_factory import make_ai_service, make_recognition_repository, make_storage_adapter
+        
+        ai_service = make_ai_service()
+        recognition_repository = make_recognition_repository(db)
+        storage_adapter = make_storage_adapter()
+        
+        # Cargar imágenes
+        images_files = []
+        for path in images_paths:
+            file = storage_adapter.get_image(path)
+            images_files.append(file)
+        
+        # Reconocimiento AI de platos (síncrono)
+        print("🤖 Running AI food recognition...")
+        result = ai_service.recognize_foods(images_files)
+        
+        # Guardar reconocimiento básico
+        from src.domain.models.recognition import Recognition
+        recognition = Recognition(
+            uid=str(uuid.uuid4()),
+            user_uid=user_uid,
+            images_paths=images_paths,
+            recognized_at=datetime.now(timezone.utc),
+            raw_result=result,
+            is_validated=False,
+            validated_at=None
+        )
+        recognition_repository.save(recognition)
+        
+        # 2. PASO ASÍNCRONO: Crear tarea para generar imágenes de platos
+        print("🎨 Queuing food image generation task...")
+        image_task_id = async_task_service.create_task(
+            user_uid=user_uid,
+            task_type='food_images',
+            input_data={
+                'recognition_id': recognition.uid,
+                'foods': result['foods']
+            }
+        )
+        
+        # Lanzar generación de imágenes de platos en background
+        from src.application.factories.recognition_usecase_factory import make_food_image_generator_service, make_calculator_service
+        food_image_generator_service = make_food_image_generator_service()
+        calculator_service = make_calculator_service()
+        
+        async_task_service.run_async_food_image_generation(
+            task_id=image_task_id,
+            user_uid=user_uid,
+            foods=result['foods'],
+            food_image_generator_service=food_image_generator_service,
+            calculator_service=calculator_service,
+            recognition_repository=recognition_repository,
+            recognition_id=recognition.uid
+        )
+        
+        # 3. RESPUESTA INMEDIATA: Datos sin imágenes + task_id para imágenes
+        current_time = datetime.now(timezone.utc)
+        
+        # Agregar placeholders de imagen y datos básicos
+        for food in result["foods"]:
+            food["image_path"] = None  # Se agregará cuando esté lista
+            food["image_status"] = "generating"
+            food["added_at"] = current_time.isoformat()
+            
+            # Calcular fecha de vencimiento básica
+            try:
+                expiration_date = calculator_service.calculate_expiration_date(
+                    added_at=current_time,
+                    time_value=food["expiration_time"],
+                    time_unit=food["time_unit"]
+                )
+                food["expiration_date"] = expiration_date.isoformat()
+            except Exception as e:
+                from datetime import timedelta
+                fallback_date = current_time + timedelta(days=food.get("expiration_time", 3))
+                food["expiration_date"] = fallback_date.isoformat()
+        
+        # Verificar alergias
         firestore_service = make_firestore_profile_service()
         user_profile = firestore_service.get_profile(user_uid)
-        
-        use_case = make_recognize_foods_use_case(db)
-        result = use_case.execute(user_uid=user_uid, images_paths=images_paths)
-        
-        # Verificar alergias en alimentos reconocidos
         if user_profile:
-            result = _check_allergies_in_recognition(result, user_profile, "recognized_foods")
+            result = _check_allergies_in_recognition(result, user_profile, "foods")
         
-        return jsonify(result), 200
+        # Respuesta con datos inmediatos + info de tarea de imágenes
+        response_data = {
+            **result,
+            "recognition_id": recognition.uid,
+            "images": {
+                "status": "generating",
+                "task_id": image_task_id,
+                "check_images_url": f"/api/recognition/images/status/{image_task_id}",
+                "estimated_time": "15-30 segundos"
+            },
+            "message": "✅ Platos reconocidos. Las imágenes se están generando en segundo plano."
+        }
+        
+        print("✅ Hybrid food recognition successful - immediate response sent")
+        print(f"📤 [HYBRID FOOD RESPONSE] Recognition ID: {recognition.uid}")
+        print(f"📤 [HYBRID FOOD RESPONSE] Images Task ID: {image_task_id}")
+        print(f"📤 [HYBRID FOOD RESPONSE] Foods count: {len(result.get('foods', []))}")
+        print(f"📤 [HYBRID FOOD RESPONSE] Complete response:")
+        print(f"📄 {json.dumps(response_data, indent=2, ensure_ascii=False)}")
+        return jsonify(response_data), 200
 
     except Exception as e:
+        print(f"🚨 HYBRID FOOD RECOGNITION ERROR: {str(e)}")
         return jsonify({"error": str(e)}), 500
 
 

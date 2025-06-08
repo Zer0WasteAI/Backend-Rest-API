@@ -61,5 +61,9 @@ def make_ingredient_image_generator_service():
     from src.application.factories.ingredient_image_generator_factory import make_ingredient_image_generator_service as _make_generator
     return _make_generator(None)  # El servicio ya no necesita db
 
+def make_food_image_generator_service():
+    from src.application.factories.food_image_generator_factory import make_food_image_generator_service as _make_generator
+    return _make_generator()
+
 def make_calculator_service():
     return InventoryCalculatorImpl()

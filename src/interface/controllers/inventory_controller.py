@@ -238,18 +238,21 @@ def get_expiring_items():
 @jwt_required()
 def add_ingredients_from_recognition():
     """
-    Endpoint específico para agregar ingredientes directamente desde el response de reconocimiento.
-    Evita que el cliente tenga que reformatear los datos.
+    🌱 Endpoint específico para agregar ingredientes directamente desde el response de reconocimiento.
+    Genera automáticamente:
+    - Impacto ambiental (CO2, agua, sostenibilidad)
+    - Consejos de consumo
+    - Consejos antes de consumir
     """
     user_uid = get_jwt_identity()
     json_data = request.get_json()
     
-    print(f"📥 [INVENTORY FROM RECOGNITION] User: {user_uid}")
-    print(f"📥 [INVENTORY FROM RECOGNITION] Request data: {json_data}")
+    print(f"📥 [INVENTORY FROM RECOGNITION ENHANCED] User: {user_uid}")
+    print(f"📥 [INVENTORY FROM RECOGNITION ENHANCED] Request data: {json_data}")
     
     # Validar que tenga la estructura del response de reconocimiento
     if not json_data or "ingredients" not in json_data:
-        print(f"❌ [INVENTORY FROM RECOGNITION] Missing 'ingredients' field")
+        print(f"❌ [INVENTORY FROM RECOGNITION ENHANCED] Missing 'ingredients' field")
         return jsonify({"error": "Se requiere el campo 'ingredients' con la estructura de reconocimiento"}), 400
     
     ingredients_data = json_data["ingredients"]
@@ -259,37 +262,150 @@ def add_ingredients_from_recognition():
     for i, ingredient in enumerate(ingredients_data):
         missing_fields = [field for field in required_fields if field not in ingredient]
         if missing_fields:
-            print(f"❌ [INVENTORY FROM RECOGNITION] Ingredient {i+1} missing fields: {missing_fields}")
+            print(f"❌ [INVENTORY FROM RECOGNITION ENHANCED] Ingredient {i+1} missing fields: {missing_fields}")
             return jsonify({
                 "error": f"Ingrediente {i+1} ({ingredient.get('name', 'unknown')}) carece de campos requeridos: {missing_fields}"
             }), 400
         
         # Agregar image_path si no existe (fallback)
         if "image_path" not in ingredient:
-            print(f"⚠️ [INVENTORY FROM RECOGNITION] Adding fallback image_path for: {ingredient['name']}")
+            print(f"⚠️ [INVENTORY FROM RECOGNITION ENHANCED] Adding fallback image_path for: {ingredient['name']}")
             ingredient["image_path"] = "https://via.placeholder.com/150x150/cccccc/666666?text=No+Image"
     
-    print(f"🥬 [INVENTORY FROM RECOGNITION] Processing {len(ingredients_data)} ingredients from recognition")
+    print(f"🥬 [INVENTORY FROM RECOGNITION ENHANCED] Processing {len(ingredients_data)} ingredients from recognition")
     
     for i, ingredient in enumerate(ingredients_data):
         print(f"   • Ingredient {i+1}: {ingredient.get('name')} - {ingredient.get('quantity')} {ingredient.get('type_unit')}")
         print(f"     └─ Has image_path: {'✅' if ingredient.get('image_path') else '❌'}")
 
     try:
-        # Usar el mismo use case que el endpoint normal
+        # 🌱 NUEVA FUNCIONALIDAD: Generar datos enriquecidos automáticamente
+        print(f"🌱 [ENHANCED ENRICHMENT] Generating enhanced data for {len(ingredients_data)} ingredients...")
+        
+        from src.application.factories.recognition_usecase_factory import make_ai_service
+        ai_service = make_ai_service()
+        
+        # Enriquecer con impacto ambiental, consejos de consumo y consejos antes de consumir
+        _enrich_ingredients_with_enhanced_data(ingredients_data, ai_service)
+        
+        # Usar el use case con AI habilitado para el enriquecimiento adicional
         use_case = make_add_ingredients_to_inventory_use_case(db)
         use_case.execute(user_uid=user_uid, ingredients_data=ingredients_data)
         
-        print(f"✅ [INVENTORY FROM RECOGNITION] Successfully added {len(ingredients_data)} ingredients for user {user_uid}")
+        print(f"✅ [INVENTORY FROM RECOGNITION ENHANCED] Successfully added {len(ingredients_data)} enhanced ingredients for user {user_uid}")
         return jsonify({
-            "message": "Ingredientes agregados exitosamente desde reconocimiento",
+            "message": "Ingredientes agregados exitosamente desde reconocimiento con datos enriquecidos",
             "ingredients_count": len(ingredients_data),
-            "source": "recognition"
+            "source": "recognition",
+            "enhanced_data": [
+                "environmental_impact",
+                "consumption_advice", 
+                "before_consumption_advice",
+                "utilization_ideas"
+            ]
         }), 201
         
     except Exception as e:
-        print(f"🚨 [INVENTORY FROM RECOGNITION] Error adding ingredients: {str(e)}")
+        print(f"🚨 [INVENTORY FROM RECOGNITION ENHANCED] Error adding enhanced ingredients: {str(e)}")
         raise e
+
+def _enrich_ingredients_with_enhanced_data(ingredients_data: list[dict], ai_service):
+    """
+    🌱 Enriquece los ingredientes con datos adicionales:
+    - Impacto ambiental (CO2, agua, sostenibilidad)
+    - Consejos de consumo
+    - Consejos antes de consumir
+    """
+    from concurrent.futures import ThreadPoolExecutor, as_completed
+    
+    print(f"🌱 [ENHANCED ENRICHMENT] Starting enhanced data generation for {len(ingredients_data)} ingredients")
+    
+    def enrich_single_ingredient(ingredient_data):
+        ingredient_name = ingredient_data["name"]
+        ingredient_description = ingredient_data.get("description", "")
+        
+        print(f"   🌱 [ENHANCED] Processing: {ingredient_name}")
+        
+        try:
+            # 1. Generar impacto ambiental
+            environmental_impact = ai_service.analyze_environmental_impact(ingredient_name)
+            
+            # 2. Generar consejos de consumo (incluye before_consumption_advice)
+            consumption_data = ai_service.generate_consumption_advice(ingredient_name, ingredient_description)
+            
+            # 3. Generar ideas de utilización (ya existía)
+            utilization_ideas = ai_service.generate_utilization_ideas(ingredient_name, ingredient_description)
+            
+            print(f"   ✅ [ENHANCED] Successfully enriched: {ingredient_name}")
+            
+            return {
+                "name": ingredient_name,
+                "environmental_impact": environmental_impact,
+                "consumption_advice": consumption_data.get("consumption_advice", {}),
+                "before_consumption_advice": consumption_data.get("before_consumption_advice", {}),
+                "utilization_ideas": utilization_ideas
+            }
+            
+        except Exception as e:
+            print(f"   ⚠️ [ENHANCED] Error enriching {ingredient_name}: {str(e)}")
+            # Datos por defecto en caso de error
+            return {
+                "name": ingredient_name,
+                "environmental_impact": {
+                    "carbon_footprint": {"value": 0.5, "unit": "kg", "description": "CO2 estimado"},
+                    "water_footprint": {"value": 100, "unit": "l", "description": "agua estimada"},
+                    "sustainability_message": "Consume de manera responsable y evita el desperdicio."
+                },
+                "consumption_advice": {
+                    "optimal_consumption": "Consume fresco para aprovechar al máximo sus nutrientes.",
+                    "preparation_tips": "Lava bien antes de consumir y mantén refrigerado.",
+                    "nutritional_benefits": "Rico en vitaminas y minerales esenciales.",
+                    "recommended_portions": "Consume en porciones moderadas."
+                },
+                "before_consumption_advice": {
+                    "quality_check": "Verifica que esté fresco y sin signos de deterioro.",
+                    "safety_tips": "Lava con agua corriente antes de consumir.",
+                    "preparation_notes": "Consume preferiblemente en los próximos días.",
+                    "special_considerations": "Mantener en condiciones adecuadas de almacenamiento."
+                },
+                "utilization_ideas": [
+                    {
+                        "title": "Consume fresco",
+                        "description": "Utiliza el ingrediente lo antes posible para aprovechar sus nutrientes.",
+                        "type": "conservación"
+                    }
+                ]
+            }
+    
+    # Generar datos enriquecidos en paralelo
+    enriched_results = {}
+    
+    with ThreadPoolExecutor(max_workers=3) as executor:
+        future_to_ingredient = {
+            executor.submit(enrich_single_ingredient, ingredient): ingredient["name"] 
+            for ingredient in ingredients_data
+        }
+        
+        for future in as_completed(future_to_ingredient):
+            try:
+                result = future.result()
+                enriched_results[result["name"]] = result
+            except Exception as e:
+                ingredient_name = future_to_ingredient[future]
+                print(f"   🚨 [ENHANCED] Error in thread for {ingredient_name}: {str(e)}")
+    
+    # Aplicar los datos enriquecidos a cada ingrediente
+    for ingredient in ingredients_data:
+        ingredient_name = ingredient["name"]
+        if ingredient_name in enriched_results:
+            enriched_data = enriched_results[ingredient_name]
+            ingredient["environmental_impact"] = enriched_data["environmental_impact"]
+            ingredient["consumption_advice"] = enriched_data["consumption_advice"] 
+            ingredient["before_consumption_advice"] = enriched_data["before_consumption_advice"]
+            ingredient["utilization_ideas"] = enriched_data["utilization_ideas"]
+            print(f"   💚 [ENHANCED] Added all enhanced data to {ingredient_name}")
+    
+    print(f"🎯 [ENHANCED ENRICHMENT] Completed enhanced enrichment for all {len(ingredients_data)} ingredients!")
 
 @inventory_bp.route("/simple", methods=["GET"])
 @jwt_required()

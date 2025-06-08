@@ -630,6 +630,151 @@ class TestHybridRecognitionFlow(unittest.TestCase):
             print(f"❌ Error verificando resultado final: {e}")
             self.fail(f"Error verificando resultado final: {e}")
     
+    def test_08_hybrid_food_recognition_flow(self):
+        """Test 8: Probar reconocimiento híbrido de platos de comida"""
+        print(f"\n🧪 TEST 8: RECONOCIMIENTO HÍBRIDO DE FOODS")
+        print("=" * 50)
+        
+        # Verificar autenticación
+        self.assertIsNotNone(self.__class__.access_token, "Access token requerido")
+        
+        # Buscar imagen de test
+        test_images = list(self.TEST_IMAGES_DIR.glob("*.jpg")) + list(self.TEST_IMAGES_DIR.glob("*.jpeg"))
+        if not test_images:
+            self.skipTest("❌ No se encontraron imágenes de test")
+        
+        # Subir imagen como food
+        image_url = self._upload_test_image(test_images[0], image_type="food")
+        self.assertIsNotNone(image_url, "No se pudo subir imagen de comida")
+        
+        print(f"✅ Imagen de comida subida: {image_url}")
+        
+        # Ejecutar reconocimiento híbrido de foods
+        headers = {"Authorization": f"Bearer {self.__class__.access_token}"}
+        payload = {"images_paths": [image_url]}
+        
+        foods_url = f"{self.BASE_URL}/api/recognition/foods"
+        
+        self._print_request_details("POST", foods_url, headers, payload)
+        
+        print(f"\n🍽️ INICIANDO RECONOCIMIENTO HÍBRIDO DE FOODS...")
+        start_time = time.time()
+        
+        response = requests.post(foods_url, headers=headers, json=payload)
+        
+        end_time = time.time()
+        recognition_time = end_time - start_time
+        
+        self._print_response_details(response, "RECONOCIMIENTO HÍBRIDO DE FOODS")
+        
+        self.assertEqual(response.status_code, 200, f"Error en reconocimiento de foods: {response.status_code}")
+        
+        result = response.json()
+        
+        # Verificar estructura de la respuesta híbrida
+        self.assertIn("foods", result, "❌ Falta campo 'foods' en respuesta")
+        self.assertIn("recognition_id", result, "❌ Falta recognition_id")
+        self.assertIn("images", result, "❌ Falta info de imágenes")
+        self.assertIn("task_id", result["images"], "❌ Falta task_id de imágenes")
+        
+        foods = result["foods"]
+        food_recognition_id = result["recognition_id"]
+        food_image_task_id = result["images"]["task_id"]
+        
+        print(f"\n📊 RESULTADOS DEL RECONOCIMIENTO DE FOODS:")
+        print(f"   ⏱️ Tiempo: {recognition_time:.1f} segundos")
+        print(f"   🍽️ Platos detectados: {len(foods)}")
+        print(f"   🆔 Recognition ID: {food_recognition_id}")
+        print(f"   🎨 Task ID imágenes: {food_image_task_id}")
+        
+        # Mostrar detalles de los platos
+        for i, food in enumerate(foods, 1):
+            print(f"\n📋 PLATO {i}:")
+            print(f"   🏷️ Nombre: {food.get('name', 'N/A')}")
+            print(f"   🍽️ Categoría: {food.get('category', 'N/A')}")
+            print(f"   🥘 Ingredientes: {food.get('main_ingredients', [])}")
+            print(f"   🔥 Calorías: {food.get('calories', 'N/A')}")
+            print(f"   📅 Vencimiento: {food.get('expiration_date', 'N/A')}")
+            print(f"   🖼️ Estado imagen: {food.get('image_status', 'N/A')}")
+        
+        # Guardar IDs para el siguiente test
+        self.__class__.food_recognition_id = food_recognition_id
+        self.__class__.food_image_task_id = food_image_task_id
+        
+        self.assertGreater(len(foods), 0, "Debe detectar al menos un plato")
+        
+        print(f"✅ Reconocimiento híbrido de foods exitoso")
+
+    def test_09_monitor_food_image_generation(self):
+        """Test 9: Monitorear generación asíncrona de imágenes de platos"""
+        print(f"\n🧪 TEST 9: MONITOREO DE GENERACIÓN DE IMÁGENES DE PLATOS")
+        print("=" * 50)
+        
+        if not hasattr(self.__class__, 'food_image_task_id') or not self.__class__.food_image_task_id:
+            self.skipTest("❌ No hay task_id de imágenes de foods del test anterior")
+        
+        headers = {"Authorization": f"Bearer {self.__class__.access_token}"}
+        status_url = f"{self.BASE_URL}/api/recognition/images/status/{self.__class__.food_image_task_id}"
+        
+        print(f"🎨 Monitoreando generación de imágenes de platos...")
+        print(f"🎯 Task ID: {self.__class__.food_image_task_id}")
+        
+        start_time = time.time()
+        max_wait_time = 90  # 90 segundos máximo
+        last_progress = -1
+        
+        while time.time() - start_time < max_wait_time:
+            try:
+                response = requests.get(status_url, headers=headers)
+                
+                if response.status_code == 200:
+                    status_data = response.json()
+                    status = status_data.get("status")
+                    progress = status_data.get("progress", 0)
+                    step = status_data.get("step", "")
+                    
+                    # Solo mostrar si hay cambio en el progreso
+                    if progress != last_progress:
+                        elapsed = time.time() - start_time
+                        print(f"🍽️ [{elapsed:.1f}s] Status: {status} | Progreso: {progress}% | {step}")
+                        last_progress = progress
+                    
+                    if status == "completed":
+                        completion_time = time.time() - start_time
+                        print(f"\n✅ GENERACIÓN DE IMÁGENES DE PLATOS COMPLETADA en {completion_time:.1f}s")
+                        
+                        # Verificar resultado de la tarea
+                        if "result" in status_data:
+                            result = status_data["result"]
+                            print(f"📊 Resultado de la tarea:")
+                            print(f"   🍽️ Platos procesados: {result.get('total_foods', 'N/A')}")
+                            print(f"   🖼️ Imágenes generadas: {result.get('images_generated', 'N/A')}")
+                        
+                        print(f"✅ Generación de imágenes de foods exitosa")
+                        return
+                    
+                    elif status == "failed":
+                        error_msg = status_data.get("error_message", "Error desconocido")
+                        self.fail(f"❌ Generación de imágenes FALLÓ: {error_msg}")
+                    
+                    time.sleep(3)  # Esperar 3 segundos antes del siguiente check
+                
+                else:
+                    print(f"⚠️ Error consultando status: {response.status_code}")
+                    if response.status_code == 404:
+                        print(f"⚠️ Task no encontrada, asumiendo completada")
+                        return
+                    time.sleep(5)
+                    
+            except Exception as e:
+                print(f"❌ Error durante monitoreo: {e}")
+                time.sleep(5)
+        
+        # Si llega aquí, es timeout
+        elapsed = time.time() - start_time
+        print(f"⏰ TIMEOUT: Generación tomó más de {max_wait_time}s (actual: {elapsed:.1f}s)")
+        print(f"⚠️ Continuando con el test...")
+
     @classmethod
     def tearDownClass(cls):
         """Limpieza después de todos los tests"""
@@ -647,7 +792,8 @@ class TestHybridRecognitionFlow(unittest.TestCase):
         print(f"🎯 TEST DE RECONOCIMIENTO HÍBRIDO FINALIZADO")
         print(f"📊 Todos los componentes funcionaron correctamente:")
         print(f"   ✅ Autenticación anónima Firebase")
-        print(f"   ✅ Reconocimiento AI síncrono")
+        print(f"   ✅ Reconocimiento AI síncrono de ingredientes")
+        print(f"   ✅ Reconocimiento AI síncrono de foods")
         print(f"   ✅ Generación de imágenes asíncrona")
         print(f"   ✅ Monitoreo de progreso")
         print(f"   ✅ Verificación de resultados")

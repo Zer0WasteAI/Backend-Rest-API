@@ -229,6 +229,9 @@ class AsyncTaskService:
     def run_async_image_generation(self, task_id: str, user_uid: str, ingredients: List[dict], 
                                  ingredient_image_generator_service, calculator_service, 
                                  recognition_repository, recognition_id: str):
+        """
+        Ejecuta la generación asíncrona de imágenes para ingredientes.
+        """
         """Ejecuta generación de imágenes de ingredientes en background"""
         
         # Capturar el app context actual
@@ -346,6 +349,130 @@ class AsyncTaskService:
         # Lanzar en background
         self.executor.submit(background_image_generation)
         print(f"🎯 [ASYNC IMAGES] Task {task_id} queued for background image processing")
+
+
+    def run_async_food_image_generation(self, task_id: str, user_uid: str, foods: List[dict], 
+                                      food_image_generator_service, calculator_service, 
+                                      recognition_repository, recognition_id: str):
+        """
+        Ejecuta la generación asíncrona de imágenes para platos de comida.
+        """
+        from flask import current_app
+        app = current_app._get_current_object()
+        
+        def background_food_image_generation():
+            with app.app_context():
+                print(f"🍽️ [ASYNC FOOD IMAGES] Starting background food image generation for task {task_id}")
+                
+                try:
+                    # Paso 1: Actualizar estado - iniciando
+                    self.update_task_progress(task_id, 5, "Iniciando generación de imágenes de platos...", "processing")
+                    
+                    # Paso 2: Generar imágenes en paralelo
+                    current_time = datetime.now(timezone.utc)
+                    self.update_task_progress(task_id, 10, "Generando imágenes de platos de comida...")
+                    
+                    def generate_food_image(food_data):
+                        food, user_uid = food_data
+                        food_name = food["name"]
+                        description = food.get("description", "")
+                        main_ingredients = food.get("main_ingredients", [])
+                        
+                        try:
+                            image_path = food_image_generator_service.get_or_generate_food_image(
+                                food_name=food_name,
+                                user_uid=user_uid,
+                                description=description,
+                                main_ingredients=main_ingredients
+                            )
+                            return food_name, image_path, None
+                        except Exception as e:
+                            return food_name, "https://via.placeholder.com/300x300/e8f5e8/666666?text=No+Image", str(e)
+                    
+                    # Generación paralela de imágenes
+                    food_images = {}
+                    total_foods = len(foods)
+                    
+                    with ThreadPoolExecutor(max_workers=3) as image_executor:
+                        thread_data = [(food, user_uid) for food in foods]
+                        
+                        future_to_food = {
+                            image_executor.submit(generate_food_image, data): data[0]["name"] 
+                            for data in thread_data
+                        }
+                        
+                        completed_images = 0
+                        for future in future_to_food:
+                            food_name, image_path, error = future.result()
+                            food_images[food_name] = image_path
+                            completed_images += 1
+                            
+                            # Actualizar progreso dinámicamente
+                            progress = 10 + (completed_images * 70 // total_foods)
+                            self.update_task_progress(task_id, progress, f"✅ Imagen generada para {food_name}")
+                            if error:
+                                print(f"⚠️ [ASYNC FOOD IMAGES] Warning generating image for {food_name}: {error}")
+                    
+                    # Paso 3: Actualizar foods con imágenes
+                    self.update_task_progress(task_id, 85, "Actualizando platos con imágenes...")
+                    
+                    # Preparar datos actualizados
+                    updated_foods = []
+                    for food in foods:
+                        food_name = food["name"]
+                        
+                        # Asignar imagen generada
+                        food["image_path"] = food_images.get(food_name, "https://via.placeholder.com/300x300/e8f5e8/666666?text=No+Image")
+                        food["image_status"] = "ready"
+                        
+                        updated_foods.append(food)
+                    
+                    # Paso 4: Actualizar reconocimiento en base de datos
+                    self.update_task_progress(task_id, 90, "Guardando imágenes en base de datos...")
+                    
+                    try:
+                        # Obtener el reconocimiento original
+                        from src.domain.models.recognition import Recognition
+                        recognition = recognition_repository.find_by_uid(recognition_id)
+                        
+                        if recognition:
+                            # Actualizar el raw_result con las imágenes
+                            updated_result = recognition.raw_result.copy()
+                            updated_result['foods'] = updated_foods
+                            
+                            # Guardar actualización
+                            recognition.raw_result = updated_result
+                            recognition_repository.save(recognition)
+                            print(f"✅ [ASYNC FOOD IMAGES] Updated recognition {recognition_id} with food images")
+                        else:
+                            print(f"⚠️ [ASYNC FOOD IMAGES] Recognition {recognition_id} not found for update")
+                            
+                    except Exception as e:
+                        print(f"⚠️ [ASYNC FOOD IMAGES] Error updating recognition: {str(e)}")
+                        # No fallar por esto, las imágenes están en el resultado de la tarea
+                    
+                    # Paso 5: Completar tarea con imágenes
+                    self.update_task_progress(task_id, 95, "Finalizando generación de imágenes de platos...")
+                    
+                    result_data = {
+                        "recognition_id": recognition_id,
+                        "foods": updated_foods,
+                        "images_generated": len(food_images),
+                        "total_foods": total_foods,
+                        "completed_at": current_time.isoformat()
+                    }
+                    
+                    self.complete_task(task_id, result_data)
+                    
+                    print(f"🎉 [ASYNC FOOD IMAGES] Task {task_id} completed successfully - {len(food_images)} images generated")
+                    
+                except Exception as e:
+                    print(f"🚨 [ASYNC FOOD IMAGES] Task {task_id} failed: {str(e)}")
+                    self.fail_task(task_id, str(e))
+        
+        # Lanzar en background
+        self.executor.submit(background_food_image_generation)
+        print(f"🎯 [ASYNC FOOD IMAGES] Task {task_id} queued for background food image processing")
 
 
 # Instancia global

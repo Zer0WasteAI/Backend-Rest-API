@@ -60,6 +60,21 @@ class IAFoodAnalyzerService(ABC):
         pass
 
     @abstractmethod
+    def generate_food_image(self, food_name: str, description: str = "", main_ingredients: List[str] = None) -> Optional[BytesIO]:
+        """
+        Genera una imagen para un plato de comida usando AI.
+        
+        Args:
+            food_name: Nombre del plato
+            description: Descripción del plato y su preparación
+            main_ingredients: Lista de ingredientes principales
+            
+        Returns:
+            BytesIO object con los datos de la imagen generada, o None si falla
+        """
+        pass
+
+    @abstractmethod
     def analyze_environmental_impact(self, ingredient_name: str) -> Dict[str, Any]:
         """
         Analiza el impacto ambiental de un ingrediente específico.
