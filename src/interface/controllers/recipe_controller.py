@@ -12,7 +12,9 @@ from src.application.factories.recipe_usecase_factory import (
     make_prepare_recipe_generation_data_use_case,
     make_generate_custom_recipe_use_case,
     make_save_recipe_use_case,
-    make_get_saved_recipes_use_case
+    make_get_saved_recipes_use_case,
+    make_get_all_recipes_use_case,
+    make_delete_user_recipe_use_case
 )
 
 from src.shared.exceptions.custom import InvalidRequestDataException
@@ -50,7 +52,8 @@ def generate_custom_recipes():
         user_uid=user_uid,
         custom_ingredients=json_data["ingredients"],
         preferences=json_data.get("preferences", []),
-        num_recipes=json_data.get("num_recipes", 2)
+        num_recipes=json_data.get("num_recipes", 2),
+        recipe_categories=json_data.get("recipe_categories", [])
     )
 
     return jsonify(result), 200
@@ -92,3 +95,38 @@ def get_saved_recipes():
         "recipes": result,
         "count": len(result)
     }), 200
+
+
+@recipes_bp.route("/all", methods=["GET"])
+@jwt_required()
+def get_all_recipes():
+
+    use_case = make_get_all_recipes_use_case()
+    all_recipes = use_case.execute()
+
+    recipe_schema = RecipeSchema()
+    result = recipe_schema.dump(all_recipes, many=True)
+
+    return jsonify({
+        "recipes": result,
+        "count": len(result)
+    }), 200
+
+@recipes_bp.route("/delete", methods=["DELETE"])
+@jwt_required()
+def delete_user_recipe():
+    user_uid = get_jwt_identity()
+    data = request.get_json()
+
+    if not data or "title" not in data:
+        raise InvalidRequestDataException(details={"title": "El campo 'title' es obligatorio."})
+
+    title = data["title"]
+    use_case = make_delete_user_recipe_use_case()
+
+    use_case.execute(user_uid=user_uid, title=title)
+
+    return jsonify({
+        "message": f"Receta '{title}' eliminada exitosamente"
+    }), 200
+

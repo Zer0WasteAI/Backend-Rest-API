@@ -11,8 +11,8 @@ class AssignImageReferenceUseCase:
         if exact:
             return exact
 
-        similars = self.image_repository.find_by_name_similarity(item_name)
-        if similars:
-            return similars[0]
+        similar = self.image_repository.find_best_match_name(item_name)
+        if similar:
+            return similar
 
-        return self.image_repository.find_by_name(self.fallback_name)
+        return None

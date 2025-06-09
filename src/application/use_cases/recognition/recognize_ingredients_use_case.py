@@ -36,13 +36,13 @@ class RecognizeIngredientsUseCase:
         current_time = datetime.now(timezone.utc)
         print(f"🚀 Processing {len(result['ingredients'])} ingredients with parallel image generation...")
         print(f"📝 BASIC endpoint: Recognition data + Images only (Environmental/Utilization will be generated when adding to inventory)")
-        
+
         # 1. Función para generar imágenes en paralelo
         def process_ingredient_image(ingredient_data):
             ingredient, user_uid = ingredient_data
             ingredient_name = ingredient["name"]
             descripcion = ingredient.get("description", "")
-            
+
             print(f"🎨 [Thread] Processing image for: {ingredient_name}")
             try:
                 image_path = self.ingredient_image_generator_service.get_or_generate_ingredient_image(
@@ -55,14 +55,14 @@ class RecognizeIngredientsUseCase:
             except Exception as e:
                 print(f"🚨 [Thread] Error with image for {ingredient_name}: {str(e)}")
                 return ingredient_name, self._get_default_image_path(), str(e)
-        
+
         # 2. Ejecutar generación de imágenes en paralelo
         ingredient_images = {}
         with ThreadPoolExecutor(max_workers=3) as executor:
             thread_data = [(ingredient, user_uid) for ingredient in result["ingredients"]]
             
             future_to_ingredient = {
-                executor.submit(process_ingredient_image, data): data[0]["name"] 
+                executor.submit(process_ingredient_image, data): data[0]["name"]
                 for data in thread_data
             }
             
@@ -73,15 +73,15 @@ class RecognizeIngredientsUseCase:
                     print(f"⚠️ Image fallback used for {ingredient_name}")
                 else:
                     print(f"🖼️ Image ready for {ingredient_name}")
-        
+
         # 3. Finalizar procesamiento de cada ingrediente
         for ingredient in result["ingredients"]:
             ingredient_name = ingredient["name"]
             print(f"📋 Finalizing basic data for ingredient: {ingredient_name}")
-            
+
             # Asignar imagen generada en paralelo
             ingredient["image_path"] = ingredient_images.get(ingredient_name, self._get_default_image_path())
-            
+
             # ⭐ Calcular fecha de vencimiento
             try:
                 expiration_date = self.calculator_service.calculate_expiration_date(
@@ -91,16 +91,16 @@ class RecognizeIngredientsUseCase:
                 )
                 ingredient["expiration_date"] = expiration_date.isoformat()
                 print(f"📅 Expiration calculated for {ingredient_name}: {expiration_date}")
-                
+
             except Exception as e:
                 print(f"🚨 Error calculating expiration for {ingredient_name}: {str(e)}")
                 fallback_date = current_time + timedelta(days=ingredient.get("expiration_time", 7))
                 ingredient["expiration_date"] = fallback_date.isoformat()
-            
+
             # ⭐ Agregar timestamp
             ingredient["added_at"] = current_time.isoformat()
             print(f"✅ Basic data ready for {ingredient_name}: Image ✅ | Expiration ✅")
-        
+
         print(f"🎉 All {len(result['ingredients'])} ingredients processed with optimized recognition flow!")
 
         return result

@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import List, Optional
+from typing import Optional
 from src.domain.models.image_reference import ImageReference
 
 class ImageReferenceRepository(ABC):
@@ -16,5 +16,5 @@ class ImageReferenceRepository(ABC):
         pass
 
     @abstractmethod
-    def find_by_name_similarity(self, name_query: str) -> List[ImageReference]:
+    def find_best_match_name(self, name_query: str) -> Optional[ImageReference]:
         pass
