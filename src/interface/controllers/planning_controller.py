@@ -160,3 +160,6 @@ def get_meal_plan_dates():
     dates = use_case.execute(user_uid=user_uid)
 
     return jsonify({"dates": [d.isoformat() for d in dates]})
+
+#TODO: Actualizar images cuando ya se generaron
+#TODO: Mejorar la generación de imagenes de recetas usando la nueva descripción :D

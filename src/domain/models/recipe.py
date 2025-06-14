@@ -24,6 +24,7 @@ class Recipe:
         steps: List[RecipeStep],
         footer: str,
         category: str,
+        description: str,
         image_path: Optional[str],
         generated_by_ai: bool = True,
         saved_at: Optional[datetime] = None,
@@ -44,6 +45,7 @@ class Recipe:
         self.image_status = image_status
         self.generated_at = generated_at or datetime.now()
         self.category = category
+        self.description = description
 
     def __repr__(self):
         return f"Recipe(uid={self.uid}, title={self.title}, user_uid={self.user_uid})"

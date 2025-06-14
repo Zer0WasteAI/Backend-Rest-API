@@ -27,6 +27,7 @@ class SaveRecipeRequestSchema(Schema):
     footer = fields.String(missing="")
     generated_by_ai = fields.Boolean(required=True)
     category = fields.String(required=True, validate=validate.OneOf(["desayuno", "almuerzo", "cena", "postre", "ensalada", "sopa"]))
+    description = fields.String(allow_none=False, required=True)
     image_path = fields.String(allow_none=True, missing=None)
     image_status = fields.String(missing="generating")  # Puede ser generado, fallido, etc.
     generated_at = fields.DateTime(allow_none=True, missing=None)
@@ -41,6 +42,7 @@ class RecipeSchema(Schema):
     generated_by_ai = fields.Boolean(required=True)
     saved_at = fields.DateTime(required=True)
     category = fields.String(required=True)
+    description = fields.String(allow_none=True, required=True)
     image_path = fields.String(allow_none=True, missing=None)
     image_status = fields.String(missing="generating")
     generated_at = fields.DateTime(allow_none=True)
