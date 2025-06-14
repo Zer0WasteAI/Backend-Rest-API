@@ -7,6 +7,8 @@ from src.application.use_cases.recipes.get_all_recipes_use_case import GetAllRec
 from src.application.use_cases.recipes.delete_user_recipe_use_case import DeleteUserRecipeUseCase
 from src.infrastructure.db.inventory_repository_impl import InventoryRepositoryImpl
 from src.infrastructure.db.recipe_repository_impl import RecipeRepositoryImpl
+from src.application.services.recipe_image_generator_service import RecipeImageGeneratorService
+from src.infrastructure.firebase.firebase_storage_adapter import FirebaseStorageAdapter
 from src.infrastructure.ai.gemini_recipe_generator_service import GeminiRecipeGeneratorService
 from src.infrastructure.db.base import db
 
@@ -30,3 +32,9 @@ def make_get_all_recipes_use_case():
 
 def make_delete_user_recipe_use_case():
     return DeleteUserRecipeUseCase(RecipeRepositoryImpl(db))
+
+def make_recipe_image_generator_service():
+    return RecipeImageGeneratorService(
+        ai_service=GeminiRecipeGeneratorService(),
+        storage_adapter=FirebaseStorageAdapter()
+    )

@@ -482,6 +482,92 @@ class AsyncTaskService:
         self.executor.submit(background_food_image_generation)
         print(f"🎯 [ASYNC FOOD IMAGES] Task {task_id} queued for background food image processing")
 
+    def run_async_recipe_image_generation(self, task_id: str, user_uid: str, recipes: List[dict],
+                                          recipe_image_generator_service):
+        """
+        Ejecuta la generación asíncrona de imágenes para recetas generadas.
+        """
+        from flask import current_app
+        app = current_app._get_current_object()
+
+        def background_recipe_image_generation():
+            with app.app_context():
+                print(f"👩‍🍳 [ASYNC RECIPE IMAGES] Starting background recipe image generation for task {task_id}")
+
+                try:
+                    self.update_task_progress(task_id, 5, "Iniciando generación de imágenes de recetas...",
+                                              "processing")
+                    current_time = datetime.now(timezone.utc)
+
+                    def generate_recipe_image(recipe_data):
+                        recipe, user_uid = recipe_data
+                        recipe_title = recipe["title"]
+                        description = recipe.get("description", "")
+                        ingredients = recipe.get("ingredients", [])
+
+                        try:
+                            image_path = recipe_image_generator_service.get_or_generate_recipe_image(
+                                recipe_title=recipe_title,
+                                user_uid=user_uid,
+                                description=description,
+                                ingredients=ingredients
+                            )
+                            return recipe_title, image_path, None
+                        except Exception as e:
+                            return recipe_title, "https://via.placeholder.com/300x300/fde3e3/666666?text=No+Image", str(
+                                e)
+
+                    recipe_images = {}
+                    total_recipes = len(recipes)
+
+                    with ThreadPoolExecutor(max_workers=3) as image_executor:
+                        thread_data = [(recipe, user_uid) for recipe in recipes]
+
+                        future_to_recipe = {
+                            image_executor.submit(generate_recipe_image, data): data[0]["title"]
+                            for data in thread_data
+                        }
+
+                        completed_images = 0
+                        for future in future_to_recipe:
+                            recipe_title, image_path, error = future.result()
+                            recipe_images[recipe_title] = image_path
+                            completed_images += 1
+
+                            progress = 10 + (completed_images * 70 // total_recipes)
+                            self.update_task_progress(task_id, progress, f"✅ Imagen generada para {recipe_title}")
+                            if error:
+                                print(f"⚠️ [ASYNC RECIPE IMAGES] Warning generating image for {recipe_title}: {error}")
+
+                    self.update_task_progress(task_id, 85, "Actualizando recetas con imágenes...")
+
+                    updated_recipes = []
+                    for recipe in recipes:
+                        recipe_title = recipe["title"]
+                        recipe["image_path"] = recipe_images.get(recipe_title)
+                        recipe["image_status"] = "ready"
+                        updated_recipes.append(recipe)
+
+                    self.update_task_progress(task_id, 95, "Finalizando generación de imágenes de recetas...")
+
+                    result_data = {
+                        "recipes": updated_recipes,
+                        "images_generated": len(recipe_images),
+                        "total_recipes": total_recipes,
+                        "completed_at": current_time.isoformat()
+                    }
+
+                    self.complete_task(task_id, result_data)
+                    print(
+                        f"🎉 [ASYNC RECIPE IMAGES] Task {task_id} completed successfully - {len(recipe_images)} images generated")
+
+                except Exception as e:
+                    print(f"🚨 [ASYNC RECIPE IMAGES] Task {task_id} failed: {str(e)}")
+                    self.fail_task(task_id, str(e))
+
+        self.executor.submit(background_recipe_image_generation)
+        print(f"🎯 [ASYNC RECIPE IMAGES] Task {task_id} queued for background recipe image processing")
+
 
 # Instancia global
 async_task_service = AsyncTaskService() 

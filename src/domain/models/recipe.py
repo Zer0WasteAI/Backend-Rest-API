@@ -27,6 +27,8 @@ class Recipe:
         image_path: Optional[str],
         generated_by_ai: bool = True,
         saved_at: Optional[datetime] = None,
+        image_status: Optional[str] = "generating",
+        generated_at: Optional[datetime] = None,
     ):
         self.uid = uid
         self.user_uid = user_uid
@@ -39,6 +41,8 @@ class Recipe:
         self.saved_at = saved_at or datetime.now()
         self.generated_by_ai = generated_by_ai
         self.image_path = image_path
+        self.image_status = image_status
+        self.generated_at = generated_at or datetime.now()
         self.category = category
 
     def __repr__(self):
