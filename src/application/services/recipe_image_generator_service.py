@@ -6,9 +6,10 @@ class RecipeImageGeneratorService:
     Servicio para obtener o generar imágenes de recetas.
     Inspirado en FoodImageGeneratorService pero adaptado a recetas generadas.
     """
-    def __init__(self, ai_service, storage_adapter):
+    def __init__(self, ai_service, storage_adapter, ai_image_service):
         self.ai_service = ai_service
         self.storage_adapter = storage_adapter
+        self.ai_image_service = ai_image_service
         self.recipes_folder = "recipes"
 
     def get_or_generate_recipe_image(self, recipe_title: str, user_uid: str, description: str = "", ingredients: List[dict] = None) -> str:
@@ -42,10 +43,11 @@ class RecipeImageGeneratorService:
     def _generate_new_recipe_image(self, recipe_title: str, description: str = "", ingredients: List[dict] = None) -> str:
         print(f"🎨 Generating image for recipe: {recipe_title}")
 
-        image_buffer = self.ai_service.generate_recipe_image(
-            title=recipe_title,
+        image_buffer = self.ai_image_service.generate_food_image(
+            #title=recipe_title,
+            food_name=recipe_title,
             description=description,
-            ingredients=[i.get("name", "") for i in ingredients] if ingredients else []
+            main_ingredients=[i.get("name", "") for i in ingredients] if ingredients else []
         )
 
         if image_buffer is None:

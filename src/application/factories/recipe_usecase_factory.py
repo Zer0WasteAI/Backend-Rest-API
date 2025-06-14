@@ -10,6 +10,7 @@ from src.infrastructure.db.recipe_repository_impl import RecipeRepositoryImpl
 from src.application.services.recipe_image_generator_service import RecipeImageGeneratorService
 from src.infrastructure.firebase.firebase_storage_adapter import FirebaseStorageAdapter
 from src.infrastructure.ai.gemini_recipe_generator_service import GeminiRecipeGeneratorService
+from src.infrastructure.ai.gemini_adapter_service import GeminiAdapterService
 from src.infrastructure.db.base import db
 
 def make_prepare_recipe_generation_data_use_case():
@@ -36,5 +37,6 @@ def make_delete_user_recipe_use_case():
 def make_recipe_image_generator_service():
     return RecipeImageGeneratorService(
         ai_service=GeminiRecipeGeneratorService(),
-        storage_adapter=FirebaseStorageAdapter()
+        storage_adapter=FirebaseStorageAdapter(),
+        ai_image_service=GeminiAdapterService()
     )

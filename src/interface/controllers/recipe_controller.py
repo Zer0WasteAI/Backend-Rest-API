@@ -40,7 +40,7 @@ def generate_recipes():
         user_uid=user_uid,
         task_type='recipe_images',
         input_data={
-            'generation_id': str(uuid.uuid4()),
+            'generation_id': str(uuid.uuid4()), # No guardando reconocimientos
             'recipes': result["generated_recipes"]
         }
     )

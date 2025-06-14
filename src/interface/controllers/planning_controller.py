@@ -162,4 +162,3 @@ def get_meal_plan_dates():
     return jsonify({"dates": [d.isoformat() for d in dates]})
 
 #TODO: Actualizar images cuando ya se generaron
-#TODO: Mejorar la generación de imagenes de recetas usando la nueva descripción :D
