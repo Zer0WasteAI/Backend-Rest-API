@@ -483,9 +483,10 @@ class AsyncTaskService:
         print(f"🎯 [ASYNC FOOD IMAGES] Task {task_id} queued for background food image processing")
 
     def run_async_recipe_image_generation(self, task_id: str, user_uid: str, recipes: List[dict],
-                                          recipe_image_generator_service):
+                                          recipe_image_generator_service,
+                                          generation_repository, generation_id: str):
         """
-        Ejecuta la generación asíncrona de imágenes para recetas generadas.
+        Ejecuta la generación asíncrona de imágenes para recetas generadas y actualiza la tabla Generation.
         """
         from flask import current_app
         app = current_app._get_current_object()
@@ -541,17 +542,32 @@ class AsyncTaskService:
 
                     self.update_task_progress(task_id, 85, "Actualizando recetas con imágenes...")
 
-                    updated_recipes = []
+                    # Modificar recetas in-place
                     for recipe in recipes:
                         recipe_title = recipe["title"]
                         recipe["image_path"] = recipe_images.get(recipe_title)
                         recipe["image_status"] = "ready"
-                        updated_recipes.append(recipe)
+
+                    # 🔄 Actualizar generación en base de datos
+                    try:
+                        print(f"🔄 [GENERATION UPDATE] Buscando generación {generation_id}")
+                        generation = generation_repository.find_by_uid(generation_id)
+                        if generation:
+                            print(f"✅ [GENERATION UPDATE] Actualizando generación con imágenes")
+                            updated_result = generation.raw_result.copy()
+                            updated_result["generated_recipes"] = recipes
+                            generation.raw_result = updated_result
+                            generation_repository.save(generation)
+                        else:
+                            print(f"⚠️ [GENERATION UPDATE] No se encontró la generación {generation_id}")
+                    except Exception as e:
+                        print(f"⚠️ [GENERATION UPDATE] Error actualizando generación: {str(e)}")
 
                     self.update_task_progress(task_id, 95, "Finalizando generación de imágenes de recetas...")
 
                     result_data = {
-                        "recipes": updated_recipes,
+                        "generation_id": generation_id,
+                        "recipes": recipes,
                         "images_generated": len(recipe_images),
                         "total_recipes": total_recipes,
                         "completed_at": current_time.isoformat()

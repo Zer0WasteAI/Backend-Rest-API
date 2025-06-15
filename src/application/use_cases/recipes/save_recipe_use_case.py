@@ -26,6 +26,7 @@ class SaveRecipeUseCase:
             generated_by_ai=recipe_data.get("generated_by_ai", True),
             category=recipe_data.get("category", ""),
             image_path=recipe_data.get("", None),
+            description=recipe_data.get("description", ""),
         )
 
         # Guardar en el repositorio

@@ -37,45 +37,10 @@ def save_meal_plan():
         meals=data["meals"]
     )
 
-    # Generar imágenes de recetas del plan
-    all_recipes = []
-    for meal in data["meals"]:
-        all_recipes.append(meal["recipe"])
-
-    image_task_id = async_task_service.create_task(
-        user_uid=user_uid,
-        task_type='recipe_images',
-        input_data={
-            'generation_id': str(uuid.uuid4()),
-            'recipes': all_recipes
-        }
-    )
-
-    recipe_image_generator_service = make_recipe_image_generator_service()
-
-    async_task_service.run_async_recipe_image_generation(
-        task_id=image_task_id,
-        user_uid=user_uid,
-        recipes=all_recipes,
-        recipe_image_generator_service=recipe_image_generator_service
-    )
-
-    current_time = datetime.now(timezone.utc)
-    for recipe in all_recipes:
-        recipe["image_path"] = None
-        recipe["image_status"] = "generating"
-        recipe["generated_at"] = current_time.isoformat()
-
     result = MealPlanSchema().dump(saved_plan)
     return jsonify({
         "message": "Plan de comidas guardado exitosamente",
-        "meal_plan": result,
-        "images": {
-            "status": "generating",
-            "task_id": image_task_id,
-            "check_images_url": f"/api/recognition/images/status/{image_task_id}",
-            "estimated_time": "15-30 segundos"
-        }
+        "meal_plan": result
     }), 201
 
 @planning_bp.route("/update", methods=["PUT"])
