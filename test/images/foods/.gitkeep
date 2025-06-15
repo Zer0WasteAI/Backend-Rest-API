@@ -1,0 +1,13 @@
+# 🍽️ Imágenes de Comidas y Platos Completos
+#
+# Coloca aquí imágenes de comidas completas y platos preparados:
+# - Platos principales: pasta.jpg, pizza.png, ensalada.jpg
+# - Desayunos: cereal.jpg, tostadas.png, smoothie.jpg  
+# - Postres: pastel.jpg, helado.png, fruta.jpg
+# - Bebidas: jugo.jpg, cafe.png, agua.jpg
+# - Comidas internacionales: sushi.jpg, tacos.png, curry.jpg
+#
+# Estas imágenes se usan para probar el reconocimiento de múltiples 
+# ingredientes en un solo plato y análisis nutricional completo.
+#
+# Formatos soportados: .jpg, .jpeg, .png, .bmp, .webp 
