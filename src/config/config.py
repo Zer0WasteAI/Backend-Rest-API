@@ -18,6 +18,7 @@ class Config:
 
     SQLALCHEMY_DATABASE_URI = (
         f"mysql+pymysql://{DB_USER}:{DB_PASS}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
+        f"?ssl_ca=/etc/ssl/certs/ca-certificates.crt"
     )
     SQLALCHEMY_TRACK_MODIFICATIONS = False
 
