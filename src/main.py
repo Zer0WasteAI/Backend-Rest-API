@@ -5,7 +5,6 @@ from flasgger import Swagger
 from flask import Flask, jsonify
 from flask_cors import CORS
 from flask_jwt_extended import JWTManager
-
 from src.config.config import Config
 from src.infrastructure.db.schemas.user_schema import db
 from src.config.swagger_config import swagger_config, swagger_template
@@ -172,7 +171,7 @@ def create_app():
 
     return application
 
-
+print(f"📦 URI: {Config.SQLALCHEMY_DATABASE_URI}")
 app = create_app()
 
 with app.app_context():
