@@ -23,7 +23,8 @@ class RecipeRepositoryImpl(RecipeRepository):
             category=recipe.category,
             image_path=recipe.image_path,
             generated_by_ai=recipe.generated_by_ai,
-            saved_at=recipe.saved_at
+            saved_at=recipe.saved_at,
+            description=recipe.description,
         )
         self.db.session.add(recipe_orm)
 
@@ -75,6 +76,7 @@ class RecipeRepositoryImpl(RecipeRepository):
             saved_at=recipe_row.saved_at,
             category=recipe_row.category,
             image_path=recipe_row.image_path,
+            description=recipe_row.description,
         )
 
     def find_by_name(self, name: str) -> Optional[Recipe]:
@@ -153,6 +155,7 @@ class RecipeRepositoryImpl(RecipeRepository):
             saved_at=recipe_row.saved_at,
             category=recipe_row.category,
             image_path=recipe_row.image_path,
+            description=recipe_row.description,
         )
 
     def map_to_domain(self, orm_recipe: RecipeORM) -> Recipe:

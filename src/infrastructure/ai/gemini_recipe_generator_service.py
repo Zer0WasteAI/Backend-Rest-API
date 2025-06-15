@@ -108,6 +108,7 @@ class GeminiRecipeGeneratorService(IARecipeGeneratorService):
             recipe_categories_preferences = "Recipe type preferences"
             respond_only = "Respond only with a JSON array like this"
             no_additional_text = "Do not include greetings, code, or additional text"
+            recipe_detailed_description = "Describe the appearance of the final dish in a clear and realistic way, focusing on visible ingredients, plating style, color contrasts, textures, and portion size. Use a neutral background and natural lighting. Avoid metaphors or poetic expressions. Describe the setting as if preparing an image for a food magazine or recipe app."
         else:
             chef_nationality = "chef peruano experto en nutrición y cocina de aprovechamiento"
             recipe_categories_options = "desayuno, almuerzo, cena, postre, ensalada, sopa"
@@ -125,6 +126,7 @@ class GeminiRecipeGeneratorService(IARecipeGeneratorService):
             recipe_categories_preferences = "Preferencias de tipo de receta"
             respond_only = "Responde únicamente con un arreglo JSON así"
             no_additional_text = "No incluyas saludos, código, ni texto adicional"
+            recipe_detailed_description = "Describe de forma clara y realista el aspecto del plato terminado, enfocándote en los ingredientes visibles, el estilo de presentación, los colores, las texturas y el tamaño de la porción. Usa un fondo neutro y luz natural. Evita metáforas o expresiones poéticas. Describe la escena como si se fuera a generar una imagen para una revista de cocina o una app de recetas."
 
         # Configurar sistema de medidas
         if measurement_unit == "imperial":
@@ -149,6 +151,7 @@ class GeminiRecipeGeneratorService(IARecipeGeneratorService):
           "duration": "20 min",
           "difficulty": "{difficulty_options}",
           "category": "{recipe_categories_options}",
+          "description" "{recipe_detailed_description}",
           "ingredients": [
             {{
               "name": "Nombre del ingrediente",

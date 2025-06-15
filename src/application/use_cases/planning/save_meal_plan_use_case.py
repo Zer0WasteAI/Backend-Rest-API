@@ -46,6 +46,7 @@ class SaveMealPlanUseCase:
                 generated_by_ai=meal_data.get("generated_by_ai", True),
                 category=meal_data["category"],
                 image_path=meal_data.get("image_path", None),
+                description=meal_data.get("description", ""),
             )
 
             self.recipe_repository.save(recipe)

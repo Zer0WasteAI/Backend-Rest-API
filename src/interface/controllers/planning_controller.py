@@ -1,6 +1,7 @@
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
-from datetime import datetime
+from datetime import datetime, timezone
+import uuid
 
 from src.interface.serializers.planning_serializers import SaveMealPlanRequestSchema, MealPlanSchema
 from src.application.factories.planning_usecase_factory import (
@@ -11,6 +12,8 @@ from src.application.factories.planning_usecase_factory import (
     make_get_all_meal_plans_use_case,
     make_get_meal_plan_dates_use_case,
 )
+from src.application.factories.recipe_usecase_factory import make_recipe_image_generator_service
+from src.infrastructure.async_tasks.async_task_service import async_task_service
 from src.shared.exceptions.custom import InvalidRequestDataException
 
 planning_bp = Blueprint("planning", __name__)
@@ -40,7 +43,6 @@ def save_meal_plan():
         "meal_plan": result
     }), 201
 
-
 @planning_bp.route("/update", methods=["PUT"])
 @jwt_required()
 def update_meal_plan():
@@ -66,7 +68,6 @@ def update_meal_plan():
         "meal_plan": result
     })
 
-
 @planning_bp.route("/delete", methods=["DELETE"])
 @jwt_required()
 def delete_meal_plan():
@@ -85,7 +86,6 @@ def delete_meal_plan():
     use_case.execute(user_uid=user_uid, plan_date=plan_date)
 
     return jsonify({"message": f"Plan de comidas del {plan_date} eliminado exitosamente."})
-
 
 @planning_bp.route("/get", methods=["GET"])
 @jwt_required()
@@ -107,7 +107,6 @@ def get_meal_plan_by_date():
     result = MealPlanSchema().dump(plan)
     return jsonify({"meal_plan": result})
 
-
 @planning_bp.route("/all", methods=["GET"])
 @jwt_required()
 def get_all_meal_plans():
@@ -118,7 +117,6 @@ def get_all_meal_plans():
     result = MealPlanSchema(many=True).dump(plans)
     return jsonify({"meal_plans": result})
 
-
 @planning_bp.route("/dates", methods=["GET"])
 @jwt_required()
 def get_meal_plan_dates():
@@ -127,3 +125,5 @@ def get_meal_plan_dates():
     dates = use_case.execute(user_uid=user_uid)
 
     return jsonify({"dates": [d.isoformat() for d in dates]})
+
+#TODO: Actualizar images cuando ya se generaron
