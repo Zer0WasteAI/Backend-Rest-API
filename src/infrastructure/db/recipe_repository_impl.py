@@ -124,6 +124,14 @@ class RecipeRepositoryImpl(RecipeRepository):
         result = self.db.session.execute(stmt).scalar_one_or_none()
         return result is not None
 
+    def find_by_user_and_title(self, user_uid: str, title: str) -> bool:
+        stmt = select(RecipeORM).where(
+            RecipeORM.user_uid == user_uid,
+            RecipeORM.title == title
+        )
+        result = self.db.session.execute(stmt).scalar_one_or_none()
+        return self._to_domain(result) if result else None
+
     def get_all(self) -> list[Recipe]:
         recipes = self.db.session.execute(select(RecipeORM)).scalars().all()
         return [self._to_domain(recipe) for recipe in recipes]

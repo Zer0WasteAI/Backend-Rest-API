@@ -19,6 +19,7 @@ from src.interface.controllers.recognition_controller import recognition_bp
 from src.interface.controllers.inventory_controller import inventory_bp
 from src.interface.controllers.recipe_controller import recipes_bp
 from src.interface.controllers.generation_controller import generation_bp
+from src.interface.controllers.environmental_savings_controller import environmental_savings_bp
 
 from src.shared.exceptions.base import AppException
 from src.infrastructure.auth.jwt_callbacks import configure_jwt_callbacks
@@ -35,6 +36,7 @@ from src.infrastructure.db.models.recognition_orm import RecognitionORM
 from src.infrastructure.db.models.async_task_orm import AsyncTaskORM
 from src.infrastructure.db.models.daily_meal_plan_orm import DailyMealPlanORM
 from src.infrastructure.db.models.generation_orm import GenerationORM
+from src.infrastructure.db.models.environmental_savings_orm import EnvironmentalSavingsORM
 
 def create_app():
     application = Flask(__name__)
@@ -61,6 +63,7 @@ def create_app():
     application.register_blueprint(recipes_bp, url_prefix='/api/recipes')
     application.register_blueprint(planning_bp, url_prefix='/api/planning')
     application.register_blueprint(generation_bp, url_prefix='/api/generation')
+    application.register_blueprint(environmental_savings_bp, url_prefix='/api/environmental_savings')
 
     @application.errorhandler(AppException)
     def handle_app_exception(error):
