@@ -700,3 +700,63 @@ Iluminación y Fondo: Utiliza una iluminación cálida que haga el plato lucir i
                     "special_considerations": "Consume preferiblemente antes de su fecha de vencimiento."
                 }
             }
+
+    def estimate_extended_environmental_savings_from_ingredients(self, ingredients: List[Dict[str, Any]]) -> Dict[
+        str, Any]:
+        """
+        Estima el impacto ambiental y económico evitado al usar los ingredientes de una receta.
+
+        Args:
+            ingredients: Lista de ingredientes, cada uno con 'name', 'quantity' y 'type_unit'
+
+        Returns:
+            Diccionario con los valores totales evitados: carbono, agua, energía y costo.
+        """
+        prompt = f"""
+    Actúa como un experto en sostenibilidad alimentaria y análisis de ciclo de vida.
+
+    Recibirás una lista de ingredientes usados en una receta. Tu tarea es estimar el impacto ambiental y económico evitado si estos ingredientes se utilizan (en lugar de desperdiciarse).
+
+    Para cada ingrediente, considera:
+    - Huella de carbono (kg CO₂e)
+    - Huella hídrica (litros)
+    - Huella energética (megajulios, MJ)
+    - Costo económico aproximado (PEN)
+
+    Asume promedios realistas según fuentes globales. No incluyas explicaciones ni texto adicional.
+
+    Aquí están los ingredientes en formato JSON:
+
+    {json.dumps(ingredients, ensure_ascii=False, indent=2)}
+
+    Devuelve únicamente un JSON con esta estructura:
+
+    {{
+      "carbon_footprint": number,
+      "water_footprint": number,
+      "energy_footprint": number,
+      "economic_cost": number,
+      "unit_carbon": "kg CO2e",
+      "unit_water": "litros",
+      "unit_energy": "MJ",
+      "unit_cost": "USD"
+    }}
+        """
+
+        try:
+            generation_config = {"temperature": 0.3}
+            response = self.model.generate_content(prompt, generation_config=generation_config)
+            return self._parse_response_text(response.text)
+
+        except Exception as e:
+            print(f"🚨 Error estimating extended savings: {str(e)}")
+            return {
+                "carbon_footprint": 0.0,
+                "water_footprint": 0.0,
+                "energy_footprint": 0.0,
+                "economic_cost": 0.0,
+                "unit_carbon": "kg CO2e",
+                "unit_water": "litros",
+                "unit_energy": "MJ",
+                "unit_cost": "USD"
+            }
