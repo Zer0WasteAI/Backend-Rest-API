@@ -5,7 +5,8 @@ from src.application.factories.environmental_savings_factory import (
     make_estimate_savings_by_title_use_case,
     make_estimate_savings_by_uid_use_case,
     make_get_all_environmental_calculations_use_case,
-    make_get_environmental_calculations_by_status_use_case
+    make_get_environmental_calculations_by_status_use_case,
+make_sum_environmental_calculations_by_user
 )
 from src.shared.exceptions.custom import InvalidRequestDataException, RecipeNotFoundException
 
@@ -64,3 +65,12 @@ def get_calculations_by_status():
     use_case = make_get_environmental_calculations_by_status_use_case()
     result = use_case.execute(user_uid=user_uid, is_cooked=is_cooked)
     return jsonify({"calculations": result, "count": len(result)}), 200
+
+@environmental_savings_bp.route("/summary", methods=["GET"])
+@jwt_required()
+def get_environmental_summary():
+    user_uid = get_jwt_identity()
+    use_case = make_sum_environmental_calculations_by_user()
+    result = use_case.execute(user_uid)
+    return jsonify(result), 200
+
