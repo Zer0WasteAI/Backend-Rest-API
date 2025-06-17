@@ -7,6 +7,7 @@ from src.application.use_cases.recipes.calculate_enviromental_savings_from_recip
 from src.application.use_cases.recipes.calculate_enviromental_savings_from_recipe_name import EstimateEnvironmentalSavingsFromRecipeName
 from src.application.use_cases.recipes.get_all_environmental_calculations_by_user import GetAllEnvironmentalCalculationsByUser
 from src.application.use_cases.recipes.get_environmental_calculations_by_user_and_status import GetEnvironmentalCalculationsByUserAndStatus
+from src.application.use_cases.recipes.sum_environmental_calculations_by_user import SumEnvironmentalCalculationsByUser
 
 
 def make_environmental_savings_repository():
@@ -39,3 +40,6 @@ def make_get_environmental_calculations_by_status_use_case():
     return GetEnvironmentalCalculationsByUserAndStatus(
         savings_repository=make_environmental_savings_repository()
     )
+
+def make_sum_environmental_calculations_by_user():
+    return SumEnvironmentalCalculationsByUser(EnvironmentalSavingsRepositoryImpl(db))
