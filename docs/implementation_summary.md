@@ -139,4 +139,160 @@ POST /recognition/ingredients/complete
 GET /inventory/complete
 ```
 
-El sistema está listo para uso en producción con toda la funcionalidad solicitada implementada y documentada. 
+El sistema está listo para uso en producción con toda la funcionalidad solicitada implementada y documentada.
+
+# Enhanced Logging & Debugging Guide
+
+## Logging Detallado para Debugging
+
+### 🔍 Nuevos Logs Implementados
+
+El sistema ahora incluye logging exhaustivo en todos los puntos críticos para facilitar el debugging. Aquí está cómo interpretar los logs:
+
+### 📤 Upload de Imágenes (`/api/image_management/upload_image`)
+
+**Logs Exitosos:**
+```
+📤 [IMAGE UPLOAD] ===== UPLOAD REQUEST DETAILS =====
+📤 [IMAGE UPLOAD] User: user_123
+📤 [IMAGE UPLOAD] Method: POST
+📤 [IMAGE UPLOAD] Content-Type: multipart/form-data; boundary=...
+📤 [IMAGE UPLOAD] Files received:
+📤 [IMAGE UPLOAD]   File[image]: test.jpg (size: 12345)
+📤 [IMAGE UPLOAD] Form data received:
+📤 [IMAGE UPLOAD]   Form[item_name]: tomate
+📤 [IMAGE UPLOAD]   Form[image_type]: ingredient
+✅ [IMAGE UPLOAD] Upload completed successfully
+📤 [IMAGE UPLOAD] ===== UPLOAD COMPLETED =====
+```
+
+**Logs de Error:**
+```
+❌ [IMAGE UPLOAD] No image file provided
+❌ [IMAGE UPLOAD] No item_name provided
+🚨 [IMAGE UPLOAD] Unexpected error: Storage connection failed
+🚨 [IMAGE UPLOAD] FULL TRACEBACK:
+```
+
+### 🚀 Reconocimiento Asíncrono (`/api/recognition/ingredients/async`)
+
+**Request Logs:**
+```
+🚀 [ASYNC RECOGNITION] ===== REQUEST DETAILS =====
+🚀 [ASYNC RECOGNITION] User: user_123
+🚀 [ASYNC RECOGNITION] Content-Type: application/json
+🚀 [ASYNC RECOGNITION] JSON content: {"images_paths": [...]}
+🚀 [ASYNC RECOGNITION] Images count: 3
+🚀 [ASYNC RECOGNITION] Validating image paths...
+🚀 [ASYNC RECOGNITION]   Path 1: https://storage.googleapis.com/...
+✅ [ASYNC RECOGNITION] Task created successfully: abc-123
+🚀 [ASYNC RECOGNITION] ===== REQUEST COMPLETED =====
+```
+
+**Background Processing Logs:**
+```
+🚀 [ASYNC RECOGNITION] ===== STARTING BACKGROUND PROCESSING =====
+🚀 [ASYNC RECOGNITION] Step 1: Initializing task...
+🚀 [ASYNC RECOGNITION] Step 2: Loading images from storage...
+✅ [ASYNC RECOGNITION] All 3 images loaded successfully
+🚀 [ASYNC RECOGNITION] Step 3: Starting AI recognition...
+✅ [ASYNC RECOGNITION] AI recognition completed
+🚀 [ASYNC RECOGNITION] Recognized 5 ingredients
+🚀 [ASYNC RECOGNITION] Step 5: Starting parallel image generation...
+🎨 [ASYNC RECOGNITION] Generating image for: tomate
+✅ [ASYNC RECOGNITION] Image generated for tomate: https://storage...
+🎉 [ASYNC RECOGNITION] ===== TASK COMPLETED SUCCESSFULLY =====
+```
+
+### 🚨 Logs de Error Comunes y Soluciones
+
+#### Error HTTP 415 (Unsupported Media Type)
+```
+🚀 [ASYNC RECOGNITION] JSON detected: False
+🚀 [ASYNC RECOGNITION] FormData detected: {'image': 'file.jpg'}
+```
+**Solución:** El frontend está enviando FormData en lugar de JSON. Debe primero subir las imágenes y luego enviar las rutas en JSON.
+
+#### Error de Validación de Datos
+```
+❌ [ASYNC RECOGNITION] images_paths is not a list. Type: <class 'str'>
+```
+**Solución:** El frontend está enviando un string en lugar de un array de strings.
+
+#### Error de Carga de Imagen
+```
+🚨 [ASYNC RECOGNITION] Error loading image 1 (/path/image.jpg): File not found
+```
+**Solución:** La imagen no existe en el storage. Verificar que el upload fue exitoso.
+
+#### Error de AI Service
+```
+🚨 [ASYNC RECOGNITION] AI recognition failed: API quota exceeded
+```
+**Solución:** Problema con el servicio de IA. Verificar configuración y cuotas.
+
+### 📊 Tarea Asíncrona - Estados y Logs
+
+#### Creación de Tarea
+```
+🆕 [ASYNC TASK] ===== CREATING NEW TASK =====
+🆕 [ASYNC TASK] Task ID: abc-123
+🆕 [ASYNC TASK] Task Type: ingredient_recognition
+✅ [ASYNC TASK] Task abc-123 created successfully
+```
+
+#### Fallo de Tarea
+```
+❌ [ASYNC TASK] ===== FAILING TASK =====
+❌ [ASYNC TASK] Task ID: abc-123
+❌ [ASYNC TASK] Error Message: AI service timeout
+❌ [ASYNC TASK] Task found - Current status: processing
+❌ [ASYNC TASK] Progress before failure: 45%
+```
+
+### 🔧 Debugging Tips para Frontend
+
+1. **Verificar Content-Type:**
+   - Upload: Debe ser `multipart/form-data`
+   - Async: Debe ser `application/json`
+
+2. **Validar Estructura de Datos:**
+   - `images_paths` debe ser un array de strings
+   - Cada string debe ser una URL válida
+
+3. **Monitorear Progreso:**
+   - Usar polling cada 2-3 segundos
+   - Verificar `status`, `progress_percentage`, `current_step`
+
+4. **Manejo de Errores:**
+   - `status: 'failed'` → Mostrar `error_message` al usuario
+   - HTTP 415 → Revisar Content-Type del request
+   - HTTP 400 → Revisar estructura de datos enviados
+
+### 📝 Ejemplo de Response con Debug Info
+
+**Respuesta exitosa del async endpoint:**
+```json
+{
+  "task_id": "abc-123",
+  "status": "pending",
+  "debug_info": {
+    "images_count": 3,
+    "user_uid": "user_123",
+    "content_type_received": "application/json"
+  }
+}
+```
+
+**Respuesta de error con detalles:**
+```json
+{
+  "error": "images_paths debe ser una lista",
+  "error_type": "ValidationError",
+  "error_details": {
+    "received_type": "string",
+    "received_value": "/path/image.jpg",
+    "content_type": "application/json"
+  }
+}
+``` 

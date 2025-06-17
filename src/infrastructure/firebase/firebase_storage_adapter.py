@@ -49,18 +49,24 @@ class FirebaseStorageAdapter:
     def _extract_bucket_path_from_url(self, url: str) -> str:
         """
         Extrae la ruta del bucket desde una URL completa de Firebase Storage.
-        Ejemplo: 
-        https://storage.googleapis.com/zer0wasteai-91408.firebasestorage.app/uploads/ingredient/ad36bbebfa4a412598cb79bd190e6515.jpg
-        -> uploads/ingredient/ad36bbebfa4a412598cb79bd190e6515.jpg
+        Maneja tanto URLs públicas como URLs firmadas.
+        
+        Ejemplos: 
+        https://storage.googleapis.com/bucket/uploads/file.jpg -> uploads/file.jpg
+        https://storage.googleapis.com/bucket/uploads/file.jpg?Expires=...&Signature=... -> uploads/file.jpg
         """
         # Patrón para extraer la ruta después del bucket name
-        pattern = r'https://storage\.googleapis\.com/[^/]+/(.+)'
+        pattern = r'https://storage\.googleapis\.com/[^/]+/(.+?)(?:\?|$)'
         match = re.match(pattern, url)
         if match:
-            return match.group(1)
+            bucket_path = match.group(1)
+            print(f"🔍 Extracted bucket path: {bucket_path}")
+            return bucket_path
         else:
-            # Fallback: tomar todo después de la última barra
-            return url.split('/')[-1]
+            # Fallback: tomar todo después de la última barra, antes de parámetros
+            path_part = url.split('/')[-1].split('?')[0]
+            print(f"🔍 Fallback bucket path: {path_part}")
+            return path_part
     
     def _try_legacy_path(self, current_path: str) -> str:
         """

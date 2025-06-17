@@ -20,28 +20,33 @@ recognition_bp = Blueprint("recognition", __name__)
 @jwt_required()
 def recognize_ingredients():
     """
-    🚀 RECONOCIMIENTO HÍBRIDO:
-    - Respuesta inmediata con datos de IA (síncrono)
+    🚀 RECONOCIMIENTO SIMPLIFICADO:
+    - Respuesta inmediata con datos completos de IA (síncrono)
     - Generación de imágenes en segundo plano (asíncrono)
+    - Frontend usa response inmediata + endpoint para verificar imágenes
     """
     user_uid = get_jwt_identity()
     images_paths = request.json.get("images_paths")
     
-    print(f"🔍 HYBRID RECOGNITION - User: {user_uid}")
-    print(f"🔍 Images paths: {images_paths}")
+    print(f"🔍 [SIMPLE RECOGNITION] User: {user_uid}")
+    print(f"🔍 [SIMPLE RECOGNITION] Images paths: {images_paths}")
 
     if not images_paths or not isinstance(images_paths, list):
-        print("❌ ERROR: Invalid images_paths")
+        print("❌ [SIMPLE RECOGNITION] ERROR: Invalid images_paths")
         return jsonify({"error": "Debe proporcionar una lista válida en 'images_paths'"}), 400
 
     try:
-        # 1. PASO SÍNCRONO: Reconocimiento AI inmediato
-        print("🔍 Loading images for AI recognition...")
-        from src.application.factories.recognition_usecase_factory import make_ai_service, make_recognition_repository, make_storage_adapter
+        # 1. PASO SÍNCRONO: Reconocimiento AI inmediato CON datos completos
+        print("🔍 [SIMPLE RECOGNITION] Loading images for AI recognition...")
+        from src.application.factories.recognition_usecase_factory import (
+            make_ai_service, make_recognition_repository, make_storage_adapter,
+            make_ingredient_image_generator_service, make_calculator_service
+        )
         
         ai_service = make_ai_service()
         recognition_repository = make_recognition_repository(db)
         storage_adapter = make_storage_adapter()
+        calculator_service = make_calculator_service()
         
         # Cargar imágenes
         images_files = []
@@ -50,61 +55,20 @@ def recognize_ingredients():
             images_files.append(file)
         
         # Reconocimiento AI (síncrono)
-        print("🤖 Running AI recognition...")
+        print("🤖 [SIMPLE RECOGNITION] Running AI recognition...")
         result = ai_service.recognize_ingredients(images_files)
         
-        # Guardar reconocimiento básico
-        from src.domain.models.recognition import Recognition
-        recognition = Recognition(
-            uid=str(uuid.uuid4()),
-            user_uid=user_uid,
-            images_paths=images_paths,
-            recognized_at=datetime.now(timezone.utc),
-            raw_result=result,
-            is_validated=False,
-            validated_at=None
-        )
-        recognition_repository.save(recognition)
-        
-        # 2. PASO ASÍNCRONO: Crear tarea para generar imágenes
-        print("🎨 Queuing image generation task...")
-        image_task_id = async_task_service.create_task(
-            user_uid=user_uid,
-            task_type='ingredient_images',
-            input_data={
-                'recognition_id': recognition.uid,
-                'ingredients': result['ingredients']
-            }
-        )
-        
-        # Lanzar generación de imágenes en background
-        from src.application.factories.recognition_usecase_factory import make_ingredient_image_generator_service, make_calculator_service
-        ingredient_image_generator_service = make_ingredient_image_generator_service()
-        calculator_service = make_calculator_service()
-        
-        async_task_service.run_async_image_generation(
-            task_id=image_task_id,
-            user_uid=user_uid,
-            ingredients=result['ingredients'],
-            ingredient_image_generator_service=ingredient_image_generator_service,
-            calculator_service=calculator_service,
-            recognition_repository=recognition_repository,
-            recognition_id=recognition.uid
-        )
-        
-        # 3. RESPUESTA INMEDIATA: Datos sin imágenes + task_id para imágenes
+        # Preparar datos completos inmediatamente
         current_time = datetime.now(timezone.utc)
         
-        # Agregar placeholders de imagen y datos básicos
         for ingredient in result["ingredients"]:
-            ingredient["image_path"] = None  # Se agregará cuando esté lista
+            # Imagen placeholder mientras se genera
+            ingredient["image_path"] = "https://via.placeholder.com/150x150/f0f0f0/666666?text=Generando..."
             ingredient["image_status"] = "generating"
             ingredient["added_at"] = current_time.isoformat()
             
-            # Calcular fecha de vencimiento básica
+            # Calcular fecha de vencimiento
             try:
-                from src.application.factories.recognition_usecase_factory import make_calculator_service
-                calculator_service = make_calculator_service()
                 expiration_date = calculator_service.calculate_expiration_date(
                     added_at=current_time,
                     time_value=ingredient["expiration_time"],
@@ -116,38 +80,57 @@ def recognize_ingredients():
                 fallback_date = current_time + timedelta(days=ingredient.get("expiration_time", 7))
                 ingredient["expiration_date"] = fallback_date.isoformat()
         
+        # Guardar reconocimiento completo
+        from src.domain.models.recognition import Recognition
+        recognition = Recognition(
+            uid=str(uuid.uuid4()),
+            user_uid=user_uid,
+            images_paths=images_paths,
+            recognized_at=current_time,
+            raw_result=result,
+            is_validated=False,
+            validated_at=None
+        )
+        recognition_repository.save(recognition)
+        
         # Verificar alergias
         firestore_service = make_firestore_profile_service()
         user_profile = firestore_service.get_profile(user_uid)
         if user_profile:
-            print("🔍 Checking allergies...")
+            print("🔍 [SIMPLE RECOGNITION] Checking allergies...")
             result = _check_allergies_in_recognition(result, user_profile, "ingredients")
         
-        # Respuesta con datos inmediatos + info de tarea de imágenes
+        # 2. RESPUESTA INMEDIATA con todos los datos
         response_data = {
             **result,
             "recognition_id": recognition.uid,
-            "images": {
-                "status": "generating",
-                "task_id": image_task_id,
-                "check_images_url": f"/api/recognition/images/status/{image_task_id}",
-                "estimated_time": "20-40 segundos"
-            },
-            "message": "✅ Ingredientes reconocidos. Las imágenes se están generando en segundo plano."
+            "images_status": "generating",
+            "images_check_url": f"/api/recognition/{recognition.uid}/images",
+            "message": "✅ Ingredientes reconocidos. Las imágenes se están generando y se actualizarán automáticamente."
         }
         
-        print("✅ Hybrid recognition successful - immediate response sent")
-        print(f"📤 [HYBRID RESPONSE] Recognition ID: {recognition.uid}")
-        print(f"📤 [HYBRID RESPONSE] Images Task ID: {image_task_id}")
-        print(f"📤 [HYBRID RESPONSE] Ingredients count: {len(result.get('ingredients', []))}")
-        print(f"📤 [HYBRID RESPONSE] Complete response:")
-        print(f"📄 {json.dumps(response_data, indent=2, ensure_ascii=False)}")
+        print("✅ [SIMPLE RECOGNITION] Immediate response sent")
+        print(f"📤 [SIMPLE RECOGNITION] Recognition ID: {recognition.uid}")
+        print(f"📤 [SIMPLE RECOGNITION] Ingredients count: {len(result.get('ingredients', []))}")
+        
+        # 3. GENERAR IMÁGENES EN BACKGROUND (sin task_id complejo)
+        print("🎨 [SIMPLE RECOGNITION] Starting background image generation...")
+        ingredient_image_generator_service = make_ingredient_image_generator_service()
+        
+        async_task_service.run_simple_image_generation(
+            recognition_id=recognition.uid,
+            user_uid=user_uid,
+            ingredients=result['ingredients'],
+            ingredient_image_generator_service=ingredient_image_generator_service,
+            recognition_repository=recognition_repository
+        )
+        
         return jsonify(response_data), 200
 
     except Exception as e:
         # Log detallado del error
-        error_msg = f"🚨 ERROR EN HYBRID RECOGNITION: {str(e)}"
-        error_traceback = f"🚨 TRACEBACK: {traceback.format_exc()}"
+        error_msg = f"🚨 [SIMPLE RECOGNITION] ERROR: {str(e)}"
+        error_traceback = f"🚨 [SIMPLE RECOGNITION] TRACEBACK: {traceback.format_exc()}"
         
         print(error_msg)
         print(error_traceback)
@@ -217,24 +200,28 @@ def recognize_ingredients_complete():
 @jwt_required()
 def recognize_foods():
     """
-    🍽️ RECONOCIMIENTO HÍBRIDO DE COMIDA:
+    🍽️ RECONOCIMIENTO SIMPLIFICADO DE COMIDAS:
     - Respuesta inmediata con datos de IA (síncrono)
-    - Generación de imágenes en segundo plano (asíncrono)
+    - Generación de imágenes en segundo plano automática (asíncrono)
+    - Sin polling complejo - similar al flujo de ingredientes
     """
     user_uid = get_jwt_identity()
     images_paths = request.json.get("images_paths")
     
-    print(f"🍽️ HYBRID FOOD RECOGNITION - User: {user_uid}")
-    print(f"🍽️ Images paths: {images_paths}")
+    print(f"🍽️ [SIMPLE FOOD RECOGNITION] User: {user_uid}")
+    print(f"🍽️ [SIMPLE FOOD RECOGNITION] Images paths: {images_paths}")
 
     if not images_paths or not isinstance(images_paths, list):
-        print("❌ ERROR: Invalid images_paths")
+        print("❌ [SIMPLE FOOD RECOGNITION] ERROR: Invalid images_paths")
         return jsonify({"error": "Debe proporcionar una lista válida en 'images_paths'"}), 400
 
     try:
-        # 1. PASO SÍNCRONO: Reconocimiento AI inmediato de platos
-        print("🔍 Loading images for AI food recognition...")
-        from src.application.factories.recognition_usecase_factory import make_ai_service, make_recognition_repository, make_storage_adapter
+        # 1. PASO SÍNCRONO: Reconocimiento AI inmediato
+        print("🔍 [SIMPLE FOOD RECOGNITION] Loading images for AI recognition...")
+        from src.application.factories.recognition_usecase_factory import (
+            make_ai_service, make_recognition_repository, make_storage_adapter,
+            make_food_image_generator_service, make_calculator_service
+        )
         
         ai_service = make_ai_service()
         recognition_repository = make_recognition_repository(db)
@@ -246,8 +233,8 @@ def recognize_foods():
             file = storage_adapter.get_image(path)
             images_files.append(file)
         
-        # Reconocimiento AI de platos (síncrono)
-        print("🤖 Running AI food recognition...")
+        # Reconocimiento AI de comidas (síncrono)
+        print("🤖 [SIMPLE FOOD RECOGNITION] Running AI food recognition...")
         result = ai_service.recognize_foods(images_files)
         
         # Guardar reconocimiento básico
@@ -263,47 +250,21 @@ def recognize_foods():
         )
         recognition_repository.save(recognition)
         
-        # 2. PASO ASÍNCRONO: Crear tarea para generar imágenes de platos
-        print("🎨 Queuing food image generation task...")
-        image_task_id = async_task_service.create_task(
-            user_uid=user_uid,
-            task_type='food_images',
-            input_data={
-                'recognition_id': recognition.uid,
-                'foods': result['foods']
-            }
-        )
-        
-        # Lanzar generación de imágenes de platos en background
-        from src.application.factories.recognition_usecase_factory import make_food_image_generator_service, make_calculator_service
-        food_image_generator_service = make_food_image_generator_service()
+        # 2. PREPARAR DATOS DE RESPUESTA INMEDIATA
+        current_time = datetime.now(timezone.utc)
         calculator_service = make_calculator_service()
         
-        async_task_service.run_async_food_image_generation(
-            task_id=image_task_id,
-            user_uid=user_uid,
-            foods=result['foods'],
-            food_image_generator_service=food_image_generator_service,
-            calculator_service=calculator_service,
-            recognition_repository=recognition_repository,
-            recognition_id=recognition.uid
-        )
-        
-        # 3. RESPUESTA INMEDIATA: Datos sin imágenes + task_id para imágenes
-        current_time = datetime.now(timezone.utc)
-        
-        # Agregar placeholders de imagen y datos básicos
+        # Procesar cada comida reconocida
         for food in result["foods"]:
             food["image_path"] = None  # Se agregará cuando esté lista
-            food["image_status"] = "generating"
             food["added_at"] = current_time.isoformat()
             
-            # Calcular fecha de vencimiento básica
+            # Calcular fecha de vencimiento
             try:
                 expiration_date = calculator_service.calculate_expiration_date(
                     added_at=current_time,
-                    time_value=food["expiration_time"],
-                    time_unit=food["time_unit"]
+                    time_value=food.get("expiration_time", 3),
+                    time_unit=food.get("time_unit", "days")
                 )
                 food["expiration_date"] = expiration_date.isoformat()
             except Exception as e:
@@ -311,35 +272,42 @@ def recognize_foods():
                 fallback_date = current_time + timedelta(days=food.get("expiration_time", 3))
                 food["expiration_date"] = fallback_date.isoformat()
         
-        # Verificar alergias
+        # 3. VERIFICAR ALERGIAS
         firestore_service = make_firestore_profile_service()
         user_profile = firestore_service.get_profile(user_uid)
         if user_profile:
+            print("🔍 [SIMPLE FOOD RECOGNITION] Checking allergies...")
             result = _check_allergies_in_recognition(result, user_profile, "foods")
         
-        # Respuesta con datos inmediatos + info de tarea de imágenes
+        # 4. LANZAR GENERACIÓN DE IMÁGENES EN BACKGROUND (sin task tracking)
+        print("🎨 [SIMPLE FOOD RECOGNITION] Starting simple background image generation...")
+        food_image_generator_service = make_food_image_generator_service()
+        
+        async_task_service.run_simple_food_image_generation(
+            recognition_id=recognition.uid,
+            user_uid=user_uid,
+            foods=result['foods'],
+            food_image_generator_service=food_image_generator_service,
+            recognition_repository=recognition_repository
+        )
+        
+        # 5. RESPUESTA INMEDIATA CON DATOS COMPLETOS
         response_data = {
             **result,
             "recognition_id": recognition.uid,
-            "images": {
-                "status": "generating",
-                "task_id": image_task_id,
-                "check_images_url": f"/api/recognition/images/status/{image_task_id}",
-                "estimated_time": "15-30 segundos"
-            },
-            "message": "✅ Platos reconocidos. Las imágenes se están generando en segundo plano."
+            "message": "✅ Comidas reconocidas exitosamente. Las imágenes se están generando automáticamente.",
+            "images_status": "generating_in_background"
         }
         
-        print("✅ Hybrid food recognition successful - immediate response sent")
-        print(f"📤 [HYBRID FOOD RESPONSE] Recognition ID: {recognition.uid}")
-        print(f"📤 [HYBRID FOOD RESPONSE] Images Task ID: {image_task_id}")
-        print(f"📤 [HYBRID FOOD RESPONSE] Foods count: {len(result.get('foods', []))}")
-        print(f"📤 [HYBRID FOOD RESPONSE] Complete response:")
-        print(f"📄 {json.dumps(response_data, indent=2, ensure_ascii=False)}")
+        print("✅ [SIMPLE FOOD RECOGNITION] Recognition successful - immediate response sent")
+        print(f"📤 [SIMPLE FOOD RECOGNITION] Recognition ID: {recognition.uid}")
+        print(f"📤 [SIMPLE FOOD RECOGNITION] Foods count: {len(result.get('foods', []))}")
         return jsonify(response_data), 200
 
     except Exception as e:
-        print(f"🚨 HYBRID FOOD RECOGNITION ERROR: {str(e)}")
+        print(f"🚨 [SIMPLE FOOD RECOGNITION] ERROR: {str(e)}")
+        import traceback
+        print(f"🚨 [SIMPLE FOOD RECOGNITION] TRACEBACK: {traceback.format_exc()}")
         return jsonify({"error": str(e)}), 500
 
 
@@ -493,16 +461,95 @@ def recognize_ingredients_async():
     - Consultar progreso con /status/{task_id}
     """
     user_uid = get_jwt_identity()
-    images_paths = request.json.get("images_paths")
     
+    # 🔍 LOGGING DETALLADO - INFORMACIÓN DE REQUEST
+    print(f"🚀 [ASYNC RECOGNITION] ===== REQUEST DETAILS =====")
     print(f"🚀 [ASYNC RECOGNITION] User: {user_uid}")
-    print(f"🚀 [ASYNC RECOGNITION] Images: {len(images_paths) if images_paths else 0}")
+    print(f"🚀 [ASYNC RECOGNITION] Method: {request.method}")
+    print(f"🚀 [ASYNC RECOGNITION] URL: {request.url}")
+    print(f"🚀 [ASYNC RECOGNITION] Content-Type: {request.content_type}")
+    print(f"🚀 [ASYNC RECOGNITION] Content-Length: {request.content_length}")
+    
+    # 🔍 LOGGING DE HEADERS
+    print(f"🚀 [ASYNC RECOGNITION] Headers:")
+    for header_name, header_value in request.headers:
+        if header_name.lower() not in ['authorization', 'cookie']:  # No loggear datos sensibles
+            print(f"🚀 [ASYNC RECOGNITION]   {header_name}: {header_value}")
+    
+    # 🔍 VERIFICAR SI HAY CONTENIDO JSON
+    try:
+        if request.is_json:
+            print(f"🚀 [ASYNC RECOGNITION] JSON detected: True")
+            json_data = request.get_json()
+            print(f"🚀 [ASYNC RECOGNITION] JSON content: {json_data}")
+            images_paths = json_data.get("images_paths") if json_data else None
+        else:
+            print(f"🚀 [ASYNC RECOGNITION] JSON detected: False")
+            print(f"🚀 [ASYNC RECOGNITION] Raw data preview: {str(request.data)[:200]}...")
+            
+            # Verificar si viene como FormData por error
+            if request.form:
+                print(f"🚀 [ASYNC RECOGNITION] FormData detected: {dict(request.form)}")
+            if request.files:
+                print(f"🚀 [ASYNC RECOGNITION] Files detected: {list(request.files.keys())}")
+            
+            images_paths = None
+            
+    except Exception as json_error:
+        print(f"🚨 [ASYNC RECOGNITION] Error parsing JSON: {str(json_error)}")
+        print(f"🚨 [ASYNC RECOGNITION] Request data type: {type(request.data)}")
+        print(f"🚨 [ASYNC RECOGNITION] Request data: {request.data}")
+        return jsonify({
+            "error": "Error parsing JSON data",
+            "details": str(json_error),
+            "content_type_received": request.content_type,
+            "expected": "application/json"
+        }), 400
 
-    if not images_paths or not isinstance(images_paths, list):
-        print("❌ [ASYNC RECOGNITION] Invalid images_paths")
-        return jsonify({"error": "Debe proporcionar una lista válida en 'images_paths'"}), 400
+    print(f"🚀 [ASYNC RECOGNITION] Images paths extracted: {images_paths}")
+    print(f"🚀 [ASYNC RECOGNITION] Images count: {len(images_paths) if images_paths else 0}")
+
+    # 🔍 VALIDACIÓN DETALLADA
+    if not images_paths:
+        print("❌ [ASYNC RECOGNITION] images_paths is None or empty")
+        return jsonify({
+            "error": "Debe proporcionar una lista válida en 'images_paths'",
+            "received": images_paths,
+            "content_type": request.content_type,
+            "is_json": request.is_json
+        }), 400
+        
+    if not isinstance(images_paths, list):
+        print(f"❌ [ASYNC RECOGNITION] images_paths is not a list. Type: {type(images_paths)}")
+        return jsonify({
+            "error": "images_paths debe ser una lista",
+            "received_type": str(type(images_paths)),
+            "received_value": images_paths
+        }), 400
+        
+    if len(images_paths) == 0:
+        print("❌ [ASYNC RECOGNITION] images_paths is empty list")
+        return jsonify({
+            "error": "La lista images_paths no puede estar vacía",
+            "received": images_paths
+        }), 400
+
+    # 🔍 VALIDAR CADA PATH
+    print(f"🚀 [ASYNC RECOGNITION] Validating image paths...")
+    for i, path in enumerate(images_paths):
+        print(f"🚀 [ASYNC RECOGNITION]   Path {i+1}: {path}")
+        if not isinstance(path, str):
+            print(f"❌ [ASYNC RECOGNITION] Path {i+1} is not string: {type(path)}")
+            return jsonify({
+                "error": f"Todas las rutas deben ser strings. Path {i+1} es {type(path)}",
+                "invalid_path_index": i,
+                "invalid_path_value": path,
+                "invalid_path_type": str(type(path))
+            }), 400
 
     try:
+        print(f"🚀 [ASYNC RECOGNITION] Creating async task...")
+        
         # Crear tarea asíncrona
         task_id = async_task_service.create_task(
             user_uid=user_uid,
@@ -510,7 +557,11 @@ def recognize_ingredients_async():
             input_data={'images_paths': images_paths}
         )
         
+        print(f"✅ [ASYNC RECOGNITION] Task created successfully: {task_id}")
+        
         # Lanzar procesamiento en background
+        print(f"🚀 [ASYNC RECOGNITION] Loading factories and services...")
+        
         from src.application.factories.recognition_usecase_factory import (
             make_ai_service, make_recognition_repository, make_storage_adapter,
             make_ingredient_image_generator_service, make_calculator_service
@@ -521,6 +572,9 @@ def recognize_ingredients_async():
         storage_adapter = make_storage_adapter()
         ingredient_image_generator_service = make_ingredient_image_generator_service()
         calculator_service = make_calculator_service()
+        
+        print(f"✅ [ASYNC RECOGNITION] All services loaded successfully")
+        print(f"🚀 [ASYNC RECOGNITION] Starting background processing...")
         
         async_task_service.run_async_recognition(
             task_id=task_id,
@@ -534,6 +588,7 @@ def recognize_ingredients_async():
         )
         
         print(f"🎯 [ASYNC RECOGNITION] Task {task_id} queued successfully")
+        print(f"🚀 [ASYNC RECOGNITION] ===== REQUEST COMPLETED =====")
         
         # Respuesta inmediata
         return jsonify({
@@ -542,17 +597,41 @@ def recognize_ingredients_async():
             "status": "pending",
             "progress_percentage": 0,
             "estimated_time": "30-60 segundos",
-            "check_status_url": f"/api/recognition/status/{task_id}"
+            "check_status_url": f"/api/recognition/status/{task_id}",
+            "debug_info": {
+                "images_count": len(images_paths),
+                "user_uid": user_uid,
+                "content_type_received": request.content_type
+            }
         }), 202  # 202 Accepted
 
     except Exception as e:
+        import traceback
         error_msg = f"🚨 ERROR EN ASYNC RECOGNITION: {str(e)}"
         print(error_msg)
-        print(f"🚨 TRACEBACK: {traceback.format_exc()}")
+        print(f"🚨 [ASYNC RECOGNITION] Exception type: {type(e).__name__}")
+        print(f"🚨 [ASYNC RECOGNITION] Exception args: {e.args}")
+        print(f"🚨 [ASYNC RECOGNITION] FULL TRACEBACK:")
+        print(traceback.format_exc())
+        
+        # Información adicional del contexto
+        print(f"🚨 [ASYNC RECOGNITION] Context info:")
+        print(f"🚨 [ASYNC RECOGNITION]   User UID: {user_uid}")
+        print(f"🚨 [ASYNC RECOGNITION]   Images paths: {images_paths}")
+        print(f"🚨 [ASYNC RECOGNITION]   Task ID: {locals().get('task_id', 'Not created yet')}")
         
         return jsonify({
             "error": str(e), 
-            "error_type": str(type(e).__name__)
+            "error_type": str(type(e).__name__),
+            "error_details": {
+                "user_uid": user_uid,
+                "images_paths": images_paths,
+                "images_count": len(images_paths) if images_paths else 0,
+                "content_type": request.content_type,
+                "is_json": request.is_json,
+                "task_id": locals().get('task_id', 'Not created yet')
+            },
+            "traceback": traceback.format_exc().split('\n')[-10:]  # Últimas 10 líneas del traceback
         }), 500
 
 @recognition_bp.route("/status/<task_id>", methods=["GET"])
@@ -584,6 +663,14 @@ def get_recognition_status(task_id):
         # Si está completada, incluir verificación de alergias
         if task_status['status'] == 'completed' and task_status['result_data']:
             try:
+                print(f"🔍 [STATUS CHECK] Raw result_data type: {type(task_status['result_data'])}")
+                print(f"🔍 [STATUS CHECK] Raw result_data keys: {task_status['result_data'].keys() if isinstance(task_status['result_data'], dict) else 'Not a dict'}")
+                
+                if isinstance(task_status['result_data'], dict) and 'ingredients' in task_status['result_data']:
+                    print(f"🔍 [STATUS CHECK] Found {len(task_status['result_data']['ingredients'])} ingredients in result")
+                    for i, ingredient in enumerate(task_status['result_data']['ingredients'][:3]):  # Solo los primeros 3
+                        print(f"🔍 [STATUS CHECK] Ingredient {i+1}: {ingredient.get('name', 'No name')} - Image: {ingredient.get('image_path', 'No image')}")
+                
                 # Obtener preferencias del usuario para verificar alergias
                 firestore_service = make_firestore_profile_service()
                 user_profile = firestore_service.get_profile(user_uid)
@@ -596,10 +683,20 @@ def get_recognition_status(task_id):
                         "ingredients"
                     )
                     task_status['result_data'] = result_with_allergies
+                    print(f"🔍 [STATUS CHECK] After allergy check - ingredients count: {len(task_status['result_data'].get('ingredients', []))}")
                     
             except Exception as e:
                 print(f"⚠️ [STATUS CHECK] Error checking allergies: {str(e)}")
+                import traceback
+                print(f"⚠️ [STATUS CHECK] Error traceback: {traceback.format_exc()}")
                 # No fallar la respuesta por esto
+        
+        # Log final response details
+        print(f"📤 [STATUS CHECK] Final response status: {task_status['status']}")
+        if task_status['status'] == 'completed' and task_status['result_data']:
+            ingredients_count = len(task_status['result_data'].get('ingredients', [])) if isinstance(task_status['result_data'], dict) else 0
+            print(f"📤 [STATUS CHECK] Final response ingredients count: {ingredients_count}")
+            print(f"📤 [STATUS CHECK] First ingredient example: {task_status['result_data'].get('ingredients', [{}])[0] if ingredients_count > 0 else 'None'}")
         
         return jsonify(task_status), 200
 
@@ -675,11 +772,11 @@ def get_images_status(task_id):
 @jwt_required()
 def get_recognition_images(recognition_id):
     """
-    🖼️ OBTENER IMÁGENES: Obtiene las imágenes actualizadas de un reconocimiento específico
+    🖼️ VERIFICAR IMÁGENES: Verifica si las imágenes están listas y devuelve el estado actual
     """
     user_uid = get_jwt_identity()
     
-    print(f"🖼️ [GET IMAGES] Recognition: {recognition_id}, User: {user_uid}")
+    print(f"🖼️ [CHECK IMAGES] Recognition: {recognition_id}, User: {user_uid}")
     
     try:
         # Obtener el reconocimiento de la base de datos
@@ -688,43 +785,52 @@ def get_recognition_images(recognition_id):
         recognition = recognition_repository.find_by_uid(recognition_id)
         
         if not recognition:
-            print(f"❌ [GET IMAGES] Recognition {recognition_id} not found")
+            print(f"❌ [CHECK IMAGES] Recognition {recognition_id} not found")
             return jsonify({"error": "Reconocimiento no encontrado"}), 404
         
         # Verificar que pertenece al usuario
         if recognition.user_uid != user_uid:
-            print(f"❌ [GET IMAGES] Recognition {recognition_id} unauthorized for user {user_uid}")
+            print(f"❌ [CHECK IMAGES] Recognition {recognition_id} unauthorized for user {user_uid}")
             return jsonify({"error": "No tienes permiso para ver este reconocimiento"}), 403
         
         # Obtener los ingredientes con imágenes actualizadas
         ingredients = recognition.raw_result.get('ingredients', [])
         
-        # Verificar si todas las imágenes están listas
-        images_ready = all(
-            ingredient.get('image_path') is not None and 
-            ingredient.get('image_status') == 'ready'
-            for ingredient in ingredients
-        )
+        # Verificar estado de las imágenes
+        images_ready = 0
+        images_generating = 0
+        
+        for ingredient in ingredients:
+            image_status = ingredient.get('image_status', 'unknown')
+            if image_status == 'ready':
+                images_ready += 1
+            elif image_status == 'generating':
+                images_generating += 1
+        
+        all_images_ready = images_ready == len(ingredients)
         
         response = {
             "recognition_id": recognition_id,
-            "ingredients": ingredients,
+            "images_status": "ready" if all_images_ready else "generating",
             "images_ready": images_ready,
+            "images_generating": images_generating,
             "total_ingredients": len(ingredients),
-            "images_generated": sum(1 for ing in ingredients if ing.get('image_path') and ing.get('image_status') == 'ready'),
+            "progress_percentage": int((images_ready / len(ingredients)) * 100) if ingredients else 100,
+            "ingredients": ingredients,
             "last_updated": recognition.recognized_at.isoformat()
         }
         
-        if images_ready:
+        if all_images_ready:
             response['message'] = "✅ Todas las imágenes están listas"
+            print(f"✅ [CHECK IMAGES] All {images_ready} images ready for recognition {recognition_id}")
         else:
-            response['message'] = "⏳ Algunas imágenes aún se están generando"
+            response['message'] = f"🎨 Generando imágenes... {images_ready}/{len(ingredients)} listas"
+            print(f"🎨 [CHECK IMAGES] Images progress: {images_ready}/{len(ingredients)} ready")
         
-        print(f"✅ [GET IMAGES] Returned {len(ingredients)} ingredients for recognition {recognition_id}")
         return jsonify(response), 200
 
     except Exception as e:
-        error_msg = f"🚨 ERROR EN GET IMAGES: {str(e)}"
+        error_msg = f"🚨 [CHECK IMAGES] ERROR: {str(e)}"
         print(error_msg)
         
         return jsonify({

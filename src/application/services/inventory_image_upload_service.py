@@ -52,16 +52,24 @@ class InventoryImageUploadService:
         return f"uploads/{user_uid}/{folder}/{unique_filename}"
     
     def _upload_to_storage(self, file: FileStorage, storage_path: str) -> str:
-        """Sube el archivo al almacenamiento y retorna la URL pública"""
+        """Sube el archivo al almacenamiento y retorna la URL firmada"""
         blob = self.storage_adapter.bucket.blob(storage_path)
         
         # Upload file content
         file.seek(0)
         blob.upload_from_file(file, content_type=file.content_type)
         
-        # Make blob publicly accessible
-        blob.make_public()
-        return blob.public_url
+        # Generate signed URL (valid for 7 days)
+        from datetime import datetime, timedelta
+        expiration = datetime.utcnow() + timedelta(days=7)
+        
+        signed_url = blob.generate_signed_url(
+            expiration=expiration,
+            method='GET'
+        )
+        
+        print(f"✅ [INVENTORY UPLOAD] Generated signed URL (expires in 7 days)")
+        return signed_url
     
     def get_user_inventory_images(self, user_uid: str, upload_type: str = None) -> list:
         """
