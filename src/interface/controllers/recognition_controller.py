@@ -1,5 +1,6 @@
 import traceback
 import json
+from flasgger import swag_from # type: ignore
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from src.infrastructure.db.base import db
@@ -18,6 +19,143 @@ recognition_bp = Blueprint("recognition", __name__)
 
 @recognition_bp.route("/ingredients", methods=["POST"])
 @jwt_required()
+@swag_from({
+    'tags': ['Recognition'],
+    'summary': 'Reconocimiento de ingredientes por IA con imágenes',
+    'description': '''
+Reconoce automáticamente ingredientes en imágenes usando inteligencia artificial.
+
+### Proceso de Reconocimiento:
+1. **Análisis IA**: Procesa imágenes para identificar ingredientes
+2. **Datos Completos**: Retorna información detallada inmediatamente
+3. **Generación de Imágenes**: Crea imágenes de referencia en segundo plano
+4. **Validación de Alergias**: Verifica ingredientes contra perfil del usuario
+
+### Información Extraída:
+- **Identificación**: Nombre específico del ingrediente
+- **Cantidad Estimada**: Cantidad aproximada detectada
+- **Unidades**: Unidad de medida apropiada
+- **Almacenamiento**: Tipo de almacenamiento recomendado
+- **Vencimiento**: Tiempo estimado hasta vencimiento
+- **Consejos**: Recomendaciones de conservación
+
+### Características Especiales:
+- **Respuesta Inmediata**: Datos completos sin esperar imágenes
+- **Imágenes Asíncronas**: Generación de imágenes en segundo plano
+- **Detección de Alergias**: Alerta si detecta alérgenos del usuario
+- **Cálculo Automático**: Fechas de vencimiento calculadas automáticamente
+
+### Formatos de Imagen Soportados:
+- JPG, PNG, WEBP, GIF
+- Máximo 10MB por imagen
+- Múltiples imágenes por request
+    ''',
+    'parameters': [
+        {
+            'name': 'body',
+            'in': 'body',
+            'required': True,
+            'schema': {
+                'type': 'object',
+                'required': ['images_paths'],
+                'properties': {
+                    'images_paths': {
+                        'type': 'array',
+                        'items': {'type': 'string'},
+                        'description': 'Lista de rutas de imágenes en Firebase Storage',
+                        'example': [
+                            'uploads/recognition/abc123-image1.jpg',
+                            'uploads/recognition/def456-image2.jpg'
+                        ]
+                    }
+                }
+            }
+        }
+    ],
+    'responses': {
+        200: {
+            'description': 'Ingredientes reconocidos exitosamente',
+            'examples': {
+                'application/json': {
+                    "ingredients": [
+                        {
+                            "name": "Tomates cherry",
+                            "quantity": 500,
+                            "type_unit": "gr",
+                            "storage_type": "refrigerador",
+                            "expiration_time": 5,
+                            "time_unit": "days",
+                            "expiration_date": "2024-01-20T00:00:00Z",
+                            "added_at": "2024-01-15T10:00:00Z",
+                            "tips": "Mantener refrigerados para mayor duración",
+                            "image_path": "https://via.placeholder.com/150x150/f0f0f0/666666?text=Generando...",
+                            "image_status": "generating",
+                            "confidence": 0.95,
+                            "allergen_alert": False
+                        },
+                        {
+                            "name": "Queso manchego",
+                            "quantity": 200,
+                            "type_unit": "gr",
+                            "storage_type": "refrigerador",
+                            "expiration_time": 3,
+                            "time_unit": "weeks",
+                            "expiration_date": "2024-02-05T00:00:00Z",
+                            "added_at": "2024-01-15T10:00:00Z",
+                            "tips": "Envolver en papel encerado",
+                            "image_path": "https://via.placeholder.com/150x150/f0f0f0/666666?text=Generando...",
+                            "image_status": "generating",
+                            "confidence": 0.87,
+                            "allergen_alert": True,
+                            "allergen_details": ["lactose", "dairy"]
+                        }
+                    ],
+                    "recognition_id": "rec_abc123def456",
+                    "processed_images": 2,
+                    "total_ingredients_found": 2,
+                    "images_status": "generating",
+                    "images_check_url": "/api/recognition/rec_abc123def456/images",
+                    "message": "✅ Ingredientes reconocidos. Las imágenes se están generando y se actualizarán automáticamente.",
+                    "allergen_warnings": [
+                        {
+                            "ingredient": "Queso manchego",
+                            "allergens": ["lactose", "dairy"],
+                            "message": "⚠️ Contiene lácteos - revisar alergias"
+                        }
+                    ]
+                }
+            }
+        },
+        400: {
+            'description': 'Datos de entrada inválidos',
+            'examples': {
+                'application/json': {
+                    'error': 'Debe proporcionar una lista válida en images_paths',
+                    'details': 'images_paths debe ser un array con al menos una imagen'
+                }
+            }
+        },
+        401: {
+            'description': 'Token de autenticación inválido',
+            'examples': {
+                'application/json': {
+                    'error': 'Unauthorized',
+                    'details': 'Invalid or expired token'  
+                }
+            }
+        },
+        500: {
+            'description': 'Error en el reconocimiento por IA',
+            'examples': {
+                'application/json': {
+                    'error': 'AI recognition failed',
+                    'error_type': 'GoogleAIException',
+                    'details': 'Unable to process images'
+                }
+            }
+        }
+    }
+})
 def recognize_ingredients():
     """
     🚀 RECONOCIMIENTO SIMPLIFICADO:
@@ -143,6 +281,200 @@ def recognize_ingredients():
 
 @recognition_bp.route("/ingredients/complete", methods=["POST"])
 @jwt_required()
+@swag_from({
+    'tags': ['Recognition'],
+    'summary': 'Reconocimiento completo de ingredientes con información detallada',
+    'description': '''
+Reconoce ingredientes en imagen y proporciona información completa incluyendo análisis nutricional, ambiental y sugerencias de uso.
+
+### Funcionalidades Avanzadas:
+- **Reconocimiento mejorado**: Utiliza modelos de IA más avanzados para mayor precisión
+- **Información nutricional**: Análisis detallado de macronutrientes y vitaminas
+- **Impacto ambiental**: Cálculo de huella de carbono y sostenibilidad
+- **Sugerencias inteligentes**: Ideas de uso, recetas recomendadas y tips de conservación
+- **Análisis de frescura**: Evaluación del estado y calidad del ingrediente
+- **Categorización avanzada**: Clasificación detallada por tipo, origen y características
+
+### Datos Adicionales Incluidos:
+- **Información nutricional completa**: Calorías, proteínas, carbohidratos, grasas, vitaminas
+- **Análisis de sostenibilidad**: Huella de carbono, uso de agua, estacionalidad
+- **Recomendaciones de almacenamiento**: Condiciones óptimas y vida útil
+- **Ideas de utilización**: Recetas sugeridas y combinaciones
+- **Análisis de calidad**: Estado de frescura y consejos de selección
+
+### Casos de Uso:
+- Análisis detallado para planificación nutricional
+- Educación sobre sostenibilidad alimentaria
+- Optimización de compras y almacenamiento
+- Planificación de menús balanceados
+- Investigación de ingredientes desconocidos
+    ''',
+    'parameters': [
+        {
+            'name': 'image',
+            'in': 'formData',
+            'type': 'file',
+            'required': True,
+            'description': 'Imagen de ingredientes para análisis completo (formatos: JPG, PNG, WEBP, GIF. Máximo: 10MB)',
+        }
+    ],
+    'consumes': ['multipart/form-data'],
+    'responses': {
+        200: {
+            'description': 'Reconocimiento completo de ingredientes exitoso',
+            'examples': {
+                'application/json': {
+                    "ingredients": [
+                        {
+                            "name": "Tomates cherry",
+                            "quantity": 500,
+                            "type_unit": "gr",
+                            "storage_type": "refrigerador",
+                            "expiration_time": 7,
+                            "time_unit": "Días",
+                            "confidence_score": 0.95,
+                            "freshness_analysis": {
+                                "quality_score": 0.88,
+                                "ripeness": "maduro_óptimo",
+                                "visual_indicators": ["color rojo intenso", "piel firme", "sin manchas"],
+                                "estimated_shelf_life": 7,
+                                "quality_tips": "Excelente estado, consumir en los próximos 5-7 días"
+                            },
+                            "nutritional_info": {
+                                "calories_per_100g": 18,
+                                "macronutrients": {
+                                    "proteins": 0.9,
+                                    "carbs": 3.9,
+                                    "fats": 0.2,
+                                    "fiber": 1.2
+                                },
+                                "vitamins": {
+                                    "vitamin_c": 13.7,
+                                    "vitamin_k": 7.9,
+                                    "folate": 15,
+                                    "potassium": 237
+                                },
+                                "nutritional_highlights": [
+                                    "Alto en vitamina C",
+                                    "Rico en licopeno",
+                                    "Bajo en calorías",
+                                    "Antioxidantes naturales"
+                                ]
+                            },
+                            "environmental_impact": {
+                                "carbon_footprint": {
+                                    "value": 0.4,
+                                    "unit": "kg CO2 eq/kg",
+                                    "rating": "bajo"
+                                },
+                                "water_footprint": {
+                                    "value": 214,
+                                    "unit": "litros/kg",
+                                    "rating": "moderado"
+                                },
+                                "seasonality": {
+                                    "peak_season": ["junio", "julio", "agosto", "septiembre"],
+                                    "current_season_match": True,
+                                    "local_availability": "alta"
+                                },
+                                "sustainability_score": 8.2,
+                                "eco_tips": [
+                                    "Compra tomates de temporada para menor huella",
+                                    "Prefiere productores locales",
+                                    "Aprovecha completamente, incluso la piel"
+                                ]
+                            },
+                            "usage_suggestions": {
+                                "recommended_recipes": [
+                                    {
+                                        "name": "Ensalada caprese",
+                                        "prep_time": 10,
+                                        "difficulty": "fácil"
+                                    },
+                                    {
+                                        "name": "Salsa de tomate fresca",
+                                        "prep_time": 20,
+                                        "difficulty": "fácil"
+                                    },
+                                    {
+                                        "name": "Bruschetta italiana",
+                                        "prep_time": 15,
+                                        "difficulty": "fácil"
+                                    }
+                                ],
+                                "preparation_methods": [
+                                    "consumo fresco",
+                                    "asado al horno",
+                                    "salteado",
+                                    "en salsas"
+                                ],
+                                "pairing_suggestions": [
+                                    "mozzarella",
+                                    "albahaca",
+                                    "aceite de oliva",
+                                    "ajo"
+                                ]
+                            },
+                            "storage_recommendations": {
+                                "optimal_temperature": "12-15°C",
+                                "humidity": "85-90%",
+                                "container": "recipiente ventilado",
+                                "tips": "No refrigerar hasta estar muy maduros. Almacenar con el tallo hacia abajo.",
+                                "preservation_methods": [
+                                    "conservación natural: 5-7 días",
+                                    "refrigeración: 7-10 días",
+                                    "congelado (procesado): 6 meses"
+                                ]
+                            },
+                            "tips": "Mantener a temperatura ambiente hasta madurar completamente, luego refrigerar para prolongar frescura"
+                        }
+                    ],
+                    "analysis_metadata": {
+                        "recognition_model": "advanced_ingredient_analyzer_v3.2",
+                        "processing_time": 4.8,
+                        "confidence_average": 0.95,
+                        "analysis_depth": "complete",
+                        "data_sources": [
+                            "visual_recognition",
+                            "nutrition_database",
+                            "environmental_data",
+                            "culinary_knowledge_base"
+                        ]
+                    },
+                    "overall_recommendations": [
+                        "Excelente calidad detectada en todos los ingredientes",
+                        "Ingredientes de temporada con bajo impacto ambiental",
+                        "Perfectos para preparaciones mediterráneas frescas"
+                    ]
+                }
+            }
+        },
+        400: {
+            'description': 'Imagen inválida o faltante'
+        },
+        413: {
+            'description': 'Archivo demasiado grande'
+        },
+        422: {
+            'description': 'No se pudieron reconocer ingredientes en la imagen',
+            'examples': {
+                'application/json': {
+                    'error': 'No ingredients detected',
+                    'details': 'La imagen no contiene ingredientes reconocibles o la calidad es insuficiente'
+                }
+            }
+        },
+        429: {
+            'description': 'Límite de velocidad excedido'
+        },
+        401: {
+            'description': 'Token de autenticación inválido'
+        },
+        500: {
+            'description': 'Error interno en el análisis completo'
+        }
+    }
+})
 def recognize_ingredients_complete():
     """
     Endpoint para reconocimiento completo de ingredientes con toda la información:
@@ -198,6 +530,140 @@ def recognize_ingredients_complete():
 
 @recognition_bp.route("/foods", methods=["POST"])
 @jwt_required()
+@swag_from({
+    'tags': ['Recognition'],
+    'summary': 'Reconocimiento de alimentos preparados',
+    'description': '''
+Reconoce alimentos preparados o comidas completas usando inteligencia artificial avanzada.
+
+### Capacidades del Sistema:
+- **Análisis de platos**: Identifica comidas preparadas y platillos completos
+- **Detección de ingredientes**: Extrae ingredientes principales de platos complejos
+- **Análisis nutricional**: Calcula información nutricional aproximada
+- **Categorización**: Clasifica por tipo de comida (desayuno, almuerzo, cena, snack)
+- **Origen cultural**: Identifica origen o estilo culinario del plato
+
+### Proceso de Reconocimiento:
+1. **Análisis de imagen**: Procesamiento con IA especializada en alimentos
+2. **Identificación de componentes**: Detección de ingredientes visibles
+3. **Estimación de porciones**: Cálculo aproximado de cantidades
+4. **Análisis nutricional**: Estimación de calorías, proteínas, carbohidratos, grasas
+5. **Generación de metadatos**: Tips de conservación y consumo
+
+### Casos de Uso:
+- Análisis de comidas preparadas caseras
+- Tracking nutricional de platos complejos
+- Identificación de ingredientes en recetas desconocidas
+- Planificación de dietas basada en comidas preparadas
+    ''',
+    'parameters': [
+        {
+            'name': 'image',
+            'in': 'formData',
+            'type': 'file',
+            'required': True,
+            'description': 'Imagen del alimento preparado (formatos: JPG, PNG, WEBP, GIF. Máximo: 10MB)',
+        }
+    ],
+    'consumes': ['multipart/form-data'],
+    'responses': {
+        200: {
+            'description': 'Reconocimiento de alimentos preparados exitoso',
+            'examples': {
+                'application/json': {
+                    "foods": [
+                        {
+                            "name": "Pasta carbonara",
+                            "category": "pasta",
+                            "cuisine_type": "italiana",
+                            "meal_type": "almuerzo",
+                            "estimated_calories": 650,
+                            "estimated_servings": 1,
+                            "main_ingredients": [
+                                {
+                                    "name": "Pasta",
+                                    "estimated_quantity": 100,
+                                    "unit": "gr"
+                                },
+                                {
+                                    "name": "Bacon",
+                                    "estimated_quantity": 50,
+                                    "unit": "gr"
+                                },
+                                {
+                                    "name": "Queso parmesano",
+                                    "estimated_quantity": 30,
+                                    "unit": "gr"
+                                },
+                                {
+                                    "name": "Huevos",
+                                    "estimated_quantity": 2,
+                                    "unit": "unidades"
+                                }
+                            ],
+                            "nutritional_info": {
+                                "calories": 650,
+                                "proteins": 28,
+                                "carbs": 55,
+                                "fats": 35,
+                                "fiber": 3
+                            },
+                            "preparation_time": "15-20 min",
+                            "difficulty": "fácil",
+                            "storage_tips": "Consumir inmediatamente, no se conserva bien",
+                            "confidence_score": 0.89
+                        }
+                    ],
+                    "total_foods": 1,
+                    "analysis_metadata": {
+                        "processing_time": 2.8,
+                        "confidence_average": 0.89,
+                        "analysis_date": "2024-01-16T10:30:00Z",
+                        "model_version": "food_recognition_v2.1"
+                    },
+                    "recommendations": [
+                        "Plato rico en proteínas, ideal para almuerzo",
+                        "Combina bien con ensalada verde",
+                        "Considerar reducir el bacon para versión más saludable"
+                    ]
+                }
+            }
+        },
+        400: {
+            'description': 'Imagen inválida o faltante',
+            'examples': {
+                'application/json': {
+                    'error': 'Invalid image format',
+                    'details': 'El archivo debe ser una imagen válida (JPG, PNG, WEBP, GIF)'
+                }
+            }
+        },
+        413: {
+            'description': 'Archivo demasiado grande',
+            'examples': {
+                'application/json': {
+                    'error': 'File too large',
+                    'details': 'El archivo no puede exceder 10MB'
+                }
+            }
+        },
+        429: {
+            'description': 'Límite de velocidad excedido',
+            'examples': {
+                'application/json': {
+                    'error': 'Rate limit exceeded',
+                    'details': 'Máximo 10 reconocimientos por minuto'
+                }
+            }
+        },
+        401: {
+            'description': 'Token de autenticación inválido'
+        },
+        500: {
+            'description': 'Error interno del servidor o en el procesamiento de IA'
+        }
+    }
+})
 def recognize_foods():
     """
     🍽️ RECONOCIMIENTO SIMPLIFICADO DE COMIDAS:
@@ -313,6 +779,149 @@ def recognize_foods():
 
 @recognition_bp.route("/batch", methods=["POST"])
 @jwt_required()
+@swag_from({
+    'tags': ['Recognition'],
+    'summary': 'Reconocimiento en lote de múltiples imágenes',
+    'description': '''
+Procesa múltiples imágenes de alimentos simultáneamente, optimizado para eficiencia y velocidad.
+
+### Capacidades Avanzadas:
+- **Procesamiento paralelo**: Analiza hasta 10 imágenes simultáneamente
+- **Reconocimiento mixto**: Combina ingredientes y alimentos preparados
+- **Optimización inteligente**: Agrupa resultados similares automáticamente
+- **Análisis comparativo**: Identifica duplicados y variaciones
+- **Procesamiento asíncrono**: Devuelve task_id para seguimiento del progreso
+
+### Ventajas del Procesamiento en Lote:
+- **Eficiencia**: Reduce tiempo total de procesamiento
+- **Consistencia**: Análisis coherente entre múltiples imágenes
+- **Optimización**: Mejor uso de recursos computacionales
+- **Agregación**: Combina resultados relacionados automáticamente
+
+### Límites del Sistema:
+- Máximo 10 imágenes por solicitud
+- Tamaño máximo por imagen: 10MB
+- Tiempo máximo de procesamiento: 5 minutos
+- Formatos soportados: JPG, PNG, WEBP, GIF
+
+### Casos de Uso:
+- Procesar fotos de compras completas
+- Análisis de inventario completo por imágenes
+- Reconocimiento de múltiples ingredientes en cocina
+- Documentación rápida de inventario alimentario
+    ''',
+    'parameters': [
+        {
+            'name': 'images',
+            'in': 'formData',
+            'type': 'array',
+            'items': {'type': 'file'},
+            'required': True,
+            'description': 'Array de imágenes para procesar (máximo 10 imágenes, 10MB cada una)',
+        }
+    ],
+    'consumes': ['multipart/form-data'],
+    'responses': {
+        202: {
+            'description': 'Procesamiento en lote iniciado - modo asíncrono',
+            'examples': {
+                'application/json': {
+                    "task_id": "batch_recognition_123456789",
+                    "status": "processing",
+                    "images_count": 5,
+                    "estimated_completion": "2024-01-16T10:35:00Z",
+                    "progress_url": "/api/recognition/status/batch_recognition_123456789",
+                    "message": "Procesamiento iniciado. Use el task_id para verificar el progreso."
+                }
+            }
+        },
+        200: {
+            'description': 'Procesamiento en lote completado - modo síncrono (pocas imágenes)',
+            'examples': {
+                'application/json': {
+                    "batch_results": {
+                        "total_images": 3,
+                        "successful_recognitions": 3,
+                        "failed_recognitions": 0,
+                        "processing_time": 12.5,
+                        "aggregated_results": {
+                            "total_ingredients": 8,
+                            "total_foods": 2,
+                            "unique_items": 10,
+                            "duplicates_found": 0
+                        }
+                    },
+                    "results_by_image": [
+                        {
+                            "image_index": 0,
+                            "image_name": "vegetables.jpg",
+                            "recognition_type": "ingredients",
+                            "items_found": 4,
+                            "processing_time": 3.2,
+                            "ingredients": [
+                                {
+                                    "name": "Tomates cherry",
+                                    "quantity": 500,
+                                    "type_unit": "gr",
+                                    "confidence_score": 0.95
+                                }
+                            ]
+                        }
+                    ],
+                    "aggregated_inventory": {
+                        "ingredients": [
+                            {
+                                "name": "Tomates cherry",
+                                "total_quantity": 1000,
+                                "type_unit": "gr",
+                                "sources": ["vegetables.jpg", "tomatoes_close.jpg"],
+                                "average_confidence": 0.93
+                            }
+                        ],
+                        "foods": []
+                    },
+                    "recommendations": [
+                        "Se detectaron tomates en múltiples imágenes - considera combinar en un solo stack",
+                        "Gran variedad de verduras detectada - ideal para recetas variadas"
+                    ]
+                }
+            }
+        },
+        400: {
+            'description': 'Datos de entrada inválidos',
+            'examples': {
+                'application/json': {
+                    'error': 'Invalid batch request',
+                    'details': 'Máximo 10 imágenes permitidas por lote'
+                }
+            }
+        },
+        413: {
+            'description': 'Archivos demasiado grandes',
+            'examples': {
+                'application/json': {
+                    'error': 'Files too large',
+                    'details': 'Una o más imágenes exceden el límite de 10MB'
+                }
+            }
+        },
+        429: {
+            'description': 'Límite de velocidad excedido',
+            'examples': {
+                'application/json': {
+                    'error': 'Rate limit exceeded',
+                    'details': 'Máximo 2 lotes por minuto'
+                }
+            }
+        },
+        401: {
+            'description': 'Token de autenticación inválido'
+        },
+        500: {
+            'description': 'Error interno en el procesamiento del lote'
+        }
+    }
+})
 def recognize_batch():
     user_uid = get_jwt_identity()
     images_paths = request.json.get("images_paths")
@@ -451,6 +1060,136 @@ def _get_allergy_alert_message(allergens: list, language: str) -> str:
 
 @recognition_bp.route("/ingredients/async", methods=["POST"])
 @jwt_required()
+@swag_from({
+    'tags': ['Recognition'],
+    'summary': 'Reconocimiento asíncrono de ingredientes en segundo plano',
+    'description': '''
+Inicia el reconocimiento de ingredientes en modo asíncrono, ideal para procesar múltiples imágenes sin bloquear la interfaz.
+
+### Características del Procesamiento Asíncrono:
+- **Respuesta inmediata**: Retorna task_id sin esperar el procesamiento completo
+- **Procesamiento en segundo plano**: La IA procesa las imágenes mientras el usuario continúa usando la app
+- **Seguimiento de progreso**: Permite consultar el estado del procesamiento con el task_id
+- **Optimización de recursos**: Mejor manejo de recursos del servidor para múltiples usuarios
+- **Timeout inteligente**: Procesamiento con límites de tiempo razonables
+
+### Flujo de Trabajo:
+1. **Envío de imágenes**: Cliente envía rutas de imágenes en Firebase Storage
+2. **Creación de tarea**: Sistema crea task_id y responde inmediatamente
+3. **Procesamiento en background**: IA procesa imágenes sin bloquear cliente
+4. **Consulta de estado**: Cliente verifica progreso con `/status/{task_id}`
+5. **Obtención de resultados**: Una vez completado, resultados disponibles vía task_id
+
+### Ventajas vs. Procesamiento Síncrono:
+- **Mejor UX**: No bloquea la interfaz durante procesamiento largo
+- **Escalabilidad**: Maneja mejor múltiples usuarios simultáneos
+- **Confiabilidad**: Menos timeouts en conexiones lentas
+- **Flexibilidad**: Usuario puede continuar usando la app mientras procesa
+
+### Casos de Uso Ideales:
+- Procesamiento de muchas imágenes (5+ fotos)
+- Conexiones lentas o inestables
+- Aplicaciones móviles con limitaciones de tiempo
+- Procesamiento de inventario completo
+- Usuarios que prefieren no esperar
+    ''',
+    'parameters': [
+        {
+            'name': 'body',
+            'in': 'body',
+            'required': True,
+            'schema': {
+                'type': 'object',
+                'required': ['images_paths'],
+                'properties': {
+                    'images_paths': {
+                        'type': 'array',
+                        'items': {'type': 'string'},
+                        'description': 'Lista de rutas de imágenes en Firebase Storage para procesamiento asíncrono',
+                        'example': [
+                            'uploads/recognition/user123/img_001.jpg',
+                            'uploads/recognition/user123/img_002.jpg',
+                            'uploads/recognition/user123/img_003.jpg'
+                        ],
+                        'minItems': 1,
+                        'maxItems': 10
+                    }
+                }
+            }
+        }
+    ],
+    'responses': {
+        202: {
+            'description': 'Tarea de reconocimiento asíncrono creada exitosamente',
+            'examples': {
+                'application/json': {
+                    "message": "🚀 Estamos procesando tu imagen en segundo plano",
+                    "task_id": "async_recognition_abc123def456",
+                    "status": "pending",
+                    "progress_percentage": 0,
+                    "estimated_time": "30-60 segundos",
+                    "check_status_url": "/api/recognition/status/async_recognition_abc123def456",
+                    "task_details": {
+                        "images_count": 3,
+                        "user_uid": "firebase_user_123",
+                        "created_at": "2024-01-16T10:30:00Z",
+                        "estimated_completion": "2024-01-16T10:31:00Z"
+                    },
+                    "instructions": {
+                        "next_steps": [
+                            "Guarda el task_id para consultar el progreso",
+                            "Usa check_status_url para verificar el estado",
+                            "Los resultados estarán disponibles cuando status sea 'completed'"
+                        ],
+                        "status_codes": {
+                            "pending": "Tarea en cola, esperando procesamiento",
+                            "processing": "IA analizando imágenes actualmente",
+                            "completed": "Procesamiento completado, resultados disponibles",
+                            "failed": "Error en el procesamiento"
+                        }
+                    }
+                }
+            }
+        },
+        400: {
+            'description': 'Datos de entrada inválidos',
+            'examples': {
+                'application/json': {
+                    'error': 'Debe proporcionar una lista válida en images_paths',
+                    'details': 'images_paths debe ser un array con al menos una imagen',
+                    'received_type': 'null',
+                    'expected_format': {
+                        'images_paths': ['ruta1.jpg', 'ruta2.jpg']
+                    }
+                }
+            }
+        },
+        401: {
+            'description': 'Token de autenticación inválido'
+        },
+        429: {
+            'description': 'Límite de tareas asíncronas excedido',
+            'examples': {
+                'application/json': {
+                    'error': 'Too many async tasks',
+                    'details': 'Máximo 3 tareas asíncronas simultáneas por usuario',
+                    'active_tasks': 3,
+                    'retry_after': 30
+                }
+            }
+        },
+        500: {
+            'description': 'Error interno al crear la tarea asíncrona',
+            'examples': {
+                'application/json': {
+                    'error': 'Failed to create async task',
+                    'error_type': 'TaskCreationException',
+                    'details': 'Unable to initialize background processing'
+                }
+            }
+        }
+    }
+})
 def recognize_ingredients_async():
     """
     🚀 ENDPOINT ASÍNCRONO: Reconocimiento de ingredientes en background
@@ -636,6 +1375,181 @@ def recognize_ingredients_async():
 
 @recognition_bp.route("/status/<task_id>", methods=["GET"])
 @jwt_required()
+@swag_from({
+    'tags': ['Recognition'],
+    'summary': 'Consultar estado y progreso de tarea asíncrona de reconocimiento',
+    'description': '''
+Obtiene el estado actual, progreso y resultados de una tarea de reconocimiento asíncrono.
+
+### Estados Posibles de la Tarea:
+- **pending**: Tarea en cola, esperando procesamiento
+- **processing**: IA analizando imágenes actualmente
+- **completed**: Procesamiento completado, resultados disponibles
+- **failed**: Error en el procesamiento
+
+### Información de Progreso:
+- **Porcentaje de completado**: Progreso actual de 0-100%
+- **Tiempo estimado restante**: Estimación basada en carga del servidor
+- **Detalles del procesamiento**: Número de imágenes procesadas vs. total
+- **Metadatos de la tarea**: Información sobre el tipo y parámetros
+
+### Resultados Incluidos (cuando status = completed):
+- **Ingredientes reconocidos**: Lista completa con datos enriquecidos
+- **Verificación de alergias**: Alertas basadas en perfil del usuario
+- **Imágenes generadas**: URLs de imágenes de referencia creadas por IA
+- **Estadísticas de procesamiento**: Tiempos, confianza promedio, errores
+
+### Casos de Uso:
+- Polling para actualizar UI con progreso en tiempo real
+- Verificar si el procesamiento ha terminado antes de mostrar resultados
+- Debugging y monitoreo de tareas largas
+- Implementación de notificaciones push cuando se complete
+    ''',
+    'parameters': [
+        {
+            'name': 'task_id',
+            'in': 'path',
+            'type': 'string',
+            'required': True,
+            'description': 'ID único de la tarea asíncrona de reconocimiento',
+            'example': 'async_recognition_abc123def456'
+        }
+    ],
+    'responses': {
+        200: {
+            'description': 'Estado de la tarea obtenido exitosamente',
+            'examples': {
+                'application/json': {
+                    "task_id": "async_recognition_abc123def456",
+                    "status": "completed",
+                    "progress_percentage": 100,
+                    "created_at": "2024-01-16T10:30:00Z",
+                    "updated_at": "2024-01-16T10:30:45Z",
+                    "completed_at": "2024-01-16T10:30:45Z",
+                    "processing_time": 45.2,
+                    "task_metadata": {
+                        "task_type": "ingredient_recognition",
+                        "images_count": 3,
+                        "user_uid": "firebase_user_123"
+                    },
+                    "result_data": {
+                        "ingredients": [
+                            {
+                                "name": "Tomates cherry",
+                                "quantity": 500,
+                                "type_unit": "gr",
+                                "storage_type": "refrigerador",
+                                "expiration_time": 7,
+                                "time_unit": "days",
+                                "expiration_date": "2024-01-23T00:00:00Z",
+                                "added_at": "2024-01-16T10:30:00Z",
+                                "tips": "Mantener refrigerados para mayor duración",
+                                "image_path": "https://storage.googleapis.com/generated-images/tomatoes-cherry-abc123.jpg",
+                                "image_status": "completed",
+                                "confidence": 0.95,
+                                "allergen_alert": False
+                            },
+                            {
+                                "name": "Queso manchego",
+                                "quantity": 200,
+                                "type_unit": "gr",
+                                "storage_type": "refrigerador",
+                                "expiration_time": 3,
+                                "time_unit": "weeks",
+                                "expiration_date": "2024-02-06T00:00:00Z",
+                                "added_at": "2024-01-16T10:30:00Z",
+                                "tips": "Envolver en papel encerado",
+                                "image_path": "https://storage.googleapis.com/generated-images/queso-manchego-def456.jpg",
+                                "image_status": "completed",
+                                "confidence": 0.87,
+                                "allergen_alert": True,
+                                "allergen_details": ["lactose", "dairy"]
+                            }
+                        ],
+                        "recognition_summary": {
+                            "total_ingredients_found": 2,
+                            "processed_images": 3,
+                            "average_confidence": 0.91,
+                            "processing_time": 45.2,
+                            "images_generated": 2,
+                            "allergen_warnings_count": 1
+                        },
+                        "allergen_warnings": [
+                            {
+                                "ingredient": "Queso manchego",
+                                "allergens": ["lactose", "dairy"],
+                                "message": "⚠️ Contiene lácteos - revisar alergias"
+                            }
+                        ]
+                    },
+                    "next_actions": [
+                        "Los ingredientes están listos para agregar al inventario",
+                        "Revisar alertas de alergias antes de consumir",
+                        "Las imágenes han sido generadas y están disponibles"
+                    ]
+                }
+            }
+        },
+        200: {
+            'description': 'Tarea en progreso',
+            'examples': {
+                'application/json': {
+                    "task_id": "async_recognition_abc123def456",
+                    "status": "processing",
+                    "progress_percentage": 65,
+                    "created_at": "2024-01-16T10:30:00Z",
+                    "updated_at": "2024-01-16T10:30:30Z",
+                    "estimated_completion": "2024-01-16T10:31:00Z",
+                    "processing_details": {
+                        "current_step": "Generando imágenes de referencia",
+                        "images_processed": 2,
+                        "images_total": 3,
+                        "ingredients_found_so_far": 4
+                    },
+                    "task_metadata": {
+                        "task_type": "ingredient_recognition",
+                        "images_count": 3,
+                        "user_uid": "firebase_user_123"
+                    },
+                    "partial_results": {
+                        "ingredients_count": 4,
+                        "average_confidence_so_far": 0.89
+                    }
+                }
+            }
+        },
+        404: {
+            'description': 'Tarea no encontrada',
+            'examples': {
+                'application/json': {
+                    'error': 'Tarea no encontrada',
+                    'task_id': 'async_recognition_invalid123'
+                }
+            }
+        },
+        403: {
+            'description': 'Sin permisos para ver esta tarea',
+            'examples': {
+                'application/json': {
+                    'error': 'No tienes permiso para ver esta tarea',
+                    'details': 'La tarea pertenece a otro usuario'
+                }
+            }
+        },
+        401: {
+            'description': 'Token de autenticación inválido'
+        },
+        500: {
+            'description': 'Error interno al consultar el estado',
+            'examples': {
+                'application/json': {
+                    'error': 'Database connection failed',
+                    'error_type': 'DatabaseException'
+                }
+            }
+        }
+    }
+})
 def get_recognition_status(task_id):
     """
     📊 CONSULTAR ESTADO: Obtiene el progreso y resultado de una tarea asíncrona

@@ -13,13 +13,18 @@ class GeminiRecipeGeneratorService(IARecipeGeneratorService):
         self.model = genai.GenerativeModel("gemini-2.5-flash-preview-05-20")
 
     def generate_recipes(self, data: Dict[str, Any], num_recipes: int = 2, recipe_categories: List[str] = []) -> Dict[str, Any]:
+        print(f"🍳 [GEMINI SERVICE] Starting recipe generation with data: {data.keys()}")
         try:
             prompt = self._build_prompt(data, num_recipes, recipe_categories)
+            print(f"🍳 [GEMINI SERVICE] Prompt length: {len(prompt)} characters")
             
             response = self.model.generate_content(prompt, generation_config={"temperature": 0.6})
+            print(f"🍳 [GEMINI SERVICE] Got response from Gemini")
+            print(f"🍳 [GEMINI SERVICE] Response text (first 200 chars): {response.text[:200]}...")
             
             # Parse the JSON response
             recipes = self._parse_response_text(response.text)
+            print(f"🍳 [GEMINI SERVICE] Successfully parsed {len(recipes)} recipes")
             
             # Información sobre preferencias aplicadas
             user_profile = data.get("user_profile", {})
@@ -44,11 +49,16 @@ class GeminiRecipeGeneratorService(IARecipeGeneratorService):
                     "preferred_food_types": user_profile.get("preferredFoodTypes", [])
                 }
             
+            print(f"✅ [GEMINI SERVICE] Recipe generation completed successfully")
             return result
             
         except Exception as e:
+            print(f"🚨 [GEMINI SERVICE] Error generating recipes: {str(e)}")
+            print(f"🚨 [GEMINI SERVICE] Error type: {type(e).__name__}")
+            import traceback
+            print(f"🚨 [GEMINI SERVICE] Full traceback: {traceback.format_exc()}")
             logger.error(f"Error generating recipes: {str(e)}")
-            raise ValueError("Error en la generación de recetas")
+            raise ValueError(f"Error en la generación de recetas: {str(e)}")
 
     import json
     import re
@@ -57,28 +67,47 @@ class GeminiRecipeGeneratorService(IARecipeGeneratorService):
     logger = logging.getLogger(__name__)
 
     def _parse_response_text(self, text: str):
+        print(f"🔧 [GEMINI PARSER] Starting to parse response text")
+        print(f"🔧 [GEMINI PARSER] Raw text length: {len(text)}")
+        print(f"🔧 [GEMINI PARSER] First 300 chars: {text[:300]}")
+        
         clean_text = text.strip()
+        print(f"🔧 [GEMINI PARSER] After strip - length: {len(clean_text)}")
 
         # Si viene con markdown-style triple backticks
         if clean_text.startswith("```"):
             clean_text = clean_text.strip("`").strip()
             if clean_text.startswith("json"):
                 clean_text = clean_text[len("json"):].strip()
+            print(f"🔧 [GEMINI PARSER] After markdown cleanup - length: {len(clean_text)}")
 
         # Extracción robusta del array JSON (de "[" a "]")
         start = clean_text.find('[')
         end = clean_text.rfind(']')
+        print(f"🔧 [GEMINI PARSER] JSON array bounds - start: {start}, end: {end}")
+        
         if start == -1 or end == -1:
+            print(f"🚨 [GEMINI PARSER] No valid JSON array found!")
+            print(f"🚨 [GEMINI PARSER] Looking for alternatives...")
+            # Try to find any bracket structure
+            print(f"🚨 [GEMINI PARSER] Full text for debugging:\n{clean_text}")
             logger.error("No valid JSON array found in text.")
             raise ValueError("Error parsing AI response: no valid JSON array found.")
 
         json_text = clean_text[start:end + 1]
+        print(f"🔧 [GEMINI PARSER] Extracted JSON text length: {len(json_text)}")
+        print(f"🔧 [GEMINI PARSER] JSON text preview: {json_text[:200]}...")
 
         try:
-            return json.loads(json_text)
+            parsed_result = json.loads(json_text)
+            print(f"✅ [GEMINI PARSER] Successfully parsed JSON with {len(parsed_result)} items")
+            return parsed_result
         except Exception as e:
+            print(f"🚨 [GEMINI PARSER] Failed to parse JSON!")
+            print(f"🚨 [GEMINI PARSER] Error: {str(e)}")
+            print(f"🚨 [GEMINI PARSER] Problematic JSON text:\n{json_text}")
             logger.error(f"Failed to parse AI response as JSON: {json_text}")
-            raise ValueError("Error parsing AI response") from e
+            raise ValueError(f"Error parsing AI response: {str(e)}") from e
 
     def _build_prompt(self, data: Dict[str, Any], num_recipes, recipe_categories) -> str:
         ingredients = data.get("ingredients", [])
