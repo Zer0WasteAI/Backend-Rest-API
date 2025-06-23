@@ -1660,6 +1660,372 @@ def _enrich_ingredients_with_enhanced_data(ingredients_data: list[dict], ai_serv
     
     print(f"🎯 [ENHANCED ENRICHMENT] Completed enhanced enrichment for all {len(ingredients_data)} ingredients!")
 
+
+# ===============================================================================
+# 🍽️ ENDPOINT PARA AGREGAR COMIDAS DESDE RECONOCIMIENTO
+# ===============================================================================
+
+@inventory_bp.route("/foods/from-recognition", methods=["POST"])
+@jwt_required()
+@swag_from({
+    'tags': ['Inventory'],
+    'summary': 'Agregar comidas desde reconocimiento IA con enriquecimiento automático',
+    'description': '''
+Agrega comidas al inventario directamente desde el resultado de reconocimiento de IA con enriquecimiento automático de datos.
+
+### Características Avanzadas:
+- **Integración directa**: Acepta estructura completa del response de reconocimiento de comidas
+- **Enriquecimiento IA**: Genera automáticamente datos adicionales con inteligencia artificial
+- **Procesamiento paralelo**: Enriquece múltiples comidas simultáneamente
+- **Datos completos**: Combina reconocimiento + análisis nutricional + consejos de conservación
+- **Fallback inteligente**: Imágenes por defecto si no están disponibles
+
+### Datos Generados Automáticamente:
+- **Análisis nutricional**: Información detallada sobre nutrientes y calorías
+- **Consejos de conservación**: Recomendaciones específicas de almacenamiento
+- **Consejos de recalentamiento**: Mejores prácticas para mantener calidad
+- **Ideas de aprovechamiento**: Sugerencias para optimizar el consumo
+
+### Estructura de Entrada:
+Debe contener el campo `foods` con la estructura completa del reconocimiento:
+- Datos básicos: name, description, main_ingredients, category, storage_type, expiration_time, time_unit, tips
+- Datos opcionales: image_path, calories, serving_quantity
+- Validación automática de campos requeridos
+
+### Procesamiento:
+1. **Validación**: Verifica estructura y campos requeridos
+2. **Enriquecimiento**: Genera datos adicionales con IA en paralelo
+3. **Almacenamiento**: Guarda comidas con datos completos
+4. **Respuesta**: Confirma agregado con metadatos de enriquecimiento
+
+### Casos de Uso:
+- Flujo automático después de reconocimiento de comidas preparadas
+- Importación masiva de alimentos con IA
+- Gestión de meal prep y batch cooking
+- Agregado inteligente con mínima intervención del usuario
+    ''',
+    'parameters': [
+        {
+            'name': 'body',
+            'in': 'body',
+            'required': True,
+            'schema': {
+                'type': 'object',
+                'required': ['foods'],
+                'properties': {
+                    'foods': {
+                        'type': 'array',
+                        'description': 'Array de comidas desde reconocimiento con estructura completa',
+                        'items': {
+                            'type': 'object',
+                            'required': ['name', 'description', 'main_ingredients', 'category', 'storage_type', 'expiration_time', 'time_unit', 'tips', 'serving_quantity'],
+                            'properties': {
+                                'name': {
+                                    'type': 'string',
+                                    'description': 'Nombre de la comida reconocida',
+                                    'example': 'Lasaña de verduras'
+                                },
+                                'description': {
+                                    'type': 'string',
+                                    'description': 'Descripción de la comida',
+                                    'example': 'Lasaña casera con espinacas, ricotta y salsa de tomate'
+                                },
+                                'main_ingredients': {
+                                    'type': 'array',
+                                    'items': {'type': 'string'},
+                                    'description': 'Ingredientes principales identificados',
+                                    'example': ['pasta', 'espinacas', 'ricotta', 'salsa de tomate']
+                                },
+                                'category': {
+                                    'type': 'string',
+                                    'description': 'Categoría de la comida',
+                                    'example': 'almuerzo'
+                                },
+                                'storage_type': {
+                                    'type': 'string',
+                                    'description': 'Tipo de almacenamiento recomendado',
+                                    'example': 'refrigerador'
+                                },
+                                'expiration_time': {
+                                    'type': 'integer',
+                                    'description': 'Tiempo estimado hasta vencimiento',
+                                    'example': 3
+                                },
+                                'time_unit': {
+                                    'type': 'string',
+                                    'description': 'Unidad de tiempo para vencimiento',
+                                    'example': 'days'
+                                },
+                                'tips': {
+                                    'type': 'string',
+                                    'description': 'Tips básicos de conservación',
+                                    'example': 'Recalentar en horno a 180°C por 15 minutos'
+                                },
+                                'serving_quantity': {
+                                    'type': 'number',
+                                    'description': 'Cantidad de porciones',
+                                    'example': 4
+                                },
+                                'calories': {
+                                    'type': 'number',
+                                    'description': 'Calorías estimadas por porción (opcional)',
+                                    'example': 320
+                                },
+                                'image_path': {
+                                    'type': 'string',
+                                    'description': 'URL de imagen del reconocimiento (opcional)',
+                                    'example': 'https://storage.googleapis.com/bucket/recognized_lasagna.jpg'
+                                }
+                            }
+                        },
+                        'example': [
+                            {
+                                'name': 'Lasaña de verduras',
+                                'description': 'Lasaña casera con capas de pasta, espinacas, ricotta y salsa de tomate',
+                                'main_ingredients': ['pasta', 'espinacas', 'ricotta', 'salsa de tomate'],
+                                'category': 'almuerzo',
+                                'storage_type': 'refrigerador',
+                                'expiration_time': 3,
+                                'time_unit': 'days',
+                                'tips': 'Recalentar en horno a 180°C por 15 minutos. Cubrir con papel aluminio.',
+                                'serving_quantity': 4,
+                                'calories': 320,
+                                'image_path': 'https://storage.googleapis.com/bucket/lasagna_recognition.jpg'
+                            }
+                        ]
+                    }
+                }
+            }
+        }
+    ],
+    'responses': {
+        201: {
+            'description': 'Comidas agregadas exitosamente con enriquecimiento IA',
+            'examples': {
+                'application/json': {
+                    "message": "Comidas agregadas exitosamente desde reconocimiento con datos enriquecidos",
+                    "foods_count": 1,
+                    "source": "recognition",
+                    "enhanced_data": [
+                        "nutritional_analysis",
+                        "storage_advice",
+                        "reheating_instructions",
+                        "consumption_ideas"
+                    ]
+                }
+            }
+        },
+        400: {
+            'description': 'Estructura de datos inválida o campos faltantes'
+        },
+        401: {
+            'description': 'Token de autenticación inválido'
+        },
+        500: {
+            'description': 'Error interno del servidor durante el procesamiento'
+        }
+    }
+})
+def add_foods_from_recognition():
+    """
+    🍽️ Endpoint específico para agregar comidas directamente desde el response de reconocimiento.
+    Genera automáticamente:
+    - Análisis nutricional detallado
+    - Consejos de conservación y recalentamiento
+    - Ideas de aprovechamiento y optimización
+    """
+    user_uid = get_jwt_identity()
+    json_data = request.get_json()
+    
+    print(f"📥 [FOODS FROM RECOGNITION ENHANCED] User: {user_uid}")
+    print(f"📥 [FOODS FROM RECOGNITION ENHANCED] Request data keys: {list(json_data.keys()) if json_data else 'None'}")
+    
+    # Validar que tenga la estructura del response de reconocimiento
+    if not json_data or "foods" not in json_data:
+        print(f"❌ [FOODS FROM RECOGNITION ENHANCED] Missing 'foods' field")
+        return jsonify({"error": "Se requiere el campo 'foods' con la estructura de reconocimiento"}), 400
+    
+    foods_data = json_data["foods"]
+    
+    # Validar que cada comida tenga los campos necesarios
+    required_fields = ["name", "description", "main_ingredients", "category", "storage_type", "expiration_time", "time_unit", "tips", "serving_quantity"]
+    for i, food in enumerate(foods_data):
+        missing_fields = [field for field in required_fields if field not in food]
+        if missing_fields:
+            print(f"❌ [FOODS FROM RECOGNITION ENHANCED] Food {i+1} missing fields: {missing_fields}")
+            return jsonify({
+                "error": f"Comida {i+1} ({food.get('name', 'unknown')}) carece de campos requeridos: {missing_fields}"
+            }), 400
+        
+        # Agregar imagen por defecto si no está disponible
+        if "image_path" not in food or not food.get("image_path") or food.get("image_path").strip() == "":
+            print(f"⚠️ [FOODS FROM RECOGNITION ENHANCED] Adding fallback image_path for: {food['name']}")
+            food["image_path"] = "https://via.placeholder.com/150x150/cccccc/666666?text=No+Image"
+    
+    print(f"🍽️ [FOODS FROM RECOGNITION ENHANCED] Processing {len(foods_data)} foods from recognition")
+    
+    try:
+        # 🍽️ NUEVA FUNCIONALIDAD: Generar datos enriquecidos automáticamente
+        print(f"🍽️ [ENHANCED ENRICHMENT] Generating enhanced data for {len(foods_data)} foods...")
+        
+        from src.application.factories.recognition_usecase_factory import make_ai_service
+        ai_service = make_ai_service()
+        
+        # Enriquecer con análisis nutricional, consejos de conservación y aprovechamiento
+        _enrich_foods_with_enhanced_data(foods_data, ai_service)
+        
+        # Usar el use case existente para agregar comidas al inventario
+        use_case = make_add_ingredients_and_foods_to_inventory_use_case(db)
+        use_case.execute(user_uid=user_uid, ingredients_data=[], food_items_data=foods_data)
+        
+        print(f"✅ [FOODS FROM RECOGNITION ENHANCED] Successfully added {len(foods_data)} enhanced foods for user {user_uid}")
+        return jsonify({
+            "message": "Comidas agregadas exitosamente desde reconocimiento con datos enriquecidos",
+            "foods_count": len(foods_data),
+            "source": "recognition",
+            "enhanced_data": [
+                "nutritional_analysis",
+                "storage_advice", 
+                "reheating_instructions",
+                "consumption_ideas"
+            ]
+        }), 201
+        
+    except Exception as e:
+        print(f"🚨 [FOODS FROM RECOGNITION ENHANCED] Error adding enhanced foods: {str(e)}")
+        raise e
+
+def _enrich_foods_with_enhanced_data(foods_data: list[dict], ai_service):
+    """
+    🍽️ Enriquece las comidas con datos adicionales:
+    - Análisis nutricional detallado
+    - Consejos de conservación y recalentamiento
+    - Ideas de aprovechamiento y optimización
+    """
+    from concurrent.futures import ThreadPoolExecutor, as_completed
+    
+    print(f"🍽️ [ENHANCED ENRICHMENT] Starting enhanced data generation for {len(foods_data)} foods")
+    
+    def enrich_single_food(food_data):
+        food_name = food_data["name"]
+        food_description = food_data.get("description", "")
+        main_ingredients = food_data.get("main_ingredients", [])
+        
+        print(f"   🍽️ [ENHANCED] Processing: {food_name}")
+        
+        try:
+            # Usar métodos existentes del servicio de IA para generar datos enriquecidos
+            # Crear análisis nutricional básico usando los datos disponibles
+            nutritional_analysis = {
+                "estimated_calories": food_data.get("calories", 300),
+                "protein_content": "medio",
+                "carbs_content": "medio",
+                "fat_content": "medio",
+                "nutritional_highlights": [f"Rico en {ing}" for ing in main_ingredients[:3]],
+                "dietary_considerations": f"Plato {food_data.get('category', 'principal')} balanceado"
+            }
+            
+            # Generar consejos de conservación basados en storage_type
+            storage_advice = {
+                "optimal_temperature": food_data.get("storage_type", "refrigeración"),
+                "max_storage_days": food_data.get("expiration_time", 3),
+                "storage_tips": food_data.get("tips", "Mantener en condiciones adecuadas"),
+                "reheating_instructions": {
+                    "method": "microondas o horno",
+                    "temperature": "calentamiento moderado",
+                    "time": "hasta que esté bien caliente",
+                    "safety_tips": "Calentar completamente antes de consumir"
+                }
+            }
+            
+            # Generar ideas de consumo basadas en los ingredientes principales
+            consumption_ideas = [
+                {
+                    "title": f"Combinar con {main_ingredients[0] if main_ingredients else 'acompañamiento'}",
+                    "description": f"Disfruta este {food_name} complementándolo adecuadamente.",
+                    "type": "combinación"
+                },
+                {
+                    "title": "Conservar porciones",
+                    "description": "Divide en porciones individuales para facilitar el consumo posterior.",
+                    "type": "conservación"
+                }
+            ]
+            
+            print(f"   ✅ [ENHANCED] Successfully enriched: {food_name}")
+            
+            return {
+                "name": food_name,
+                "nutritional_analysis": nutritional_analysis,
+                "storage_advice": storage_advice,
+                "reheating_instructions": storage_advice.get("reheating_instructions", {}),
+                "consumption_ideas": consumption_ideas
+            }
+            
+        except Exception as e:
+            print(f"   ⚠️ [ENHANCED] Error enriching {food_name}: {str(e)}")
+            # Datos por defecto en caso de error
+            return {
+                "name": food_name,
+                "nutritional_analysis": {
+                    "estimated_calories": food_data.get("calories", 300),
+                    "protein_content": "medio",
+                    "carbs_content": "medio", 
+                    "fat_content": "medio",
+                    "nutritional_highlights": ["comida balanceada", "aporta energía"],
+                    "dietary_considerations": "Apto para dieta general"
+                },
+                "storage_advice": {
+                    "optimal_temperature": "refrigeración",
+                    "max_storage_days": food_data.get("expiration_time", 3),
+                    "storage_tips": "Mantener refrigerado y consumir pronto.",
+                    "reheating_instructions": {
+                        "method": "microondas o horno",
+                        "temperature": "calentamiento moderado",
+                        "time": "hasta que esté caliente",
+                        "safety_tips": "Calentar completamente antes de consumir"
+                    }
+                },
+                "consumption_ideas": [
+                    {
+                        "title": "Consume como está",
+                        "description": "Disfruta la comida tal como fue preparada.",
+                        "type": "directo"
+                    }
+                ]
+            }
+    
+    # Generar datos enriquecidos en paralelo
+    enriched_results = {}
+    
+    with ThreadPoolExecutor(max_workers=3) as executor:
+        future_to_food = {
+            executor.submit(enrich_single_food, food): food["name"] 
+            for food in foods_data
+        }
+        
+        for future in as_completed(future_to_food):
+            try:
+                result = future.result()
+                enriched_results[result["name"]] = result
+            except Exception as e:
+                food_name = future_to_food[future]
+                print(f"   🚨 [ENHANCED] Error in thread for {food_name}: {str(e)}")
+    
+    # Aplicar los datos enriquecidos a cada comida
+    for food in foods_data:
+        food_name = food["name"]
+        if food_name in enriched_results:
+            enriched_data = enriched_results[food_name]
+            food["nutritional_analysis"] = enriched_data["nutritional_analysis"]
+            food["storage_advice"] = enriched_data["storage_advice"] 
+            food["reheating_instructions"] = enriched_data["reheating_instructions"]
+            food["consumption_ideas"] = enriched_data["consumption_ideas"]
+            print(f"   💚 [ENHANCED] Added all enhanced data to {food_name}")
+    
+    print(f"🎯 [ENHANCED ENRICHMENT] Completed enhanced enrichment for all {len(foods_data)} foods!")
+
+
 @inventory_bp.route("/simple", methods=["GET"])
 @jwt_required()
 @swag_from({

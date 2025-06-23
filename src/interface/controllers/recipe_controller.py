@@ -1256,3 +1256,228 @@ def delete_user_recipe():
     return jsonify({
         "message": f"Receta '{title}' eliminada exitosamente"
     }), 200
+
+
+@recipes_bp.route("/default", methods=["GET"])
+@swag_from({
+    'tags': ['Recipes'],
+    'summary': 'Obtener recetas por defecto del sistema',
+    'description': '''
+Obtiene las recetas por defecto curadas que están disponibles para todos los usuarios.
+Estas recetas están organizadas por categorías y no requieren autenticación.
+
+### Categorías Disponibles:
+- **Destacadas**: Las mejores recetas seleccionadas
+- **Rápidas y Fáciles**: Recetas de preparación rápida
+- **Vegetarianas**: Opciones sin carne
+- **Postres**: Dulces y postres clásicos
+- **Saludables**: Recetas nutritivas y balanceadas
+
+### Características:
+- **Sin autenticación**: Accesible sin login
+- **Curadas**: Recetas seleccionadas y probadas
+- **Completas**: Incluyen ingredientes, pasos, tiempos y dificultad
+- **Categorizadas**: Organizadas para fácil navegación
+- **Inspiración**: Perfectas para descubrir nuevas ideas
+
+### Casos de Uso:
+- Explorar recetas sin crear cuenta
+- Obtener inspiración culinaria
+- Acceder a recetas básicas y populares
+- Navegar por categorías específicas
+- Descubrir nuevas preparaciones
+    ''',
+    'parameters': [
+        {
+            'name': 'category',
+            'in': 'query',
+            'type': 'string',
+            'required': False,
+            'enum': ['destacadas', 'rapidas_faciles', 'vegetarianas', 'postres', 'saludables'],
+            'description': 'Filtrar por categoría específica',
+            'example': 'destacadas'
+        }
+    ],
+    'responses': {
+        200: {
+            'description': 'Recetas por defecto obtenidas exitosamente',
+            'examples': {
+                'application/json': {
+                    "default_recipes": [
+                        {
+                            "uid": "default_recipe_001",
+                            "title": "Pasta Carbonara Clásica",
+                            "duration": "30 minutos",
+                            "difficulty": "Intermedio",
+                            "category": "almuerzo",
+                            "description": "La auténtica receta italiana de carbonara con huevos, bacon y queso parmesano. Cremosa y deliciosa.",
+                            "ingredients": [
+                                {
+                                    "name": "Pasta (espaguetis)",
+                                    "quantity": 400,
+                                    "type_unit": "gr"
+                                },
+                                {
+                                    "name": "Huevos",
+                                    "quantity": 4,
+                                    "type_unit": "unidades"
+                                },
+                                {
+                                    "name": "Bacon o panceta",
+                                    "quantity": 200,
+                                    "type_unit": "gr"
+                                }
+                            ],
+                            "steps": [
+                                {
+                                    "step_order": 1,
+                                    "description": "Cocinar la pasta en agua con sal hasta que esté al dente"
+                                },
+                                {
+                                    "step_order": 2,
+                                    "description": "Freír el bacon hasta que esté crujiente y reservar"
+                                }
+                            ],
+                            "footer": "Un clásico italiano que nunca falla",
+                            "generated_by_ai": False,
+                            "image_status": "pending",
+                            "saved_at": "2024-01-15T10:00:00Z"
+                        }
+                    ],
+                    "categories_summary": {
+                        "destacadas": 3,
+                        "rapidas_faciles": 3,
+                        "vegetarianas": 3,
+                        "postres": 3,
+                        "saludables": 2
+                    },
+                    "total_recipes": 14,
+                    "filter_applied": {
+                        "category": None
+                    }
+                }
+            }
+        },
+        404: {
+            'description': 'No se encontraron recetas por defecto',
+            'examples': {
+                'application/json': {
+                    'message': 'No default recipes found',
+                    'default_recipes': [],
+                    'total_recipes': 0
+                }
+            }
+        },
+        500: {
+            'description': 'Error interno del servidor'
+        }
+    }
+})
+def get_default_recipes():
+    """
+    Obtiene las recetas por defecto del sistema.
+    No requiere autenticación ya que son recetas públicas.
+    """
+    from src.infrastructure.db.models.recipe_orm import RecipeORM
+    from src.infrastructure.db.models.recipe_ingredient_orm import RecipeIngredientORM
+    from src.infrastructure.db.models.recipe_step_orm import RecipeStepORM
+    from src.infrastructure.db.base import db
+    from sqlalchemy import select
+    
+    # UID especial para recetas del sistema
+    SYSTEM_USER_UID = "SYSTEM_DEFAULT_RECIPES"
+    
+    try:
+        # Obtener parámetro de categoría opcional
+        category_filter = request.args.get('category')
+        
+        # Construir query base
+        query = select(RecipeORM).where(RecipeORM.user_uid == SYSTEM_USER_UID)
+        
+        # Aplicar filtro de categoría si se especifica
+        if category_filter:
+            # Mapear categorías de query a categorías de base de datos
+            category_mapping = {
+                'destacadas': ['almuerzo', 'cena', 'ensalada'],
+                'rapidas_faciles': ['almuerzo', 'desayuno'],
+                'vegetarianas': ['cena', 'ensalada', 'almuerzo'],
+                'postres': ['postre'],
+                'saludables': ['almuerzo', 'cena']
+            }
+            
+            if category_filter in category_mapping:
+                db_categories = category_mapping[category_filter]
+                query = query.where(RecipeORM.category.in_(db_categories))
+        
+        # Ejecutar query
+        result = db.session.execute(query)
+        recipes_orm = result.scalars().all()
+        
+        if not recipes_orm:
+            return jsonify({
+                "message": "No default recipes found",
+                "default_recipes": [],
+                "total_recipes": 0
+            }), 404
+        
+        # Convertir a formato de respuesta
+        default_recipes = []
+        categories_count = {}
+        
+        for recipe_orm in recipes_orm:
+            # Obtener ingredientes
+            ingredients = []
+            for ing in recipe_orm.ingredients:
+                ingredients.append({
+                    "name": ing.name,
+                    "quantity": ing.quantity,
+                    "type_unit": ing.type_unit
+                })
+            
+            # Obtener pasos ordenados
+            steps = []
+            sorted_steps = sorted(recipe_orm.steps, key=lambda s: s.step_order)
+            for step in sorted_steps:
+                steps.append({
+                    "step_order": step.step_order,
+                    "description": step.description
+                })
+            
+            # Construir objeto receta
+            recipe_data = {
+                "uid": recipe_orm.uid,
+                "title": recipe_orm.title,
+                "duration": recipe_orm.duration,
+                "difficulty": recipe_orm.difficulty,
+                "category": recipe_orm.category,
+                "description": recipe_orm.description,
+                "ingredients": ingredients,
+                "steps": steps,
+                "footer": recipe_orm.footer,
+                "generated_by_ai": recipe_orm.generated_by_ai,
+                "image_status": recipe_orm.image_status,
+                "image_path": recipe_orm.image_path,
+                "saved_at": recipe_orm.saved_at.isoformat() if recipe_orm.saved_at else None
+            }
+            
+            default_recipes.append(recipe_data)
+            
+            # Contar categorías
+            category = recipe_orm.category
+            categories_count[category] = categories_count.get(category, 0) + 1
+        
+        return jsonify({
+            "default_recipes": default_recipes,
+            "categories_summary": categories_count,
+            "total_recipes": len(default_recipes),
+            "filter_applied": {
+                "category": category_filter
+            }
+        }), 200
+        
+    except Exception as e:
+        print(f"❌ [DEFAULT RECIPES] Error: {str(e)}")
+        return jsonify({
+            "error": "Failed to fetch default recipes",
+            "details": str(e)
+        }), 500
