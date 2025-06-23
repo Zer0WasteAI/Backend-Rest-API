@@ -31,7 +31,7 @@ def make_add_ingredients_to_inventory_use_case(db):
         InventoryRepositoryImpl(db), 
         InventoryCalculatorImpl(), 
         GeminiAdapterService(),
-        make_ingredient_image_generator_service()
+        make_ingredient_image_generator_service(db)
     )
 
 def make_add_item_to_inventory_use_case(db):

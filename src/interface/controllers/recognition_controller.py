@@ -12,7 +12,7 @@ from src.application.factories.recognition_usecase_factory import (
 )
 from src.application.factories.auth_usecase_factory import make_firestore_profile_service
 from src.infrastructure.async_tasks.async_task_service import async_task_service
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 import uuid
 
 recognition_bp = Blueprint("recognition", __name__)
@@ -207,16 +207,32 @@ def recognize_ingredients():
             
             # Calcular fecha de vencimiento
             try:
-                expiration_date = calculator_service.calculate_expiration_date(
-                    added_at=current_time,
-                    time_value=ingredient["expiration_time"],
-                    time_unit=ingredient["time_unit"]
-                )
-                ingredient["expiration_date"] = expiration_date.isoformat()
+                # Verificar que expiration_time no sea None
+                expiration_time = ingredient.get("expiration_time")
+                time_unit = ingredient.get("time_unit", "Días")
+                
+                if expiration_time is not None and expiration_time > 0:
+                    expiration_date = calculator_service.calculate_expiration_date(
+                        added_at=current_time,
+                        time_value=expiration_time,
+                        time_unit=time_unit
+                    )
+                    ingredient["expiration_date"] = expiration_date.isoformat()
+                else:
+                    # Si expiration_time es None o 0, usar 7 días por defecto
+                    print(f"⚠️ [SIMPLE RECOGNITION] expiration_time is None/0 for {ingredient.get('name', 'unknown')}, using 7 days default")
+                    fallback_date = current_time + timedelta(days=7)
+                    ingredient["expiration_date"] = fallback_date.isoformat()
+                    ingredient["expiration_time"] = 7
+                    ingredient["time_unit"] = "Días"
+                    
             except Exception as e:
-                from datetime import timedelta
-                fallback_date = current_time + timedelta(days=ingredient.get("expiration_time", 7))
+                print(f"🚨 [SIMPLE RECOGNITION] ERROR calculating expiration for {ingredient.get('name', 'unknown')}: {str(e)}")
+                # Fallback seguro: usar 7 días por defecto
+                fallback_date = current_time + timedelta(days=7)
                 ingredient["expiration_date"] = fallback_date.isoformat()
+                ingredient["expiration_time"] = 7
+                ingredient["time_unit"] = "Días"
         
         # Guardar reconocimiento completo
         from src.domain.models.recognition import Recognition
@@ -1687,6 +1703,7 @@ def get_images_status(task_id):
 def get_recognition_images(recognition_id):
     """
     🖼️ VERIFICAR IMÁGENES: Verifica si las imágenes están listas y devuelve el estado actual
+    Soporta tanto reconocimiento de ingredientes como de alimentos preparados
     """
     user_uid = get_jwt_identity()
     
@@ -1707,39 +1724,79 @@ def get_recognition_images(recognition_id):
             print(f"❌ [CHECK IMAGES] Recognition {recognition_id} unauthorized for user {user_uid}")
             return jsonify({"error": "No tienes permiso para ver este reconocimiento"}), 403
         
-        # Obtener los ingredientes con imágenes actualizadas
-        ingredients = recognition.raw_result.get('ingredients', [])
+        # Determinar el tipo de reconocimiento y obtener los elementos correspondientes
+        raw_result = recognition.raw_result
+        ingredients = raw_result.get('ingredients', [])
+        foods = raw_result.get('foods', [])
+        
+        # Determinar qué tipo de reconocimiento es
+        if ingredients and not foods:
+            # Reconocimiento de ingredientes
+            items = ingredients
+            item_type = "ingredients"
+            print(f"🖼️ [CHECK IMAGES] Detected ingredients recognition with {len(items)} items")
+        elif foods and not ingredients:
+            # Reconocimiento de alimentos preparados
+            items = foods
+            item_type = "foods"
+            print(f"🖼️ [CHECK IMAGES] Detected foods recognition with {len(items)} items")
+        elif ingredients and foods:
+            # Reconocimiento mixto (batch) - combinar ambos
+            items = ingredients + foods
+            item_type = "mixed"
+            print(f"🖼️ [CHECK IMAGES] Detected mixed recognition with {len(ingredients)} ingredients and {len(foods)} foods")
+        else:
+            # Sin elementos reconocidos
+            items = []
+            item_type = "empty"
+            print(f"🖼️ [CHECK IMAGES] No items found in recognition")
         
         # Verificar estado de las imágenes
         images_ready = 0
         images_generating = 0
         
-        for ingredient in ingredients:
-            image_status = ingredient.get('image_status', 'unknown')
+        for item in items:
+            image_status = item.get('image_status', 'unknown')
             if image_status == 'ready':
                 images_ready += 1
             elif image_status == 'generating':
                 images_generating += 1
         
-        all_images_ready = images_ready == len(ingredients)
+        all_images_ready = images_ready == len(items) if items else True
         
+        # Preparar respuesta adaptada al tipo de reconocimiento
         response = {
             "recognition_id": recognition_id,
+            "recognition_type": item_type,
             "images_status": "ready" if all_images_ready else "generating",
             "images_ready": images_ready,
             "images_generating": images_generating,
-            "total_ingredients": len(ingredients),
-            "progress_percentage": int((images_ready / len(ingredients)) * 100) if ingredients else 100,
-            "ingredients": ingredients,
+            "total_items": len(items),
+            "progress_percentage": int((images_ready / len(items)) * 100) if items else 100,
             "last_updated": recognition.recognized_at.isoformat()
         }
         
-        if all_images_ready:
-            response['message'] = "✅ Todas las imágenes están listas"
-            print(f"✅ [CHECK IMAGES] All {images_ready} images ready for recognition {recognition_id}")
+        # Incluir los elementos según el tipo
+        if item_type == "ingredients":
+            response["ingredients"] = items
+            response["total_ingredients"] = len(items)
+        elif item_type == "foods":
+            response["foods"] = items
+            response["total_foods"] = len(items)
+        elif item_type == "mixed":
+            response["ingredients"] = ingredients
+            response["foods"] = foods
+            response["total_ingredients"] = len(ingredients)
+            response["total_foods"] = len(foods)
         else:
-            response['message'] = f"🎨 Generando imágenes... {images_ready}/{len(ingredients)} listas"
-            print(f"🎨 [CHECK IMAGES] Images progress: {images_ready}/{len(ingredients)} ready")
+            response["items"] = []
+        
+        if all_images_ready:
+            response['message'] = f"✅ Todas las imágenes están listas ({item_type})"
+            print(f"✅ [CHECK IMAGES] All {images_ready} images ready for {item_type} recognition {recognition_id}")
+        else:
+            response['message'] = f"🎨 Generando imágenes... {images_ready}/{len(items)} listas ({item_type})"
+            print(f"🎨 [CHECK IMAGES] Images progress: {images_ready}/{len(items)} ready for {item_type}")
         
         return jsonify(response), 200
 

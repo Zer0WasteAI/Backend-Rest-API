@@ -925,6 +925,14 @@ Actualiza la información completa de un stack específico de ingrediente en el 
     }
 })
 def update_ingredient(ingredient_name, added_at):
+    from urllib.parse import unquote
+    
+    # Decodificar el nombre del ingrediente URL-encoded
+    ingredient_name = unquote(ingredient_name)
+    
+    # Restaurar caracteres especiales que fueron reemplazados para ser URL-safe
+    ingredient_name = ingredient_name.replace('_SLASH_', '/')
+    
     user_uid = get_jwt_identity()
     schema = UpdateIngredientSchema()
     json_data = request.get_json()
@@ -1078,6 +1086,14 @@ def delete_ingredient(ingredient_name, added_at):
     
     URL: DELETE /api/inventory/ingredients/Tomate/2025-01-01T10:00:00Z
     """
+    from urllib.parse import unquote
+    
+    # Decodificar el nombre del ingrediente URL-encoded
+    ingredient_name = unquote(ingredient_name)
+    
+    # Restaurar caracteres especiales que fueron reemplazados para ser URL-safe
+    ingredient_name = ingredient_name.replace('_SLASH_', '/')
+    
     user_uid = get_jwt_identity()
     
     print(f"🗑️ [DELETE INGREDIENT STACK] User: {user_uid}")
@@ -1926,6 +1942,14 @@ def update_ingredient_quantity(ingredient_name, added_at):
     
     Body: { "quantity": 2.5 }
     """
+    from urllib.parse import unquote
+    
+    # Decodificar el nombre del ingrediente URL-encoded
+    ingredient_name = unquote(ingredient_name)
+    
+    # Restaurar caracteres especiales que fueron reemplazados para ser URL-safe
+    ingredient_name = ingredient_name.replace('_SLASH_', '/')
+    
     user_uid = get_jwt_identity()
     
     print(f"📦 [UPDATE INGREDIENT QUANTITY] ===== REQUEST DETAILS =====")
@@ -2189,6 +2213,14 @@ def update_food_quantity(food_name, added_at):
     
     Body: { "serving_quantity": 3 }
     """
+    from urllib.parse import unquote
+    
+    # Decodificar el nombre del food URL-encoded
+    food_name = unquote(food_name)
+    
+    # Restaurar caracteres especiales que fueron reemplazados para ser URL-safe
+    food_name = food_name.replace('_SLASH_', '/')
+    
     user_uid = get_jwt_identity()
     schema = UpdateFoodQuantitySchema()
     json_data = request.get_json()
@@ -2427,6 +2459,14 @@ def delete_food_item(food_name, added_at):
     
     URL: DELETE /api/inventory/foods/Pasta con Tomate/2025-01-01T10:00:00Z
     """
+    from urllib.parse import unquote
+    
+    # Decodificar el nombre del food URL-encoded
+    food_name = unquote(food_name)
+    
+    # Restaurar caracteres especiales que fueron reemplazados para ser URL-safe
+    food_name = food_name.replace('_SLASH_', '/')
+    
     user_uid = get_jwt_identity()
 
     print(f"🗑️ [DELETE FOOD ITEM] User: {user_uid}")
@@ -2577,6 +2617,14 @@ def mark_ingredient_stack_consumed(ingredient_name, added_at):
     URL: POST /api/inventory/ingredients/Tomate/2025-01-01T10:00:00Z/consume
     Body: { "consumed_quantity": 2.5 } (opcional - por defecto consume todo)
     """
+    from urllib.parse import unquote
+    
+    # Decodificar el nombre del ingrediente URL-encoded
+    ingredient_name = unquote(ingredient_name)
+    
+    # Restaurar caracteres especiales que fueron reemplazados para ser URL-safe
+    ingredient_name = ingredient_name.replace('_SLASH_', '/')
+    
     user_uid = get_jwt_identity()
 
     print(f"🍽️ [MARK INGREDIENT CONSUMED] ===== REQUEST DETAILS =====")
@@ -2703,6 +2751,14 @@ def mark_food_item_consumed(food_name, added_at):
     URL: POST /api/inventory/foods/Pasta con Tomate/2025-01-01T10:00:00Z/consume
     Body: { "consumed_portions": 1.5 } (opcional - por defecto consume todo)
     """
+    from urllib.parse import unquote
+    
+    # Decodificar el nombre del food URL-encoded
+    food_name = unquote(food_name)
+    
+    # Restaurar caracteres especiales que fueron reemplazados para ser URL-safe
+    food_name = food_name.replace('_SLASH_', '/')
+    
     user_uid = get_jwt_identity()
 
     print(f"🍽️ [MARK FOOD CONSUMED] User: {user_uid}")
@@ -3134,6 +3190,14 @@ def get_food_detail(food_name, added_at):
     
     URL: GET /api/inventory/foods/Pasta con Tomate/2025-01-01T10:00:00Z/detail
     """
+    from urllib.parse import unquote
+    
+    # Decodificar el nombre del food URL-encoded
+    food_name = unquote(food_name)
+    
+    # Restaurar caracteres especiales que fueron reemplazados para ser URL-safe
+    food_name = food_name.replace('_SLASH_', '/')
+    
     user_uid = get_jwt_identity()
 
     print(f"🍽️ [GET FOOD DETAIL] User: {user_uid}")
@@ -3478,7 +3542,7 @@ Obtiene únicamente la lista de alimentos preparados del inventario, excluyendo 
                     'foods': [],
                     'summary': {
                         'total_food_items': 0,
-                        'total_servings_available': 0
+                        "total_servings_available": 0
                     }
                 }
             }
@@ -4054,4 +4118,14 @@ def add_item_to_inventory():
             "error": "Failed to add item to inventory",
             "details": str(e)
         }), 500
+
+
+
+
+
+
+
+
+
+
 

@@ -1,0 +1,28 @@
+{
+  "mcpServers": {
+    "zerowaste-ai-backend": {
+      "command": "python",
+      "args": ["mcp_server.py"],
+      "cwd": ".",
+      "env": {
+        "PYTHONPATH": "./src"
+      }
+    },
+    "hybrid-context-server": {
+      "command": "python",
+      "args": ["hybrid_mcp_server.py"],
+      "cwd": ".",
+      "env": {
+        "PYTHONPATH": "./src"
+      }
+    },
+    "universal-python-analyzer": {
+      "command": "python",
+      "args": ["generic_mcp_server.py"],
+      "cwd": ".",
+      "env": {
+        "PYTHONPATH": "./src"
+      }
+    }
+  }
+} 

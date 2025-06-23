@@ -10,7 +10,8 @@ logger = logging.getLogger(__name__)
 class GeminiRecipeGeneratorService(IARecipeGeneratorService):
     def __init__(self):
         genai.configure(api_key=Config.GEMINI_API_KEY)
-        self.model = genai.GenerativeModel("gemini-2.5-flash-preview-05-20")
+        # TODO: Change to the new model
+        self.model = genai.GenerativeModel("gemini-2.5-flash-lite-preview-06-17")
 
     def generate_recipes(self, data: Dict[str, Any], num_recipes: int = 2, recipe_categories: List[str] = []) -> Dict[str, Any]:
         print(f"🍳 [GEMINI SERVICE] Starting recipe generation with data: {data.keys()}")
