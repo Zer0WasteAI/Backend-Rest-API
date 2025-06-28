@@ -210,6 +210,22 @@ def generate_recipes():
         recipes_ids=None
     )
     generation_repository.save(generation)
+    
+    # Guardar recetas generadas automáticamente en recipes_generated
+    from src.application.factories.environmental_savings_factory import make_recipe_generated_repository
+    recipe_generated_repo = make_recipe_generated_repository()
+    generated_recipe_uids = []
+    
+    for recipe_data in result["generated_recipes"]:
+        recipe_uid = recipe_generated_repo.save_generated_recipe(
+            user_uid=user_uid,
+            generation_id=generation_id,
+            recipe_data=recipe_data,
+            generation_type="inventory"
+        )
+        generated_recipe_uids.append(recipe_uid)
+    
+    print(f"🍳 [RECIPE CONTROLLER] Saved {len(generated_recipe_uids)} recipes to recipes_generated table")
 
     # Crear tarea de imagen
     image_task_id = async_task_service.create_task(
@@ -450,6 +466,22 @@ def generate_custom_recipes():
         recipes_ids=None
     )
     generation_repository.save(generation)
+    
+    # Guardar recetas generadas automáticamente en recipes_generated
+    from src.application.factories.environmental_savings_factory import make_recipe_generated_repository
+    recipe_generated_repo = make_recipe_generated_repository()
+    generated_recipe_uids = []
+    
+    for recipe_data in result["generated_recipes"]:
+        recipe_uid = recipe_generated_repo.save_generated_recipe(
+            user_uid=user_uid,
+            generation_id=generation_id,
+            recipe_data=recipe_data,
+            generation_type="custom"
+        )
+        generated_recipe_uids.append(recipe_uid)
+    
+    print(f"🍳 [RECIPE CONTROLLER] Saved {len(generated_recipe_uids)} recipes to recipes_generated table")
 
     image_task_id = async_task_service.create_task(
         user_uid=user_uid,

@@ -25,18 +25,30 @@ class GenerateCustomRecipeUseCase:
         if user_profile:
             # Agregar alergias como restricciones
             if user_profile.get("allergies"):
-                combined_preferences.extend([f"sin {allergy}" for allergy in user_profile["allergies"]])
+                for allergy in user_profile["allergies"]:
+                    allergy_text = allergy.get("name", allergy) if isinstance(allergy, dict) else allergy
+                    if isinstance(allergy_text, str):
+                        combined_preferences.append(f"sin {allergy_text}")
             
             if user_profile.get("allergyItems"):
-                combined_preferences.extend([f"sin {item}" for item in user_profile["allergyItems"]])
+                for item in user_profile["allergyItems"]:
+                    item_text = item.get("name", item) if isinstance(item, dict) else item
+                    if isinstance(item_text, str):
+                        combined_preferences.append(f"sin {item_text}")
             
             # Agregar tipos de comida preferidos (si no conflictan con preferencias del request)
             if user_profile.get("preferredFoodTypes"):
-                combined_preferences.extend(user_profile["preferredFoodTypes"])
+                for food_type in user_profile["preferredFoodTypes"]:
+                    food_type_text = food_type.get("name", food_type) if isinstance(food_type, dict) else food_type
+                    if isinstance(food_type_text, str):
+                        combined_preferences.append(food_type_text)
             
             # Agregar dietas especiales
             if user_profile.get("specialDietItems"):
-                combined_preferences.extend(user_profile["specialDietItems"])
+                for diet_item in user_profile["specialDietItems"]:
+                    diet_text = diet_item.get("name", diet_item) if isinstance(diet_item, dict) else diet_item
+                    if isinstance(diet_text, str):
+                        combined_preferences.append(diet_text)
             
             # Agregar nivel de cocina
             cooking_level = user_profile.get("cookingLevel", "beginner")
@@ -71,12 +83,16 @@ class GenerateCustomRecipeUseCase:
         
         # Verificar alergias generales
         for allergy in allergies:
-            if allergy.lower() in ingredient_lower:
+            # Manejar tanto strings como diccionarios
+            allergy_text = allergy.get("name", allergy) if isinstance(allergy, dict) else allergy
+            if isinstance(allergy_text, str) and allergy_text.lower() in ingredient_lower:
                 return True
         
         # Verificar items específicos de alergia
         for item in allergy_items:
-            if item.lower() in ingredient_lower:
+            # Manejar tanto strings como diccionarios  
+            item_text = item.get("name", item) if isinstance(item, dict) else item
+            if isinstance(item_text, str) and item_text.lower() in ingredient_lower:
                 return True
         
         return False 

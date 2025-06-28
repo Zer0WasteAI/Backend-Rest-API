@@ -1,6 +1,7 @@
 from src.infrastructure.db.base import db
 from src.infrastructure.db.environmental_savings_repository_impl import EnvironmentalSavingsRepositoryImpl
 from src.infrastructure.db.recipe_repository_impl import RecipeRepositoryImpl
+from src.infrastructure.db.recipe_generated_repository_impl import RecipeGeneratedRepositoryImpl
 from src.infrastructure.ai.gemini_adapter_service import GeminiAdapterService
 
 from src.application.use_cases.recipes.calculate_enviromental_savings_from_recipe_uid import EstimateEnvironmentalSavingsFromRecipeUID
@@ -12,6 +13,9 @@ from src.application.use_cases.recipes.sum_environmental_calculations_by_user im
 
 def make_environmental_savings_repository():
     return EnvironmentalSavingsRepositoryImpl(db)
+
+def make_recipe_generated_repository():
+    return RecipeGeneratedRepositoryImpl()
 
 
 def make_estimate_savings_by_uid_use_case():
@@ -26,7 +30,8 @@ def make_estimate_savings_by_title_use_case():
     return EstimateEnvironmentalSavingsFromRecipeName(
         recipe_repository=RecipeRepositoryImpl(db),
         ai_adapter=GeminiAdapterService(),
-        savings_repository=make_environmental_savings_repository()
+        savings_repository=make_environmental_savings_repository(),
+        recipe_generated_repository=make_recipe_generated_repository()
     )
 
 

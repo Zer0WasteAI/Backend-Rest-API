@@ -20,6 +20,7 @@ class EnvironmentalSavingsRepositoryImpl(EnvironmentalSavingsRepository):
                     (EnvironmentalSavingsORM.recipe_uid == savings.recipe_uid)
                 ).values(
                     recipe_title=savings.recipe_title,
+                    recipe_source_type=savings.recipe_source_type,
                     carbon_footprint=savings.carbon_footprint,
                     water_footprint=savings.water_footprint,
                     energy_footprint=savings.energy_footprint,
@@ -36,6 +37,7 @@ class EnvironmentalSavingsRepositoryImpl(EnvironmentalSavingsRepository):
                 stmt = insert(EnvironmentalSavingsORM).values(
                     user_uid=savings.user_uid,
                     recipe_uid=savings.recipe_uid,
+                    recipe_source_type=savings.recipe_source_type,
                     recipe_title=savings.recipe_title,
                     carbon_footprint=savings.carbon_footprint,
                     water_footprint=savings.water_footprint,
@@ -97,6 +99,7 @@ class EnvironmentalSavingsRepositoryImpl(EnvironmentalSavingsRepository):
         return EnvironmentalSavings(
             user_uid=row.user_uid,
             recipe_uid=row.recipe_uid,
+            recipe_source_type=getattr(row, 'recipe_source_type', 'manual'),  # Default for existing records
             recipe_title=row.recipe_title,
             carbon_footprint=row.carbon_footprint,
             water_footprint=row.water_footprint,
