@@ -1,31 +1,39 @@
 """
-Servicio simplificado para generar y gestionar imágenes de ingredientes.
+Servicio optimizado para generar y gestionar imágenes de ingredientes.
 Solo usa la carpeta /ingredients/ y almacena URLs directamente.
+Inclye optimizaciones de batch processing y async operations.
 """
 import re
+import asyncio
 from pathlib import Path
-from typing import Optional
+from typing import Optional, List, Dict
+from concurrent.futures import ThreadPoolExecutor, as_completed
 import time
 
 
 class IngredientImageGeneratorService:
     """
-    Servicio para obtener o generar imágenes de ingredientes.
+    Servicio optimizado para obtener o generar imágenes de ingredientes.
     
-    Flujo simplificado:
-    1. Buscar imagen existente en /ingredients/
-    2. Si no existe, generar nueva imagen
-    3. Retornar URL directa
+    Flujo optimizado:
+    1. Batch check de imágenes existentes
+    2. Generación paralela de imágenes faltantes
+    3. Upload concurrente con rate limiting
+    4. Cache en memoria para sesión actual
     """
     
     def __init__(self, ai_service, storage_adapter):
         self.ai_service = ai_service
         self.storage_adapter = storage_adapter
         self.ingredients_folder = "ingredients"
+        self.performance_mode = True
+        self.max_concurrent_generations = 5  # Increased for better throughput
+        self.max_concurrent_uploads = 10     # Increased storage upload limit
+        self.session_cache = {}             # In-memory cache for current session
     
     def get_or_generate_ingredient_image(self, ingredient_name: str, user_uid: str, descripcion: str = "") -> str:
         """
-        Obtiene o genera una imagen para un ingrediente.
+        Obtiene o genera una imagen para un ingrediente (modo estándar).
         
         Args:
             ingredient_name: Nombre del ingrediente
@@ -37,19 +45,172 @@ class IngredientImageGeneratorService:
         """
         print(f"🔍 Getting/generating image for ingredient: {ingredient_name}")
         
+        # Check session cache first
+        if ingredient_name in self.session_cache:
+            print(f"⚡ [SESSION CACHE] Using cached URL for {ingredient_name}")
+            return self.session_cache[ingredient_name]
+        
         # 1. Buscar imagen existente
         existing_image_url = self._check_existing_ingredient_image(ingredient_name)
         if existing_image_url:
             print(f"✅ Found existing image: {existing_image_url}")
+            self.session_cache[ingredient_name] = existing_image_url
             return existing_image_url
         
         # 2. Generar nueva imagen si no existe
         print(f"🎨 Generating new image for: {ingredient_name}")
         try:
-            return self._generate_new_ingredient_image(ingredient_name, descripcion)
+            image_url = self._generate_new_ingredient_image(ingredient_name, descripcion)
+            self.session_cache[ingredient_name] = image_url
+            return image_url
         except Exception as e:
             print(f"🚨 Error generating image for {ingredient_name}: {str(e)}")
-            return self._get_fallback_image_url(ingredient_name)
+            fallback_url = self._get_fallback_image_url(ingredient_name)
+            self.session_cache[ingredient_name] = fallback_url
+            return fallback_url
+    
+    async def get_or_generate_ingredient_images_batch(self, ingredients: List[Dict], user_uid: str) -> Dict[str, str]:
+        """
+        ULTRA-OPTIMIZED: Generate multiple ingredient images in parallel with smart caching
+        
+        Args:
+            ingredients: List of ingredient dicts with 'name' and optional 'description'
+            user_uid: User ID for logging
+            
+        Returns:
+            Dict mapping ingredient names to image URLs
+        """
+        print(f"🚀 [BATCH OPTIMIZED] Processing {len(ingredients)} ingredient images")
+        
+        # 1. Check session cache first
+        image_urls = {}
+        uncached_ingredients = []
+        
+        for ingredient in ingredients:
+            name = ingredient.get('name', '')
+            if name in self.session_cache:
+                image_urls[name] = self.session_cache[name]
+                print(f"⚡ [SESSION CACHE] Found {name}")
+            else:
+                uncached_ingredients.append(ingredient)
+        
+        if not uncached_ingredients:
+            print(f"🎯 [ALL CACHED] All {len(ingredients)} images found in session cache")
+            return image_urls
+        
+        print(f"📋 [CACHE MISS] Need to process {len(uncached_ingredients)} images")
+        
+        # 2. Batch check existing images in parallel
+        existing_checks = []
+        with ThreadPoolExecutor(max_workers=self.max_concurrent_uploads) as executor:
+            for ingredient in uncached_ingredients:
+                future = executor.submit(self._check_existing_ingredient_image, ingredient['name'])
+                existing_checks.append((ingredient['name'], future))
+        
+        # 3. Collect existing images and identify missing ones
+        missing_ingredients = []
+        for ingredient_name, future in existing_checks:
+            try:
+                existing_url = future.result(timeout=5)  # 5 second timeout per check
+                if existing_url:
+                    image_urls[ingredient_name] = existing_url
+                    self.session_cache[ingredient_name] = existing_url
+                    print(f"✅ Found existing: {ingredient_name}")
+                else:
+                    # Find the ingredient data for missing ones
+                    ingredient_data = next(ing for ing in uncached_ingredients if ing['name'] == ingredient_name)
+                    missing_ingredients.append(ingredient_data)
+            except Exception as e:
+                print(f"⚠️ Error checking {ingredient_name}: {e}")
+                ingredient_data = next(ing for ing in uncached_ingredients if ing['name'] == ingredient_name)
+                missing_ingredients.append(ingredient_data)
+        
+        # 4. Generate missing images in parallel batches (respecting API limits)
+        if missing_ingredients:
+            print(f"🎨 [BATCH GENERATION] Generating {len(missing_ingredients)} new images")
+            
+            # Process in smaller batches to respect AI API rate limits
+            batch_size = self.max_concurrent_generations
+            for i in range(0, len(missing_ingredients), batch_size):
+                batch = missing_ingredients[i:i + batch_size]
+                
+                # Generate batch concurrently
+                generation_tasks = []
+                with ThreadPoolExecutor(max_workers=batch_size) as executor:
+                    for ingredient in batch:
+                        future = executor.submit(
+                            self._generate_new_ingredient_image,
+                            ingredient['name'],
+                            ingredient.get('description', '')
+                        )
+                        generation_tasks.append((ingredient['name'], future))
+                
+                # Collect results from batch
+                for ingredient_name, future in generation_tasks:
+                    try:
+                        image_url = future.result(timeout=30)  # 30 second timeout per generation
+                        image_urls[ingredient_name] = image_url
+                        self.session_cache[ingredient_name] = image_url
+                        print(f"✅ Generated: {ingredient_name}")
+                    except Exception as e:
+                        print(f"🚨 Failed to generate {ingredient_name}: {e}")
+                        fallback_url = self._get_fallback_image_url(ingredient_name)
+                        image_urls[ingredient_name] = fallback_url
+                        self.session_cache[ingredient_name] = fallback_url
+                
+                # Small delay between batches to respect rate limits
+                if i + batch_size < len(missing_ingredients):
+                    await asyncio.sleep(0.5)
+        
+        print(f"🎉 [BATCH COMPLETED] Processed {len(image_urls)} ingredient images")
+        return image_urls
+    
+    def clear_session_cache(self) -> int:
+        """
+        Clear the session cache and return number of cleared entries
+        """
+        count = len(self.session_cache)
+        self.session_cache.clear()
+        print(f"🧹 Cleared {count} cached image URLs")
+        return count
+    
+    def get_cache_stats(self) -> Dict[str, any]:
+        """
+        Get session cache statistics
+        """
+        return {
+            'cached_images': len(self.session_cache),
+            'cache_keys': list(self.session_cache.keys()),
+            'performance_mode': self.performance_mode,
+            'max_concurrent_generations': self.max_concurrent_generations,
+            'max_concurrent_uploads': self.max_concurrent_uploads
+        }
+    
+    def get_or_generate_ingredient_images_sync_batch(self, ingredients: List[Dict], user_uid: str) -> Dict[str, str]:
+        """
+        Synchronous version of batch image generation for compatibility
+        """
+        if self.performance_mode:
+            # Run async version in event loop
+            try:
+                loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(loop)
+                result = loop.run_until_complete(
+                    self.get_or_generate_ingredient_images_batch(ingredients, user_uid)
+                )
+                loop.close()
+                return result
+            except Exception as e:
+                print(f"🚨 Async batch failed, falling back to standard: {e}")
+        
+        # Fallback to individual processing
+        image_urls = {}
+        for ingredient in ingredients:
+            name = ingredient.get('name', '')
+            description = ingredient.get('description', '')
+            image_urls[name] = self.get_or_generate_ingredient_image(name, user_uid, description)
+        
+        return image_urls
     
     def _check_existing_ingredient_image(self, ingredient_name: str) -> Optional[str]:
         """
