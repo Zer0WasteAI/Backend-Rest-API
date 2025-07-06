@@ -3,6 +3,7 @@ from firebase_admin import firestore
 from pathlib import Path
 from src.config.config import Config
 import logging
+import json
 
 logger = logging.getLogger(__name__)
 
@@ -10,12 +11,22 @@ class FirestoreProfileService:
     def __init__(self):
         # Inicializar Firestore client
         if not firebase_admin._apps:
-            cred_path = Path(Config.FIREBASE_CREDENTIALS_PATH).resolve()
-            if not cred_path.exists():
-                raise FileNotFoundError(f"No se encontró el archivo de credenciales en {cred_path}")
-            
-            cred = firebase_admin.credentials.Certificate(str(cred_path))
-            firebase_admin.initialize_app(cred)
+            if Config.FIREBASE_CREDENTIALS_JSON:
+                try:
+                    creds_dict = json.loads(Config.FIREBASE_CREDENTIALS_JSON)
+                    cred = firebase_admin.credentials.Certificate(creds_dict)
+                    firebase_admin.initialize_app(cred)
+                except json.JSONDecodeError:
+                    raise ValueError("FIREBASE_CREDENTIALS_JSON tiene un formato inválido.")
+            elif Config.FIREBASE_CREDENTIALS_PATH:
+                cred_path = Path(Config.FIREBASE_CREDENTIALS_PATH).resolve()
+                if not cred_path.exists():
+                    raise FileNotFoundError(f"No se encontró el archivo de credenciales en {cred_path}")
+
+                cred = firebase_admin.credentials.Certificate(str(cred_path))
+                firebase_admin.initialize_app(cred)
+            else:
+                raise EnvironmentError("No se proporcionó ninguna credencial de Firebase (ni JSON ni PATH)")
         
         self.db = firestore.client()
         self.users_collection = self.db.collection('users')
