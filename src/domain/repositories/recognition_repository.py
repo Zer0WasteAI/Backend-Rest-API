@@ -18,3 +18,7 @@ class RecognitionRepository(ABC):
     @abstractmethod
     def update_validation_status(self, recognition_uid: str, validated: bool) -> None:
         pass
+
+    @abstractmethod
+    def update(self, recognition: Recognition) -> None:
+        pass

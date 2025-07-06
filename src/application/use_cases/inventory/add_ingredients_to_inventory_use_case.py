@@ -3,10 +3,11 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from src.domain.models.ingredient import Ingredient, IngredientStack
 
 class AddIngredientsToInventoryUseCase:
-    def __init__(self, repository, calculator, ai_service=None):
+    def __init__(self, repository, calculator, ai_service=None, ingredient_image_generator_service=None):
         self.repository = repository
         self.calculator = calculator
         self.ai_service = ai_service
+        self.ingredient_image_generator_service = ingredient_image_generator_service
 
     def execute(self, user_uid: str, ingredients_data: list[dict]):
         print(f"🏗️ [ADD INGREDIENTS USE CASE] Starting execution for user: {user_uid}")
@@ -20,6 +21,11 @@ class AddIngredientsToInventoryUseCase:
 
         now = datetime.now()
         print(f"⏰ [ADD INGREDIENTS USE CASE] Processing timestamp: {now}")
+        
+        # 🆕 NUEVA FUNCIONALIDAD: Recuperar imágenes faltantes antes de procesar
+        if self.ingredient_image_generator_service:
+            print(f"🔍 [IMAGE RECOVERY] Checking for missing images and attempting recovery...")
+            self._recover_missing_images(ingredients_data, user_uid)
         
         # 🚀 NUEVA FUNCIONALIDAD: Generar environmental impact y utilization ideas solo para ingredientes que van al inventario
         if self.ai_service:
@@ -89,6 +95,75 @@ class AddIngredientsToInventoryUseCase:
                 raise e
         
         print(f"🎉 [ADD INGREDIENTS USE CASE] Successfully processed all {len(ingredients_data)} ingredients")
+
+    def _recover_missing_images(self, ingredients_data: list[dict], user_uid: str):
+        """
+        🔍 Recupera imágenes faltantes intentando buscar o generar imágenes para ingredientes que no las tienen
+        """
+        print(f"🔍 [IMAGE RECOVERY] Starting image recovery for {len(ingredients_data)} ingredients")
+        
+        missing_image_ingredients = []
+        for ingredient in ingredients_data:
+            image_path = ingredient.get("image_path", "")
+            is_placeholder = "placeholder" in image_path.lower() or "via.placeholder" in image_path.lower()
+            is_empty = not image_path or image_path.strip() == ""
+            
+            if is_empty or is_placeholder:
+                missing_image_ingredients.append(ingredient)
+                print(f"🔍 [IMAGE RECOVERY] Found ingredient without proper image: {ingredient.get('name')}")
+                print(f"   └─ Current image_path: '{image_path}'")
+        
+        if not missing_image_ingredients:
+            print(f"✅ [IMAGE RECOVERY] All ingredients already have proper images")
+            return
+        
+        print(f"🎨 [IMAGE RECOVERY] Attempting to recover images for {len(missing_image_ingredients)} ingredients...")
+        
+        def recover_ingredient_image(ingredient_data):
+            ingredient_name = ingredient_data["name"]
+            descripcion = ingredient_data.get("description", "")
+            
+            print(f"🎨 [RECOVERY THREAD] Processing image for: {ingredient_name}")
+            try:
+                image_path = self.ingredient_image_generator_service.get_or_generate_ingredient_image(
+                    ingredient_name=ingredient_name,
+                    user_uid=user_uid,
+                    descripcion=descripcion
+                )
+                print(f"✅ [RECOVERY THREAD] Image recovered for {ingredient_name}: {image_path[:50]}...")
+                return ingredient_name, image_path, None
+            except Exception as e:
+                print(f"🚨 [RECOVERY THREAD] Error recovering image for {ingredient_name}: {str(e)}")
+                return ingredient_name, "https://via.placeholder.com/150x150/cccccc/666666?text=No+Image", str(e)
+        
+        # Recuperar imágenes en paralelo
+        recovered_images = {}
+        with ThreadPoolExecutor(max_workers=3) as executor:
+            future_to_ingredient = {
+                executor.submit(recover_ingredient_image, ingredient): ingredient["name"]
+                for ingredient in missing_image_ingredients
+            }
+            
+            for future in as_completed(future_to_ingredient):
+                ingredient_name, image_path, error = future.result()
+                recovered_images[ingredient_name] = image_path
+                if error:
+                    print(f"⚠️ [IMAGE RECOVERY] Fallback used for {ingredient_name}")
+                else:
+                    print(f"🖼️ [IMAGE RECOVERY] Image recovered for {ingredient_name}")
+        
+        # Aplicar las imágenes recuperadas
+        for ingredient in ingredients_data:
+            ingredient_name = ingredient["name"]
+            if ingredient_name in recovered_images:
+                old_image_path = ingredient.get("image_path", "")
+                new_image_path = recovered_images[ingredient_name]
+                ingredient["image_path"] = new_image_path
+                print(f"🔄 [IMAGE RECOVERY] Updated image for {ingredient_name}")
+                print(f"   └─ Old: {old_image_path[:50]}..." if len(old_image_path) > 50 else f"   └─ Old: {old_image_path}")
+                print(f"   └─ New: {new_image_path[:50]}..." if len(new_image_path) > 50 else f"   └─ New: {new_image_path}")
+        
+        print(f"✅ [IMAGE RECOVERY] Completed image recovery for all ingredients")
 
     def _enrich_ingredients_with_ai_data(self, ingredients_data: list[dict]):
         """

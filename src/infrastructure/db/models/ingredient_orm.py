@@ -11,7 +11,7 @@ class IngredientORM(db.Model):
     type_unit = db.Column(db.String(50), nullable=False)
     storage_type = db.Column(db.String(50), nullable=False)
     tips = db.Column(db.String(255), nullable=True)
-    image_path = db.Column(db.String(255), nullable=False)
+    image_path = db.Column(db.String(1000), nullable=False)
 
     inventory = relationship("InventoryORM", back_populates="ingredients")
     stacks = relationship("IngredientStackORM", back_populates="ingredient", cascade="all, delete-orphan")

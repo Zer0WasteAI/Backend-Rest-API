@@ -17,6 +17,6 @@ class FoodItemORM(db.Model):
     time_unit = db.Column(db.String(20))
     tips = db.Column(db.Text)
     serving_quantity = db.Column(db.Integer)
-    image_path = db.Column(db.String(255))
+    image_path = db.Column(db.String(1000))
     added_at = db.Column(db.DateTime, default=datetime.now(timezone.utc))
     expiration_date = db.Column(db.DateTime, nullable=False)

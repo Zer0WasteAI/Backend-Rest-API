@@ -75,8 +75,14 @@ class FoodImageGeneratorService:
                 # Verificar si existe usando el storage adapter
                 blob = self.storage_adapter.bucket.blob(image_path)
                 if blob.exists():
-                    # Generar URL pública
-                    image_url = f"https://storage.googleapis.com/{self.storage_adapter.bucket.name}/{image_path}"
+                    # Generar URL firmada para imagen existente
+                    from datetime import datetime, timedelta
+                    expiration = datetime.utcnow() + timedelta(days=7)
+                    
+                    image_url = blob.generate_signed_url(
+                        expiration=expiration,
+                        method='GET'
+                    )
                     print(f"✅ Found existing food image: {image_path}")
                     return image_url
                     
@@ -123,8 +129,14 @@ class FoodImageGeneratorService:
             image_buffer.seek(0)  # Reset buffer position
             blob.upload_from_file(image_buffer, content_type='image/jpeg')
             
-            # Generar URL pública
-            image_url = f"https://storage.googleapis.com/{self.storage_adapter.bucket.name}/{image_path}"
+            # Generar URL firmada (válida por 7 días)
+            from datetime import datetime, timedelta
+            expiration = datetime.utcnow() + timedelta(days=7)
+            
+            image_url = blob.generate_signed_url(
+                expiration=expiration,
+                method='GET'
+            )
             
             print(f"✅ Food image generated and saved: {image_path}")
             return image_url

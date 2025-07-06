@@ -3,9 +3,11 @@ from sqlalchemy import false
 
 class EnvironmentalSavings:
     def __init__(self, user_uid, recipe_uid, recipe_title, carbon_footprint, water_footprint, energy_footprint,
-                 economic_cost, unit_carbon, unit_water, unit_energy, unit_cost, is_cooked: bool = False, saved_at=None):
+                 economic_cost, unit_carbon, unit_water, unit_energy, unit_cost, is_cooked: bool = False, 
+                 recipe_source_type: str = "manual", saved_at=None):
         self.user_uid = user_uid
         self.recipe_uid = recipe_uid
+        self.recipe_source_type = recipe_source_type  # 'manual' or 'generated'
         self.recipe_title = recipe_title
         self.carbon_footprint = carbon_footprint
         self.water_footprint = water_footprint

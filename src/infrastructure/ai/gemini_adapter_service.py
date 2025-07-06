@@ -1,7 +1,9 @@
 import google.generativeai as genai
 import json
 import base64
+import asyncio
 from io import BytesIO
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 from PIL import Image
 from src.config.config import Config
@@ -9,13 +11,24 @@ from typing import IO, List, Dict, Any, Optional
 
 from src.domain.services.ia_food_analyzer_service import IAFoodAnalyzerService
 from src.shared.exceptions.custom import UnidentifiedImageException, InvalidResponseFormatException
+from src.infrastructure.ai.cache_service import ai_cache
 
 class GeminiAdapterService(IAFoodAnalyzerService):
     def __init__(self):
         genai.configure(api_key=Config.GEMINI_API_KEY)
-        self.model = genai.GenerativeModel("gemini-2.5-flash-preview-05-20")
+        # TODO: Change to the new model
+        self.model = genai.GenerativeModel("gemini-2.5-flash-lite-preview-06-17")
         # Separate model for image generation
         self.image_gen_model = genai.GenerativeModel("gemini-2.0-flash-preview-image-generation")
+        self.performance_mode = True  # Enable optimizations
+        self.max_workers = 8  # Increased for better parallelization
+        self.generation_config_base = {
+            "temperature": 0.4,  # Standardized for consistency
+            "max_output_tokens": 1024,  # Prevent overgeneration
+            "candidate_count": 1,
+            "top_k": 40,
+            "top_p": 0.9
+        }
 
     def _parse_response_text(self, text: str):
         clean_text = text.strip()
@@ -41,18 +54,28 @@ class GeminiAdapterService(IAFoodAnalyzerService):
         Returns:
             BytesIO object containing the generated image data, or None if generation fails
         """
+        # Check cache first
+        cache_key = f"ingredient_img_{ingredient_name}_{descripcion[:30]}"
+        cached_image = ai_cache.get_cached_response('image_generation', cache_key)
+        
+        if cached_image:
+            print(f"🎯 [CACHE HIT] Using cached image for {ingredient_name}")
+            try:
+                import base64
+                image_bytes = base64.b64decode(cached_image)
+                return BytesIO(image_bytes)
+            except Exception as e:
+                print(f"⚠️ Cache decode failed: {e}")
+        
         try:
-            # Create a detailed prompt for high-quality ingredient images using Pixar style
-            prompt = f"""Ilustración 3D de alta definición de: {ingredient_name}, un ingrediente icónico de Perú.
-Enfócate en representar fielmente sus características únicas basándote en esta descripción: "{descripcion}".
-El estilo visual debe ser el de la comida en las películas de animación de Pixar: detallado, apetitoso y con volumen, usando colores vibrantes y texturas definidas.
-Composición: Muestra un {ingredient_name} entero junto a otro cortado limpiamente por la mitad para revelar su interior.
-Iluminación y Fondo: Utiliza una iluminación de estudio suave que resalte la frescura. El fondo debe ser minimalista, de un color gris claro neutro y desenfocado."""
+            # Ultra-compact prompt for ingredient images
+            prompt = f"""Ilustra {ingredient_name} peruano estilo Pixar 3D: {descripcion}. Fondo neutro, iluminación suave, detallado."""
 
-            generation_config = {
+            generation_config = self.generation_config_base.copy()
+            generation_config.update({
                 "response_modalities": ["TEXT", "IMAGE"],
-                "temperature": 0.4,
-            }
+                "max_output_tokens": 512  # Images don't need text output
+            })
 
             response = self.image_gen_model.generate_content(
                 prompt,
@@ -85,6 +108,15 @@ Iluminación y Fondo: Utiliza una iluminación de estudio suave que resalte la f
                             jpg_buffer.seek(0)
                             
                             print(f"✅ Successfully converted image for {ingredient_name} to JPG format")
+                            
+                            # Cache the image data
+                            jpg_buffer.seek(0)
+                            image_data = jpg_buffer.read()
+                            import base64
+                            cached_data = base64.b64encode(image_data).decode()
+                            ai_cache.cache_response('image_generation', cache_key, cached_data)
+                            
+                            jpg_buffer.seek(0)
                             return jpg_buffer
                             
                     except Exception as conversion_error:
@@ -123,10 +155,12 @@ Composición: Muestra el plato servido de manera elegante en un plato o bowl tí
 Detalles: Incluye guarniciones tradicionales, salsas o acompañamientos característicos del plato.
 Iluminación y Fondo: Utiliza una iluminación cálida que haga el plato lucir irresistible. El fondo debe ser minimalista, de color neutro y ligeramente desenfocado para que el plato sea el protagonista."""
 
-            generation_config = {
+            generation_config = self.generation_config_base.copy()
+            generation_config.update({
                 "response_modalities": ["TEXT", "IMAGE"],
-                "temperature": 0.5,  # Slightly higher temperature for more creative food images
-            }
+                "temperature": 0.5,  # Slightly higher for creativity
+                "max_output_tokens": 512  # Images don't need text output
+            })
 
             response = self.image_gen_model.generate_content(
                 prompt,
@@ -176,7 +210,44 @@ Iluminación y Fondo: Utiliza una iluminación cálida que haga el plato lucir i
             images = [Image.open(f) for f in images_files]
         except Exception as e:
             raise UnidentifiedImageException() from e
+        
+        if self.performance_mode:
+            return self._recognize_ingredients_optimized(images)
+        else:
+            return self._recognize_ingredients_standard(images)
+    
+    def _recognize_ingredients_optimized(self, images: List[Image.Image]) -> Dict[str, List[Dict[str, Any]]]:
+        """Ultra-optimized ingredient recognition with 90% size reduction"""
+        # Ultra-compact prompt - 90% size reduction
+        prompt = """Chef peruano: detecta ingredientes crudos (NO platos). Formato: {"ingredients":[{"name":"str","description":"str","quantity":num,"type_unit":"str","storage_type":"Refrigerado|Congelado|Ambiente","expiration_time":num,"time_unit":"Días|Semanas|Meses","tips":"str"}]}"""
+        
+        # Check cache first
+        image_hash = self._get_images_hash(images)
+        cached_response = ai_cache.get_cached_response(
+            'ingredient_recognition', prompt, image_hash=image_hash
+        )
+        
+        if cached_response:
+            print(f"🎯 [CACHE HIT] Using cached ingredient recognition")
+            raw = json.loads(cached_response)
+        else:
+            print(f"💾 [CACHE MISS] Generating new ingredient recognition")
+            generation_config = self.generation_config_base.copy()
+            generation_config["max_output_tokens"] = 1024
+            response = self.model.generate_content([prompt] + images, generation_config=generation_config)
             
+            # Cache the response
+            ai_cache.cache_response(
+                'ingredient_recognition', prompt, response.text, image_hash=image_hash
+            )
+            raw = self._parse_response_text(response.text)
+        
+        ingredients = raw.get("ingredients", [])
+        print(f"🚀 [OPTIMIZED] Recognized {len(ingredients)} ingredients")
+        return {"ingredients": ingredients}
+    
+    def _recognize_ingredients_standard(self, images: List[Image.Image]) -> Dict[str, List[Dict[str, Any]]]:
+        """Standard ingredient recognition (original method)"""
         prompt = """
         Actúa como un chef peruano experto en conservación de alimentos y análisis visual.
         Recibirás una imagen que puede contener ingredientes crudos o comidas preparadas.
@@ -245,15 +316,12 @@ Iluminación y Fondo: Utiliza una iluminación cálida que haga el plato lucir i
           ]
         }
         """
-        generation_config = {
-            "temperature": 0.4,
-        }
+        generation_config = self.generation_config_base.copy()
+        generation_config["max_output_tokens"] = 2048
         response = self.model.generate_content([prompt] + images, generation_config=generation_config)
         raw = self._parse_response_text(response.text)
         ingredients = raw.get("ingredients", [])
-        return {
-            "ingredients": ingredients,
-        }
+        return {"ingredients": ingredients}
     
     def recognize_foods(self, images_files: List[IO[bytes]]) -> Dict[str, List[Dict[str, Any]]]:
         try:
@@ -486,7 +554,8 @@ Iluminación y Fondo: Utiliza una iluminación cálida que haga el plato lucir i
         - NO incluyas saludos, explicaciones ni texto adicional. Solo el JSON.
         """
         
-        generation_config = {"temperature": 0.3}
+        generation_config = self.generation_config_base.copy()
+        generation_config["temperature"] = 0.3  # Conservative for sustainability data
         response = self.model.generate_content(prompt, generation_config=generation_config)
         return self._parse_response_text(response.text)
 
@@ -525,73 +594,122 @@ Iluminación y Fondo: Utiliza una iluminación cálida que haga el plato lucir i
         - NO incluyas saludos, explicaciones ni texto adicional. Solo el JSON.
         """
         
-        generation_config = {"temperature": 0.5}
+        generation_config = self.generation_config_base.copy()
+        generation_config["temperature"] = 0.5  # Balanced for creative ideas
         response = self.model.generate_content(prompt, generation_config=generation_config)
         return self._parse_response_text(response.text)
 
+    async def recognize_ingredients_complete_async(self, images_files: List[IO[bytes]]) -> Dict[str, List[Dict[str, Any]]]:
+        """
+        ULTRA-OPTIMIZED: Async ingredient recognition with batch processing and smart caching
+        """
+        print(f"🚀 [ASYNC OPTIMIZED] Starting complete ingredient recognition")
+        
+        # 1. Basic recognition (with caching)
+        basic_result = self.recognize_ingredients(images_files)
+        ingredients = basic_result["ingredients"]
+        
+        if not ingredients:
+            return basic_result
+        
+        print(f"🧠 [ASYNC] Processing {len(ingredients)} ingredients with async optimization")
+        
+        # 2. Create batches for parallel processing (respecting API limits)
+        batch_size = 3  # Conservative for API rate limits
+        ingredient_batches = [ingredients[i:i + batch_size] for i in range(0, len(ingredients), batch_size)]
+        
+        # 3. Process batches concurrently
+        enrichment_tasks = []
+        for batch in ingredient_batches:
+            task = self._process_ingredient_batch_async(batch)
+            enrichment_tasks.append(task)
+        
+        # 4. Wait for all batches to complete
+        try:
+            batch_results = await asyncio.gather(*enrichment_tasks, return_exceptions=True)
+            
+            # 5. Merge results back to ingredients
+            ingredient_index = 0
+            for batch_result in batch_results:
+                if isinstance(batch_result, Exception):
+                    print(f"🚨 [ASYNC] Batch failed: {batch_result}")
+                    continue
+                
+                for enriched_data in batch_result:
+                    if ingredient_index < len(ingredients):
+                        ingredients[ingredient_index].update(enriched_data)
+                        ingredient_index += 1
+            
+            print(f"🎉 [ASYNC OPTIMIZED] Completed: {len(ingredients)} ingredients enriched")
+            return basic_result
+            
+        except Exception as e:
+            print(f"🚨 [ASYNC] Error in async processing: {e}")
+            # Fallback to synchronous processing
+            return self.recognize_ingredients_complete(images_files)
+    
     def recognize_ingredients_complete(self, images_files: List[IO[bytes]]) -> Dict[str, List[Dict[str, Any]]]:
         """
-        Reconoce ingredientes con información completa: básica + impacto ambiental + aprovechamiento
-        TODO PROCESADO EN PARALELO PARA MÁXIMA VELOCIDAD
+        Optimized synchronous version with improved threading and caching
         """
-        from concurrent.futures import ThreadPoolExecutor, as_completed
-        
-        # 1. Reconocimiento básico
+        # 1. Basic recognition
         basic_result = self.recognize_ingredients(images_files)
+        ingredients = basic_result["ingredients"]
         
-        print(f"🚀 Processing complete data for {len(basic_result['ingredients'])} ingredients in parallel...")
+        if not ingredients:
+            return basic_result
         
-        # 2. Función para enriquecer cada ingrediente en paralelo
-        def enrich_ingredient(ingredient_data):
+        print(f"🚀 [OPTIMIZED] Processing {len(ingredients)} ingredients with enhanced parallel processing")
+        
+        # 2. Optimized enrichment function with caching
+        def enrich_ingredient_optimized(ingredient_data):
             ingredient_name, ingredient_description = ingredient_data
             
             try:
-                print(f"🧠 [Thread] Processing complete data for: {ingredient_name}")
+                # Check cache for environmental data
+                env_cache_key = f"env_{ingredient_name}"
+                cached_env = ai_cache.get_cached_response('environmental_impact', env_cache_key)
                 
-                # Procesar environmental impact y utilization ideas en paralelo dentro del thread
-                environmental_data = self.analyze_environmental_impact(ingredient_name)
-                utilization_data = self.generate_utilization_ideas(ingredient_name, ingredient_description)
+                # Check cache for utilization data  
+                util_cache_key = f"util_{ingredient_name}_{ingredient_description[:50]}"
+                cached_util = ai_cache.get_cached_response('utilization_ideas', util_cache_key)
                 
-                print(f"✅ [Thread] Complete data ready for {ingredient_name}")
+                if cached_env and cached_util:
+                    print(f"🎯 [CACHE HIT] Complete data for {ingredient_name}")
+                    return ingredient_name, json.loads(cached_env), json.loads(cached_util), None
+                
+                print(f"🧠 [PROCESSING] Generating data for: {ingredient_name}")
+                
+                # Generate missing data
+                if not cached_env:
+                    environmental_data = self.analyze_environmental_impact(ingredient_name)
+                    ai_cache.cache_response('environmental_impact', env_cache_key, json.dumps(environmental_data))
+                else:
+                    environmental_data = json.loads(cached_env)
+                
+                if not cached_util:
+                    utilization_data = self.generate_utilization_ideas(ingredient_name, ingredient_description)
+                    ai_cache.cache_response('utilization_ideas', util_cache_key, json.dumps(utilization_data))
+                else:
+                    utilization_data = json.loads(cached_util)
+                
+                print(f"✅ [PROCESSED] Complete data ready for {ingredient_name}")
                 return ingredient_name, environmental_data, utilization_data, None
                 
             except Exception as e:
-                print(f"🚨 [Thread] Error enriching {ingredient_name}: {str(e)}")
-                # Datos por defecto
-                environmental_data = {
-                    "environmental_impact": {
-                        "carbon_footprint": {"value": 0.0, "unit": "kg", "description": "CO2"},
-                        "water_footprint": {"value": 0, "unit": "l", "description": "agua"},
-                        "sustainability_message": "Consume de manera responsable y evita el desperdicio."
-                    }
-                }
-                utilization_data = {
-                    "utilization_ideas": [
-                        {
-                            "title": "Consume fresco",
-                            "description": "Utiliza el ingrediente lo antes posible para aprovechar sus nutrientes.",
-                            "type": "conservación"
-                        }
-                    ]
-                }
-                return ingredient_name, environmental_data, utilization_data, str(e)
+                print(f"🚨 [ERROR] Enriching {ingredient_name}: {str(e)}")
+                return ingredient_name, self._get_fallback_environmental(), self._get_fallback_utilization(), str(e)
         
-        # 3. Procesar todos los ingredientes en paralelo (máximo 4 threads para Gemini)
+        # 3. Process with optimized thread pool
         enrichment_results = {}
-        with ThreadPoolExecutor(max_workers=4) as executor:
-            # Preparar datos para threads
-            thread_data = [
-                (ingredient["name"], ingredient.get("description", "")) 
-                for ingredient in basic_result["ingredients"]
-            ]
+        with ThreadPoolExecutor(max_workers=self.max_workers) as executor:
+            thread_data = [(ing["name"], ing.get("description", "")) for ing in ingredients]
             
-            # Enviar todas las tareas
             future_to_ingredient = {
-                executor.submit(enrich_ingredient, data): data[0] 
+                executor.submit(enrich_ingredient_optimized, data): data[0] 
                 for data in thread_data
             }
             
-            # Recoger resultados
             for future in as_completed(future_to_ingredient):
                 ingredient_name, environmental_data, utilization_data, error = future.result()
                 enrichment_results[ingredient_name] = {
@@ -599,23 +717,86 @@ Iluminación y Fondo: Utiliza una iluminación cálida que haga el plato lucir i
                     "utilization": utilization_data,
                     "error": error
                 }
-                
-                if error:
-                    print(f"⚠️ Fallback data used for {ingredient_name}")
-                else:
-                    print(f"🎯 Complete enrichment ready for {ingredient_name}")
         
-        # 4. Aplicar resultados a los ingredientes originales
-        for ingredient in basic_result["ingredients"]:
+        # 4. Apply enrichment to ingredients
+        for ingredient in ingredients:
             ingredient_name = ingredient["name"]
             if ingredient_name in enrichment_results:
                 result = enrichment_results[ingredient_name]
                 ingredient.update(result["environmental"])
                 ingredient.update(result["utilization"])
-                print(f"✅ Applied complete data to {ingredient_name}")
         
-        print(f"🎉 All {len(basic_result['ingredients'])} ingredients enriched with parallel processing!")
+        print(f"🎉 [OPTIMIZED] All {len(ingredients)} ingredients enriched successfully!")
         return basic_result
+    
+    async def _process_ingredient_batch_async(self, ingredient_batch: List[Dict]) -> List[Dict]:
+        """Process a batch of ingredients concurrently"""
+        tasks = []
+        for ingredient in ingredient_batch:
+            task = self._enrich_single_ingredient_async(
+                ingredient["name"], 
+                ingredient.get("description", "")
+            )
+            tasks.append(task)
+        
+        return await asyncio.gather(*tasks, return_exceptions=True)
+    
+    async def _enrich_single_ingredient_async(self, ingredient_name: str, description: str) -> Dict:
+        """Async wrapper for single ingredient enrichment"""
+        loop = asyncio.get_event_loop()
+        
+        # Run in thread pool to avoid blocking
+        with ThreadPoolExecutor(max_workers=1) as executor:
+            future = executor.submit(self._enrich_ingredient_sync, ingredient_name, description)
+            return await loop.run_in_executor(None, lambda: future.result())
+    
+    def _enrich_ingredient_sync(self, ingredient_name: str, description: str) -> Dict:
+        """Synchronous ingredient enrichment"""
+        try:
+            environmental_data = self.analyze_environmental_impact(ingredient_name)
+            utilization_data = self.generate_utilization_ideas(ingredient_name, description)
+            
+            combined_data = {}
+            combined_data.update(environmental_data)
+            combined_data.update(utilization_data)
+            
+            return combined_data
+        except Exception as e:
+            print(f"🚨 Error enriching {ingredient_name}: {e}")
+            fallback_data = {}
+            fallback_data.update(self._get_fallback_environmental())
+            fallback_data.update(self._get_fallback_utilization())
+            return fallback_data
+    
+    def _get_fallback_environmental(self) -> Dict:
+        """Fallback environmental data"""
+        return {
+            "environmental_impact": {
+                "carbon_footprint": {"value": 0.0, "unit": "kg", "description": "CO2"},
+                "water_footprint": {"value": 0, "unit": "l", "description": "agua"},
+                "sustainability_message": "Consume de manera responsable y evita el desperdicio."
+            }
+        }
+    
+    def _get_fallback_utilization(self) -> Dict:
+        """Fallback utilization data"""
+        return {
+            "utilization_ideas": [
+                {
+                    "title": "Consume fresco",
+                    "description": "Utiliza el ingrediente lo antes posible para aprovechar sus nutrientes.",
+                    "type": "conservación"
+                }
+            ]
+        }
+    
+    def _get_images_hash(self, images: List[Image.Image]) -> str:
+        """Generate hash for image list for caching"""
+        import hashlib
+        
+        # Simple hash based on image sizes and modes
+        hash_data = "|".join([f"{img.size}_{img.mode}" for img in images])
+        return hashlib.md5(hash_data.encode()).hexdigest()[:16]
 
     def generate_consumption_advice(self, ingredient_name: str, description: str = "") -> Dict[str, Any]:
         """
@@ -667,9 +848,8 @@ Iluminación y Fondo: Utiliza una iluminación cálida que haga el plato lucir i
             }}
             """
             
-            generation_config = {
-                "temperature": 0.3,  # Más conservador para consejos de salud
-            }
+            generation_config = self.generation_config_base.copy()
+            generation_config["temperature"] = 0.3  # Conservative for health advice
             
             response = self.model.generate_content(prompt, generation_config=generation_config)
             result = self._parse_response_text(response.text)
@@ -744,7 +924,8 @@ Iluminación y Fondo: Utiliza una iluminación cálida que haga el plato lucir i
         """
 
         try:
-            generation_config = {"temperature": 0.3}
+            generation_config = self.generation_config_base.copy()
+            generation_config["temperature"] = 0.3  # Conservative for extended savings
             response = self.model.generate_content(prompt, generation_config=generation_config)
             return self._parse_response_text(response.text)
 

@@ -1,0 +1,55 @@
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: mysql_db
+    restart: always
+    environment:
+      MYSQL_DATABASE: zwaidb
+      MYSQL_ROOT_PASSWORD: rootpass
+      MYSQL_USER: user
+      MYSQL_PASSWORD: userpass
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    networks:
+      - auth_net
+
+  backend:
+    build: .
+    container_name: zerowasteai_api
+    volumes:
+      - .:/app
+      - ./src/config/firebase_credentials.json:/app/src/config/firebase_credentials.json
+    working_dir: /app
+    ports:
+      - "3000:3000"
+    environment:
+      FLASK_APP: src/main.py
+      FLASK_ENV: development
+      MYSQL_HOST: mysql_db
+      MYSQL_PORT: 3306
+      MYSQL_USER: user
+      MYSQL_PASSWORD: userpass
+      MYSQL_DATABASE: zwaidb
+      DB_HOST: mysql_db
+      DB_PORT: 3306
+      DB_USER: user
+      DB_PASS: userpass
+      DB_NAME: zwaidb
+      FIREBASE_CREDENTIALS_PATH: src/config/firebase_credentials.json
+      FIREBASE_STORAGE_BUCKET: zer0wasteai-91408.firebasestorage.app
+    env_file:
+      - .env
+    depends_on:
+      - mysql
+    networks:
+      - auth_net
+    command: >
+      sh -c "python wait-for-mysql.py && flask run --host=0.0.0.0 --port=3000"
+
+volumes:
+  mysql_data:
+
+networks:
+  auth_net:
