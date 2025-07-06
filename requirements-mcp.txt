@@ -1,4 +1,0 @@
-# MCP Server Dependencies for ZeroWasteAI Backend Context
-mcp>=1.0.0
-asyncio-mqtt>=0.16.0
-typing-extensions>=4.0.0 
