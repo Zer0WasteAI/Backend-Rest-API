@@ -109,7 +109,6 @@ def firebase_debug():
 
 @auth_bp.route("/refresh", methods=["POST"])
 @jwt_required(refresh=True)
-@refresh_rate_limit
 @swag_from({
     'tags': ['Auth'],
     'security': [{"Bearer": []}],
@@ -321,7 +320,6 @@ def logout():
 
 @auth_bp.route("/firebase-signin", methods=["POST"])
 @verify_firebase_token
-@auth_rate_limit
 @swag_from({
     'tags': ['Auth'],
     'summary': 'Autenticación con Firebase ID Token',

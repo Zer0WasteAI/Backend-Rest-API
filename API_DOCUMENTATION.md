@@ -220,6 +220,23 @@ Authorization: Bearer <access_token>
 }
 ```
 
+#### GET `/api/auth/firebase-debug`
+**Description**: Debug Firebase configuration (development only)
+
+**Note**: This endpoint should be disabled in production. Used for debugging Firebase connectivity issues.
+
+**Response**:
+```json
+{
+  "firebase_apps": 1,
+  "credentials_path": "/path/to/firebase-credentials.json",
+  "storage_bucket": "zerowasteai-12345.appspot.com",
+  "credentials_exists": true,
+  "project_id": "zerowasteai-12345",
+  "client_email": "firebase-adminsdk-abc123@zerowasteai-12345.iam.gserviceaccount.com"
+}
+```
+
 ### User Management (`/api/user`)
 
 #### GET `/api/user/profile`
@@ -561,6 +578,63 @@ Content-Type: application/json
 }
 ```
 
+#### GET `/api/recipes/all`
+**Description**: Get all recipes in the system (public and community recipes)
+
+**Response**:
+```json
+{
+  "recipes": [
+    {
+      "recipe_uid": "system_recipe_001",
+      "name": "Pasta Carbonara Clásica",
+      "description": "La auténtica receta italiana de carbonara",
+      "cuisine_type": "italiana",
+      "difficulty": "intermedio",
+      "prep_time": 25,
+      "servings": 4,
+      "source": "community"
+    }
+  ],
+  "count": 10
+}
+```
+
+#### GET `/api/recipes/default`
+**Description**: Get default system recipes (no authentication required)
+
+**Query Parameters**:
+- `category` (optional): Filter by category (destacadas, rapidas_faciles, vegetarianas, postres, saludables)
+
+**Response**:
+```json
+{
+  "default_recipes": [
+    {
+      "uid": "default_recipe_001",
+      "title": "Pasta Carbonara Clásica",
+      "duration": "30 minutos",
+      "difficulty": "Intermedio",
+      "category": "almuerzo",
+      "description": "La auténtica receta italiana de carbonara",
+      "ingredients": [...],
+      "steps": [...]
+    }
+  ],
+  "total_recipes": 14
+}
+```
+
+#### DELETE `/api/recipes/delete`
+**Description**: Delete a saved recipe from user's collection
+
+**Request Body**:
+```json
+{
+  "title": "Recipe title to delete"
+}
+```
+
 ### Meal Planning (`/api/planning`)
 
 #### POST `/api/planning/save`
@@ -630,6 +704,52 @@ Content-Type: application/json
     "2024-01-20"
   ],
   "total_dates": 3
+}
+```
+
+### Recipe Generation (`/api/recipes`)
+
+#### POST `/api/recipes/generate-custom`
+**Description**: Generate custom recipe with specific ingredients
+
+**Request Body**:
+```json
+{
+  "ingredients": [
+    {
+      "name": "Pollo",
+      "quantity": 500,
+      "unit": "gr"
+    }
+  ],
+  "cuisine_type": "italiana",
+  "difficulty": "intermedio",
+  "prep_time": "medio",
+  "dietary_restrictions": [],
+  "meal_type": "almuerzo",
+  "servings": 4
+}
+```
+
+**Response**:
+```json
+{
+  "generated_recipes": [
+    {
+      "name": "Pasta al Pollo con Tomates Frescos",
+      "description": "Una deliciosa pasta italiana...",
+      "ingredients": [...],
+      "steps": [...],
+      "prep_time": 45,
+      "servings": 4,
+      "difficulty": "intermedio"
+    }
+  ],
+  "generation_id": "gen_123xyz",
+  "images": {
+    "status": "generating",
+    "task_id": "task_abc123"
+  }
 }
 ```
 
@@ -1734,3 +1854,256 @@ class ImageRecognitionExample {
 ```
 
 This comprehensive documentation provides everything needed to understand and integrate with the ZeroWasteAI Backend API from a Flutter frontend perspective. The API offers robust features for food management, AI recognition, recipe generation, and meal planning, all secured with enterprise-level authentication and security features.
+
+# Sistema de Planificación de Comidas
+
+## 1. Descripción General
+El sistema de planificación de comidas permite a los usuarios organizar sus comidas diarias, vinculándolas con recetas y gestionando su inventario de ingredientes. El sistema está diseñado para ser flexible y fácil de usar, permitiendo una planificación detallada de las comidas diarias.
+
+## 2. Endpoints Disponibles
+
+### 2.1 Guardar Plan de Comidas
+**Endpoint:** `POST /api/planning/save`  
+**Autenticación requerida:** Sí (JWT)
+
+#### Descripción
+Permite crear un nuevo plan de comidas para una fecha específica.
+
+#### Request Body
+```json
+{
+  "date": "2024-01-20",
+  "meals": {
+    "breakfast": {
+      "name": "Avena con frutas",
+      "description": "Desayuno nutritivo con avena y frutas frescas",
+      "recipe_id": "recipe_123",
+      "ingredients": ["Avena", "Plátano", "Miel", "Leche"],
+      "prep_time_minutes": 10
+    },
+    "lunch": { },
+    "dinner": { },
+    "snacks": [ ]
+  }
+}
+```
+
+#### Respuesta Exitosa (201)
+```json
+{
+  "message": "Plan de comidas guardado exitosamente",
+  "meal_plan": {
+    "id": "plan_abc123",
+    "user_uid": "firebase_uid_123",
+    "date": "2024-01-20",
+    "meals": { },
+    "created_at": "2024-01-15T10:00:00Z"
+  }
+}
+```
+
+### 2.2 Actualizar Plan de Comidas
+**Endpoint:** `PUT /api/planning/update`  
+**Autenticación requerida:** Sí (JWT)
+
+#### Descripción
+Permite modificar un plan de comidas existente.
+
+#### Request Body
+```json
+{
+  "meal_date": "2024-01-20",
+  "breakfast": [
+    {
+      "recipe_uid": "recipe_pancakes_123",
+      "servings": 2
+    }
+  ],
+  "lunch": [ ],
+  "dinner": [ ],
+  "snacks": [ ]
+}
+```
+
+#### Respuesta Exitosa (200)
+```json
+{
+  "message": "Plan de comidas actualizado exitosamente",
+  "meal_plan": {
+    "meal_date": "2024-01-20",
+    "user_uid": "firebase_uid_123",
+    "meals": { },
+    "daily_summary": {
+      "total_recipes": 4,
+      "total_servings": 10,
+      "estimated_total_prep_time": 105,
+      "total_daily_calories": 3060
+    }
+  }
+}
+```
+
+### 2.3 Eliminar Plan de Comidas
+**Endpoint:** `DELETE /api/planning/delete`  
+**Autenticación requerida:** Sí (JWT)
+
+#### Descripción
+Elimina completamente un plan de comidas para una fecha específica.
+
+#### Query Parameters
+- `date`: Fecha del plan a eliminar (YYYY-MM-DD)
+
+#### Respuesta Exitosa (200)
+```json
+{
+  "message": "Plan de comidas del 2024-01-20 eliminado exitosamente.",
+  "deleted_plan": {
+    "meal_date": "2024-01-20",
+    "user_uid": "firebase_uid_123",
+    "deleted_at": "2024-01-16T16:45:00Z",
+    "meals_removed": {
+      "breakfast": 1,
+      "lunch": 2,
+      "dinner": 1,
+      "snacks": 0,
+      "total_recipes": 4
+    }
+  }
+}
+```
+
+### 2.4 Obtener Plan de Comidas por Fecha
+**Endpoint:** `GET /api/planning/get`  
+**Autenticación requerida:** Sí (JWT)
+
+#### Descripción
+Obtiene los detalles completos de un plan de comidas para una fecha específica.
+
+#### Query Parameters
+- `date`: Fecha del plan (YYYY-MM-DD)
+
+#### Respuesta Exitosa (200)
+```json
+{
+  "meal_plan": {
+    "meal_date": "2024-01-20",
+    "user_uid": "firebase_uid_123",
+    "created_at": "2024-01-15T14:30:00Z",
+    "last_updated": "2024-01-16T09:15:00Z",
+    "meals": { },
+    "daily_summary": {
+      "total_recipes": 3,
+      "total_servings": 8,
+      "estimated_total_prep_time": 75,
+      "total_daily_calories": 2880
+    },
+    "inventory_analysis": {
+      "total_ingredients_needed": 12,
+      "available_in_inventory": 9,
+      "missing_ingredients": 3,
+      "shopping_list": [ ]
+    }
+  }
+}
+```
+
+### 2.5 Obtener Todos los Planes de Comidas
+**Endpoint:** `GET /api/planning/all`  
+**Autenticación requerida:** Sí (JWT)
+
+#### Descripción
+Obtiene todos los planes de comidas del usuario con estadísticas y resumen.
+
+#### Respuesta Exitosa (200)
+```json
+{
+  "meal_plans": [
+    {
+      "meal_date": "2024-01-20",
+      "status": "upcoming",
+      "meals": { },
+      "daily_summary": { }
+    }
+  ],
+  "summary": {
+    "total_plans": 15,
+    "date_range": {
+      "earliest": "2024-01-01",
+      "latest": "2024-01-25"
+    },
+    "statistics": { }
+  }
+}
+```
+
+### 2.6 Obtener Fechas con Planes
+**Endpoint:** `GET /api/planning/dates`  
+**Autenticación requerida:** Sí (JWT)
+
+#### Descripción
+Obtiene una lista de fechas que tienen planes de comidas asociados.
+
+#### Respuesta Exitosa (200)
+```json
+{
+  "meal_plan_dates": [
+    {
+      "date": "2024-01-20",
+      "status": "upcoming",
+      "total_recipes": 3,
+      "meal_types": ["breakfast", "lunch", "dinner"],
+      "created_at": "2024-01-18T10:00:00Z"
+    }
+  ],
+  "summary": {
+    "total_dates_with_plans": 4,
+    "planning_streak": { },
+    "averages": { }
+  }
+}
+```
+
+## 3. Características Principales
+
+### 3.1 Gestión de Comidas
+- Soporte para múltiples tipos de comidas (desayuno, almuerzo, cena, snacks)
+- Vinculación con recetas existentes
+- Control de porciones por comida
+- Tiempo de preparación estimado
+
+### 3.2 Análisis Nutricional
+- Cálculo de calorías totales por día
+- Distribución de macronutrientes
+- Balance nutricional por comida
+- Recomendaciones de ajuste
+
+### 3.3 Integración con Inventario
+- Verificación de ingredientes disponibles
+- Lista de compras automática
+- Tracking de ingredientes faltantes
+- Optimización de uso de inventario
+
+### 3.4 Estadísticas y Análisis
+- Resumen diario de planes
+- Tendencias de planificación
+- Consistencia en la planificación
+- Variedad de recetas utilizadas
+
+## 4. Seguridad
+- Autenticación mediante JWT
+- Validación de propiedad de planes
+- Protección contra modificaciones no autorizadas
+- Registro de cambios y auditoría
+
+## 5. Manejo de Errores
+- Validación de formatos de fecha
+- Verificación de existencia de planes
+- Control de acceso y permisos
+- Respuestas de error detalladas
+
+## 6. Recomendaciones de Uso
+1. Planificar comidas con anticipación
+2. Verificar inventario antes de crear planes
+3. Mantener balance nutricional entre comidas
+4. Utilizar la función de análisis para optimizar planes
+5. Revisar regularmente las estadísticas para mejorar la planificación
