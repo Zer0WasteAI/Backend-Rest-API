@@ -16,17 +16,25 @@ if not firebase_admin._apps:
         "storageBucket": Config.FIREBASE_STORAGE_BUCKET
     })
     """
-    firebase_json = Config.FIREBASE_CREDENTIALS_JSON
-    try:
-        creds_dict = json.loads(firebase_json)
-        cred = credentials.Certificate(creds_dict)
-        initialize_app(cred, {
+    if Config.FIREBASE_CREDENTIALS_JSON:
+        try:
+            creds_dict = json.loads(Config.FIREBASE_CREDENTIALS_JSON)
+            cred = credentials.Certificate(creds_dict)
+            firebase_admin.initialize_app(cred, {
+                "storageBucket": Config.FIREBASE_STORAGE_BUCKET
+            })
+        except json.JSONDecodeError:
+            raise ValueError("FIREBASE_CREDENTIALS_JSON tiene un formato inválido.")
+    elif Config.FIREBASE_CREDENTIALS_PATH:
+        cred_path = Path(Config.FIREBASE_CREDENTIALS_PATH).resolve()
+        if not cred_path.exists():
+            raise FileNotFoundError(f"No se encontró el archivo de credenciales en {cred_path.resolve()}")
+        cred = credentials.Certificate(str(cred_path))
+        firebase_admin.initialize_app(cred, {
             "storageBucket": Config.FIREBASE_STORAGE_BUCKET
         })
-        print("| Firebase Storage initialized successfully.")
-    except json.JSONDecodeError as e:
-        print(f"Error decoding Firebase credentials JSON: {e}")
-        raise ValueError("Invalid Firebase credentials JSON provided.")
+    else:
+        raise EnvironmentError("No se proporcionó ninguna credencial de Firebase (ni JSON ni PATH)")
 
 class FirebaseStorageAdapter:
     def __init__(self):
