@@ -3,16 +3,30 @@ from io import BytesIO
 import firebase_admin
 from pathlib import Path
 from src.config.config import Config
-import re
+import re, json
 
 if not firebase_admin._apps:
+    """""
     cred_path = Path(Config.FIREBASE_CREDENTIALS_PATH).resolve()
     if not cred_path.exists():
         raise FileNotFoundError(f"No se encontró el archivo de credenciales en {cred_path.resolve()}")
+    
     cred = credentials.Certificate(str(cred_path))
     initialize_app(cred, {
         "storageBucket": Config.FIREBASE_STORAGE_BUCKET
     })
+    """
+    firebase_json = Config.FIREBASE_CREDENTIALS_JSON
+    try:
+        creds_dict = json.loads(firebase_json)
+        cred = credentials.Certificate(creds_dict)
+        initialize_app(cred, {
+            "storageBucket": Config.FIREBASE_STORAGE_BUCKET
+        })
+        print("| Firebase Storage initialized successfully.")
+    except json.JSONDecodeError as e:
+        print(f"Error decoding Firebase credentials JSON: {e}")
+        raise ValueError("Invalid Firebase credentials JSON provided.")
 
 class FirebaseStorageAdapter:
     def __init__(self):
