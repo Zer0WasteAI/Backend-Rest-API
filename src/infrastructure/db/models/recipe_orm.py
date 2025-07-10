@@ -17,7 +17,7 @@ class RecipeORM(db.Model):
     image_status = db.Column(db.String(50), default="generating", nullable=True)
     category = db.Column(db.String(50), nullable=False)
     description = db.Column(db.Text(300), nullable=False)
-    image_path = db.Column(db.String(255), nullable=True)
+    image_path = db.Column(db.String(1000), nullable=True)
 
     ingredients = db.relationship("RecipeIngredientORM", back_populates="recipe", cascade="all, delete-orphan")
     steps = db.relationship("RecipeStepORM", back_populates="recipe", cascade="all, delete-orphan")

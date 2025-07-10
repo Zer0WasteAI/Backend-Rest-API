@@ -24,6 +24,59 @@ import traceback
 auth_bp = Blueprint("auth", __name__)
 
 @auth_bp.route("/firebase-debug", methods=["GET"])
+@swag_from({
+    'tags': ['Auth'],
+    'summary': 'Debug de configuración Firebase (desarrollo)',
+    'description': '''
+Endpoint de debug para verificar la configuración de Firebase durante desarrollo.
+
+⚠️ **Solo para desarrollo**: Este endpoint se debe deshabilitar en producción.
+
+### Información Proporcionada:
+- Estado de inicialización de Firebase
+- Validación de archivos de credenciales
+- Configuración de Storage Bucket
+- Project ID y Client Email
+- Errores de configuración si existen
+
+### Casos de Uso:
+- Verificar configuración durante desarrollo
+- Diagnosticar problemas de conexión con Firebase
+- Validar archivos de credenciales
+- Debuggear problemas de autenticación
+
+### Configuración Requerida:
+- `FIREBASE_CREDENTIALS_PATH`: Ruta al archivo de credenciales JSON
+- `FIREBASE_STORAGE_BUCKET`: Nombre del bucket de Firebase Storage
+    ''',
+    'responses': {
+        200: {
+            'description': 'Información de debug de Firebase',
+            'examples': {
+                'application/json': {
+                    "firebase_apps": 1,
+                    "credentials_path": "/path/to/firebase-credentials.json",
+                    "storage_bucket": "zerowasteai-12345.appspot.com",
+                    "credentials_exists": True,
+                    "credentials_path_resolved": "/absolute/path/to/firebase-credentials.json",
+                    "project_id": "zerowasteai-12345",
+                    "client_email": "firebase-adminsdk-abc123@zerowasteai-12345.iam.gserviceaccount.com"
+                }
+            }
+        },
+        500: {
+            'description': 'Error de configuración Firebase',
+            'examples': {
+                'application/json': {
+                    "firebase_apps": 0,
+                    "credentials_path": "/path/to/firebase-credentials.json",
+                    "credentials_exists": False,
+                    "error": "Firebase credentials file not found"
+                }
+            }
+        }
+    }
+})
 def firebase_debug():
     """Endpoint de debug para verificar la configuración de Firebase"""
     import firebase_admin
@@ -56,16 +109,87 @@ def firebase_debug():
 
 @auth_bp.route("/refresh", methods=["POST"])
 @jwt_required(refresh=True)
-@refresh_rate_limit
 @swag_from({
     'tags': ['Auth'],
     'security': [{"Bearer": []}],
-    'summary': 'Renovación de token JWT con rotación',
-    'description': 'Renueva tokens implementando rotación segura y detección de reutilización',
+    'summary': 'Renovación de tokens JWT con rotación segura',
+    'description': '''
+Renueva tokens JWT implementando rotación segura y detección de reutilización de tokens.
+
+### Características de Seguridad:
+- **Rotación de Tokens**: El refresh token anterior se invalida automáticamente
+- **Detección de Reutilización**: Detecta intentos de reutilizar tokens expirados
+- **Rate Limiting**: Máximo 10 renovaciones por minuto
+
+### Flujo de Renovación:
+1. Cliente envía refresh token válido en Authorization header
+2. Sistema valida el token y verifica que no esté en blacklist
+3. Se genera nuevo par de tokens (access + refresh)
+4. El refresh token anterior se marca como usado/invalidado
+5. Se retornan los nuevos tokens
+
+### Cuándo Usar:
+- Cuando el access token expira (normalmente cada 1 hora)
+- Antes de hacer requests importantes si el token está cerca de expirar
+- No usar si el usuario cerró sesión (tokens invalidados)
+
+⚠️ **Importante**: Cada refresh token solo puede usarse una vez.
+    ''',
+    'parameters': [
+        {
+            'name': 'Authorization',
+            'in': 'header',
+            'type': 'string',
+            'required': True,
+            'description': 'Refresh Token JWT. Formato: Bearer <refresh_token>',
+            'example': 'Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJI...'
+        }
+    ],
     'responses': {
-        200: {'description': 'Nuevo token generado exitosamente'},
-        401: {'description': 'Token inválido o revocado'},
-        429: {'description': 'Demasiadas solicitudes - rate limit excedido'}
+        200: {
+            'description': 'Tokens renovados exitosamente',
+            'examples': {
+                'application/json': {
+                    "message": "Tokens refreshed successfully",
+                    "tokens": {
+                        "access_token": "eyJ0eXAiOiJKV1QiLCJhbGciOiJI...",
+                        "refresh_token": "eyJ0eXAiOiJKV1QiLCJhbGciOiJI...",
+                        "token_type": "Bearer",
+                        "expires_in": 3600
+                    },
+                    "rotated": True,
+                    "previous_token_invalidated": True
+                }
+            }
+        },
+        401: {
+            'description': 'Refresh token inválido, expirado o ya usado',
+            'examples': {
+                'application/json': {
+                    "error": "Invalid or expired token",
+                    "details": "Refresh token has been used or revoked"
+                }
+            }
+        },
+        429: {
+            'description': 'Rate limit excedido - demasiadas renovaciones',
+            'examples': {
+                'application/json': {
+                    "error": "Too many refresh attempts",
+                    "retry_after": 60,
+                    "limit": "10 per minute"
+                }
+            }
+        },
+        500: {
+            'description': 'Error interno durante renovación de tokens',
+            'examples': {
+                'application/json': {
+                    "error": "Token refresh failed",
+                    "details": "Internal error during token generation"
+                }
+            }
+        }
     }
 })
 def refresh_token():
@@ -102,12 +226,78 @@ def refresh_token():
 @swag_from({
     'tags': ['Auth'],
     'summary': 'Cerrar sesión (logout) seguro',
-    'description': 'Cierra sesión invalidando todos los tokens del usuario',
+    'description': '''
+Cierra sesión del usuario invalidando todos los tokens JWT activos de forma segura.
+
+### Proceso de Logout:
+1. Invalida el token actual usado en la request
+2. Invalida todos los refresh tokens del usuario
+3. Añade tokens a blacklist para prevenir reutilización
+4. Registra evento de logout en logs de seguridad
+
+### Efectos del Logout:
+- **Todos los dispositivos**: Se cierran todas las sesiones activas del usuario
+- **Tokens Invalidados**: Ningún token anterior funcionará después del logout
+- **Nuevo Login Requerido**: Usuario debe autenticarse nuevamente con Firebase
+
+### Cuándo Usar:
+- Cuando el usuario decide cerrar sesión voluntariamente
+- En cambio de cuenta o usuario
+- Por seguridad si se sospecha compromiso de tokens
+- Al desinstalar la aplicación (opcional)
+
+⚠️ **Nota**: Después del logout, todos los tokens JWT del usuario quedan inválidos.
+    ''',
+    'parameters': [
+        {
+            'name': 'Authorization',
+            'in': 'header',
+            'type': 'string',
+            'required': True,
+            'description': 'Access Token JWT válido. Formato: Bearer <access_token>',
+            'example': 'Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJI...'
+        }
+    ],
     'security': [{'Bearer': []}],
     'responses': {
-        200: {'description': 'Sesión cerrada exitosamente'},
-        401: {'description': 'Token inválido'},
-        429: {'description': 'Demasiadas solicitudes'}
+        200: {
+            'description': 'Sesión cerrada exitosamente',
+            'examples': {
+                'application/json': {
+                    "message": "Logout successful",
+                    "logged_out_at": "2024-01-15T10:30:00Z",
+                    "tokens_invalidated": True,
+                    "all_sessions_closed": True
+                }
+            }
+        },
+        401: {
+            'description': 'Token de acceso inválido o expirado',
+            'examples': {
+                'application/json': {
+                    "error": "Invalid access token",
+                    "details": "Token expired or malformed"
+                }
+            }
+        },
+        429: {
+            'description': 'Rate limit excedido',
+            'examples': {
+                'application/json': {
+                    "error": "Too many requests",
+                    "retry_after": 60
+                }
+            }
+        },
+        500: {
+            'description': 'Error interno durante logout',
+            'examples': {
+                'application/json': {
+                    "error": "Logout failed",
+                    "details": "Internal server error"
+                }
+            }
+        }
     }
 })
 def logout():
@@ -130,17 +320,105 @@ def logout():
 
 @auth_bp.route("/firebase-signin", methods=["POST"])
 @verify_firebase_token
-@auth_rate_limit
 @swag_from({
     'tags': ['Auth'],
-    'summary': 'Sign in with Firebase ID Token and sync user',
-    'description': 'Autentica con Firebase y sincroniza datos del usuario de forma segura',
-    'security': [{"Bearer": []}],
+    'summary': 'Autenticación con Firebase ID Token',
+    'description': '''
+Autentica usuarios usando Firebase ID Token y sincroniza datos del usuario de forma segura.
+
+Este endpoint:
+- Valida el Firebase ID Token
+- Crea o actualiza el usuario en la base de datos local
+- Genera tokens JWT internos para usar en la API
+- Sincroniza el perfil con Firestore
+- Maneja usuarios anónimos y con múltiples proveedores
+
+### Flujo de Autenticación:
+1. Cliente obtiene Firebase ID Token (tras autenticarse con Firebase)
+2. Cliente envía token en header Authorization: Bearer <firebase_token>
+3. API valida token con Firebase
+4. API retorna tokens JWT internos para uso posterior
+
+### Proveedores Soportados:
+- Email/Password (password)
+- Google (google.com)  
+- Facebook (facebook.com)
+- Anonymous (anonymous)
+- Custom tokens (custom)
+
+### Rate Limiting:
+- Máximo 5 intentos por minuto por IP
+    ''',
+    'parameters': [
+        {
+            'name': 'Authorization',
+            'in': 'header',
+            'type': 'string',
+            'required': True,
+            'description': 'Firebase ID Token. Formato: Bearer <firebase_id_token>',
+            'example': 'Bearer eyJhbGciOiJSUzI1NiIsImtpZCI6...'
+        }
+    ],
     'responses': {
-        200: {'description': 'Firebase sign-in successful, user synced, app tokens returned'},
-        400: {'description': 'Invalid request data'},
-        401: {'description': 'Invalid or missing Firebase ID Token'},
-        429: {'description': 'Too many authentication attempts'}
+        200: {
+            'description': 'Autenticación exitosa, usuario sincronizado, tokens JWT retornados',
+            'examples': {
+                'application/json': {
+                    "message": "Authentication successful",
+                    "user": {
+                        "uid": "firebase_user_uid_123",
+                        "email": "usuario@ejemplo.com",
+                        "name": "Juan Pérez",
+                        "picture": "https://lh3.googleusercontent.com/...",
+                        "email_verified": True,
+                        "sign_in_provider": "google.com"
+                    },
+                    "tokens": {
+                        "access_token": "eyJ0eXAiOiJKV1QiLCJhbGciOiJI...",
+                        "refresh_token": "eyJ0eXAiOiJKV1QiLCJhbGciOiJI...",
+                        "token_type": "Bearer",
+                        "expires_in": 3600
+                    },
+                    "profile_synced": True
+                }
+            }
+        },
+        400: {
+            'description': 'Datos de request inválidos o Firebase token malformado',
+            'examples': {
+                'application/json': {
+                    "error": "Authentication failed",
+                    "details": "Invalid Firebase token format"
+                }
+            }
+        },
+        401: {
+            'description': 'Firebase ID Token inválido o expirado',
+            'examples': {
+                'application/json': {
+                    "error": "Invalid or expired Firebase token",
+                    "details": "Token signature verification failed"
+                }
+            }
+        },
+        429: {
+            'description': 'Demasiados intentos de autenticación - rate limit excedido',
+            'examples': {
+                'application/json': {
+                    "error": "Too many authentication attempts",
+                    "retry_after": 60
+                }
+            }
+        },
+        500: {
+            'description': 'Error interno del servidor durante autenticación',
+            'examples': {
+                'application/json': {
+                    "error": "Internal server error",
+                    "details": "Failed to sync user profile"
+                }
+            }
+        }
     }
 })
 def firebase_signin():

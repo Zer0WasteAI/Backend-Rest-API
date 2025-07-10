@@ -147,9 +147,13 @@ class InventoryRepositoryImpl(InventoryRepository):
         # Convertir added_at string a datetime para comparar
         try:
             added_at_datetime = datetime.fromisoformat(added_at.replace('Z', '+00:00'))
+            # Convertir a naive datetime (sin timezone) para coincidir con la base de datos
+            added_at_datetime = added_at_datetime.replace(tzinfo=None)
         except ValueError:
             # Intentar otros formatos si falla
             added_at_datetime = datetime.strptime(added_at, '%Y-%m-%d %H:%M:%S')
+        
+        print(f"🗑️ [DELETE STACK] Searching for timestamp: {added_at_datetime}")
         
         # Eliminar el stack específico
         stmt = delete(IngredientStackORM).where(
@@ -187,6 +191,8 @@ class InventoryRepositoryImpl(InventoryRepository):
     def delete_food_item(self, user_uid: str, food_name: str, added_at: str) -> None:
         try:
             added_at_datetime = datetime.fromisoformat(added_at.replace('Z', '+00:00'))
+            # Convertir a naive datetime (sin timezone) para coincidir con la base de datos
+            added_at_datetime = added_at_datetime.replace(tzinfo=None)
         except ValueError:
             added_at_datetime = datetime.strptime(added_at, '%Y-%m-%d %H:%M:%S')
         
@@ -234,6 +240,8 @@ class InventoryRepositoryImpl(InventoryRepository):
         # Convertir added_at string a datetime
         try:
             added_at_datetime = datetime.fromisoformat(added_at.replace('Z', '+00:00'))
+            # Convertir a naive datetime (sin timezone) para coincidir con la base de datos
+            added_at_datetime = added_at_datetime.replace(tzinfo=None)
         except ValueError:
             added_at_datetime = datetime.strptime(added_at, '%Y-%m-%d %H:%M:%S')
         
@@ -287,6 +295,8 @@ class InventoryRepositoryImpl(InventoryRepository):
         """
         try:
             added_at_datetime = datetime.fromisoformat(added_at.replace('Z', '+00:00'))
+            # Convertir a naive datetime (sin timezone) para coincidir con la base de datos
+            added_at_datetime = added_at_datetime.replace(tzinfo=None)
         except ValueError:
             added_at_datetime = datetime.strptime(added_at, '%Y-%m-%d %H:%M:%S')
         
@@ -334,6 +344,8 @@ class InventoryRepositoryImpl(InventoryRepository):
         """
         try:
             added_at_datetime = datetime.fromisoformat(added_at.replace('Z', '+00:00'))
+            # Convertir a naive datetime (sin timezone) para coincidir con la base de datos
+            added_at_datetime = added_at_datetime.replace(tzinfo=None)
         except ValueError:
             added_at_datetime = datetime.strptime(added_at, '%Y-%m-%d %H:%M:%S')
         

@@ -76,6 +76,35 @@ class RecognitionRepositoryImpl(RecognitionRepository):
         self.db.session.execute(stmt)
         self.db.session.commit()
 
+    def update(self, recognition: Recognition) -> None:
+        """
+        Actualiza un reconocimiento existente en la base de datos.
+        """
+        try:
+            stmt = update(RecognitionORM).where(
+                RecognitionORM.uid == recognition.uid
+            ).values(
+                user_uid=recognition.user_uid,
+                images_paths=recognition.images_paths,
+                recognized_at=recognition.recognized_at,
+                raw_result=recognition.raw_result,
+                is_validated=recognition.is_validated,
+                validated_at=recognition.validated_at
+            )
+            result = self.db.session.execute(stmt)
+            
+            if result.rowcount == 0:
+                print(f"⚠️ [RECOGNITION REPO] No rows updated for recognition: {recognition.uid}")
+            else:
+                print(f"✅ [RECOGNITION REPO] Updated recognition: {recognition.uid}")
+            
+            self.db.session.commit()
+            
+        except Exception as e:
+            self.db.session.rollback()
+            print(f"🚨 [RECOGNITION REPO] Error updating recognition {recognition.uid}: {str(e)}")
+            raise
+
     def _to_domain(self, row: RecognitionORM) -> Recognition:
         return Recognition(
             uid=row.uid,

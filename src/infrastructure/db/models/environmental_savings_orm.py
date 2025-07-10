@@ -8,7 +8,8 @@ class EnvironmentalSavingsORM(db.Model):
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
 
     user_uid = db.Column(db.String(128), db.ForeignKey("users.uid"), nullable=False)
-    recipe_uid = db.Column(db.String(36), db.ForeignKey("recipes.uid"), nullable=False)
+    recipe_uid = db.Column(db.String(36), nullable=False)
+    recipe_source_type = db.Column(db.String(20), nullable=False, default="manual")  # 'manual' or 'generated'
 
     recipe_title = db.Column(db.String(128), default="No title")
     carbon_footprint = db.Column(db.Float, nullable=False)
@@ -25,4 +26,4 @@ class EnvironmentalSavingsORM(db.Model):
     saved_at = db.Column(db.DateTime, default=datetime.now(timezone.utc))
 
     user = db.relationship("User", backref=db.backref("environmental_savings", lazy=True))
-    recipe = db.relationship("RecipeORM", backref=db.backref("environmental_savings", lazy=True))
+    # Note: No direct relationship to recipes since we now support both manual and generated recipes

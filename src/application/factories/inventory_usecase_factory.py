@@ -20,6 +20,7 @@ from src.application.use_cases.inventory.update_food_quantity_use_case import Up
 from src.infrastructure.db.inventory_repository_impl import InventoryRepositoryImpl
 from src.infrastructure.inventory.inventory_calcularor_impl import InventoryCalculatorImpl
 from src.infrastructure.ai.gemini_adapter_service import GeminiAdapterService
+from src.application.factories.ingredient_image_generator_factory import make_ingredient_image_generator_service
 
 def make_add_food_items_to_inventory_use_case(db):
     return None #AddFoodItemsToInventoryUseCase(InventoryRepositoryImpl(db), InventoryCalculatorImpl)
@@ -29,7 +30,8 @@ def make_add_ingredients_to_inventory_use_case(db):
     return AddIngredientsToInventoryUseCase(
         InventoryRepositoryImpl(db), 
         InventoryCalculatorImpl(), 
-        GeminiAdapterService()
+        GeminiAdapterService(),
+        make_ingredient_image_generator_service(db)
     )
 
 def make_add_item_to_inventory_use_case(db):
