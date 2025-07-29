@@ -1641,6 +1641,124 @@ def get_recognition_status(task_id):
 
 @recognition_bp.route("/images/status/<task_id>", methods=["GET"])
 @jwt_required()
+@swag_from({
+    'tags': ['Recognition'],
+    'summary': 'Consultar estado de generación de imágenes para reconocimiento',
+    'description': '''
+Obtiene el estado actual y progreso de la generación de imágenes de referencia para elementos reconocidos.
+
+### Funcionalidades:
+- **Seguimiento en tiempo real**: Progreso de generación de imágenes
+- **Estado detallado**: Información completa del proceso
+- **Validación de propiedad**: Solo el propietario puede consultar sus tareas
+- **Metadatos incluidos**: Información del proceso y tiempos
+
+### Estados Posibles:
+- **pending**: Tarea en cola, esperando procesamiento
+- **processing**: Generando imágenes actualmente  
+- **completed**: Todas las imágenes generadas exitosamente
+- **failed**: Error en la generación de imágenes
+
+### Casos de Uso:
+- Verificar progreso de generación de imágenes
+- Obtener URLs de imágenes generadas cuando estén listas
+- Debugging de problemas en generación
+- Implementar polling para actualizaciones en tiempo real
+    ''',
+    'parameters': [
+        {
+            'name': 'task_id',
+            'in': 'path',
+            'type': 'string',
+            'required': True,
+            'description': 'ID único de la tarea de generación de imágenes',
+            'example': 'task_img_abc123def456'
+        }
+    ],
+    'security': [{'Bearer': []}],
+    'responses': {
+        200: {
+            'description': 'Estado de generación de imágenes obtenido exitosamente',
+            'examples': {
+                'application/json': {
+                    "task_id": "task_img_abc123def456",
+                    "status": "completed", 
+                    "progress_percentage": 100,
+                    "current_step": "Imágenes generadas exitosamente",
+                    "created_at": "2024-01-16T10:30:00Z",
+                    "started_at": "2024-01-16T10:30:05Z",
+                    "completed_at": "2024-01-16T10:30:45Z",
+                    "images_data": {
+                        "generated_images": [
+                            {
+                                "item_name": "Tomates cherry",
+                                "image_url": "https://storage.googleapis.com/generated/tomatoes-abc123.jpg",
+                                "generation_time": 12.5,
+                                "quality_score": 0.92
+                            },
+                            {
+                                "item_name": "Queso manchego", 
+                                "image_url": "https://storage.googleapis.com/generated/cheese-def456.jpg",
+                                "generation_time": 15.2,
+                                "quality_score": 0.88
+                            }
+                        ],
+                        "total_images": 2,
+                        "successful_generations": 2,
+                        "failed_generations": 0,
+                        "average_quality": 0.90
+                    },
+                    "message": "🎉 Imágenes generadas exitosamente"
+                }
+            }
+        },
+        200: {
+            'description': 'Generación en progreso',
+            'examples': {
+                'application/json': {
+                    "task_id": "task_img_abc123def456",
+                    "status": "processing",
+                    "progress_percentage": 65,
+                    "current_step": "Generando imagen 2 de 3",
+                    "created_at": "2024-01-16T10:30:00Z",
+                    "started_at": "2024-01-16T10:30:05Z",
+                    "completed_at": None,
+                    "message": "🎨 Generando imágenes... 65%"
+                }
+            }
+        },
+        404: {
+            'description': 'Tarea de generación no encontrada',
+            'examples': {
+                'application/json': {
+                    'error': 'Tarea de imágenes no encontrada',
+                    'task_id': 'task_img_invalid123'
+                }
+            }
+        },
+        403: {
+            'description': 'Sin permisos para ver esta tarea',
+            'examples': {
+                'application/json': {
+                    'error': 'No tienes permiso para ver esta tarea',
+                    'details': 'La tarea pertenece a otro usuario'
+                }
+            }
+        },
+        401: {
+            'description': 'Token de autenticación inválido'
+        },
+        500: {
+            'description': 'Error interno al consultar estado de imágenes',
+            'examples': {
+                'application/json': {
+                    'error': 'Database connection failed',
+                    'error_type': 'DatabaseException'
+                }
+            }
+        }
+    }
+})
 def get_images_status(task_id):
     """
     🎨 CONSULTAR IMÁGENES: Obtiene el progreso y resultado de la generación de imágenes
@@ -1700,6 +1818,181 @@ def get_images_status(task_id):
 
 @recognition_bp.route("/recognition/<recognition_id>/images", methods=["GET"])
 @jwt_required()
+@swag_from({
+    'tags': ['Recognition'],
+    'summary': 'Verificar estado de imágenes generadas para reconocimiento específico',
+    'description': '''
+Verifica el estado de las imágenes generadas para un reconocimiento específico y devuelve el estado actual.
+
+### Funcionalidades:
+- **Verificación de estado**: Consulta si las imágenes están listas
+- **Soporte multi-tipo**: Funciona con reconocimiento de ingredientes y alimentos
+- **Información detallada**: Progreso y metadatos de generación
+- **Validación de propiedad**: Solo el propietario puede consultar sus reconocimientos
+
+### Tipos de Reconocimiento Soportados:
+- **Ingredientes**: Reconocimiento simple de ingredientes
+- **Alimentos**: Reconocimiento de comidas preparadas  
+- **Mixto**: Reconocimiento combinado (batch)
+- **Vacío**: Reconocimientos sin elementos detectados
+
+### Estados de Imágenes:
+- **ready**: Imagen generada y disponible
+- **generating**: Imagen en proceso de generación
+- **failed**: Error en la generación
+- **pending**: Esperando procesamiento
+
+### Casos de Uso:
+- Verificar si las imágenes están listas después del reconocimiento
+- Obtener URLs de imágenes generadas automáticamente
+- Implementar polling para actualizaciones de UI
+- Debugging de problemas en generación de imágenes
+    ''',
+    'parameters': [
+        {
+            'name': 'recognition_id',
+            'in': 'path',
+            'type': 'string',
+            'required': True,
+            'description': 'ID único del reconocimiento cuyas imágenes se quieren verificar',
+            'example': 'rec_abc123def456'
+        }
+    ],
+    'security': [{'Bearer': []}],
+    'responses': {
+        200: {
+            'description': 'Estado de imágenes del reconocimiento obtenido exitosamente',
+            'examples': {
+                'application/json': {
+                    "recognition_id": "rec_abc123def456",
+                    "recognition_type": "ingredients",
+                    "images_status": "ready",
+                    "images_ready": 3,
+                    "images_generating": 0,
+                    "total_items": 3,
+                    "progress_percentage": 100,
+                    "last_updated": "2024-01-16T10:30:45Z",
+                    "ingredients": [
+                        {
+                            "name": "Tomates cherry",
+                            "quantity": 500,
+                            "type_unit": "gr",
+                            "image_path": "https://storage.googleapis.com/generated/tomatoes-abc123.jpg",
+                            "image_status": "ready",
+                            "confidence": 0.95
+                        },
+                        {
+                            "name": "Queso manchego",
+                            "quantity": 200,
+                            "type_unit": "gr", 
+                            "image_path": "https://storage.googleapis.com/generated/cheese-def456.jpg",
+                            "image_status": "ready",
+                            "confidence": 0.87
+                        },
+                        {
+                            "name": "Aceite de oliva",
+                            "quantity": 250,
+                            "type_unit": "ml",
+                            "image_path": "https://storage.googleapis.com/generated/oil-ghi789.jpg",
+                            "image_status": "ready",
+                            "confidence": 0.91
+                        }
+                    ],
+                    "total_ingredients": 3,
+                    "message": "✅ Todas las imágenes están listas (ingredients)"
+                }
+            }
+        },
+        200: {
+            'description': 'Imágenes en proceso de generación',
+            'examples': {
+                'application/json': {
+                    "recognition_id": "rec_abc123def456",
+                    "recognition_type": "foods",
+                    "images_status": "generating",
+                    "images_ready": 1,
+                    "images_generating": 1,
+                    "total_items": 2,
+                    "progress_percentage": 50,
+                    "last_updated": "2024-01-16T10:30:30Z",
+                    "foods": [
+                        {
+                            "name": "Pasta carbonara",
+                            "image_path": "https://storage.googleapis.com/generated/pasta-jkl012.jpg",
+                            "image_status": "ready"
+                        },
+                        {
+                            "name": "Ensalada mixta",
+                            "image_path": "https://via.placeholder.com/150x150/f0f0f0/666666?text=Generando...",
+                            "image_status": "generating"
+                        }
+                    ],
+                    "total_foods": 2,
+                    "message": "🎨 Generando imágenes... 1/2 listas (foods)"
+                }
+            }
+        },
+        200: {
+            'description': 'Reconocimiento mixto con ingredientes y alimentos',
+            'examples': {
+                'application/json': {
+                    "recognition_id": "rec_abc123def456",
+                    "recognition_type": "mixed",
+                    "images_status": "ready",
+                    "images_ready": 4,
+                    "images_generating": 0,
+                    "total_items": 4,
+                    "progress_percentage": 100,
+                    "ingredients": [
+                        {
+                            "name": "Tomates",
+                            "image_status": "ready"
+                        }
+                    ],
+                    "foods": [
+                        {
+                            "name": "Pizza margherita",
+                            "image_status": "ready"
+                        }
+                    ],
+                    "total_ingredients": 1,
+                    "total_foods": 1,
+                    "message": "✅ Todas las imágenes están listas (mixed)"
+                }
+            }
+        },
+        404: {
+            'description': 'Reconocimiento no encontrado',
+            'examples': {
+                'application/json': {
+                    'error': 'Reconocimiento no encontrado',
+                    'recognition_id': 'rec_invalid123'
+                }
+            }
+        },
+        403: {
+            'description': 'Sin permisos para ver este reconocimiento',
+            'examples': {
+                'application/json': {
+                    'error': 'No tienes permiso para ver este reconocimiento',
+                    'details': 'El reconocimiento pertenece a otro usuario'
+                }
+            }
+        },
+        401: {
+            'description': 'Token de autenticación inválido'
+        },
+        500: {
+            'description': 'Error interno al consultar imágenes del reconocimiento',
+            'examples': {
+                'application/json': {
+                    'error': 'Database connection failed',
+                    'error_type': 'DatabaseException'
+                }
+            }
+        }
+    }
+})
 def get_recognition_images(recognition_id):
     """
     🖼️ VERIFICAR IMÁGENES: Verifica si las imágenes están listas y devuelve el estado actual

@@ -2819,6 +2819,114 @@ def delete_ingredient_complete(ingredient_name):
 
 @inventory_bp.route("/foods/<food_name>/<added_at>", methods=["DELETE"])
 @jwt_required()
+@swag_from({
+    'tags': ['Inventory'],
+    'summary': 'Eliminar alimento preparado específico del inventario',
+    'description': '''
+Elimina un alimento preparado específico del inventario del usuario usando el nombre y fecha de agregado.
+
+### Funcionalidades:
+- **Eliminación selectiva**: Elimina solo el alimento específico identificado por nombre y fecha
+- **Decodificación automática**: Maneja nombres con caracteres especiales y espacios
+- **Validación de propiedad**: Solo el propietario puede eliminar sus alimentos
+- **Limpieza completa**: Elimina el registro completamente del inventario
+
+### Formato de Parámetros:
+- **food_name**: Debe estar URL-encoded si contiene espacios o caracteres especiales
+- **added_at**: Fecha ISO 8601 exacta de cuando se agregó el alimento
+- Caracteres especiales como "/" deben ser enviados como "_SLASH_"
+
+### Casos de Uso:
+- Eliminar alimentos consumidos completamente
+- Remover alimentos que se echaron a perder
+- Limpiar inventario de elementos no deseados
+- Corregir errores en el inventario
+
+### Ejemplos de URLs:
+- `DELETE /foods/Pasta%20Carbonara/2024-01-15T10:30:00Z`
+- `DELETE /foods/Pollo_SLASH_Arroz/2024-01-15T10:30:00Z`
+    ''',
+    'parameters': [
+        {
+            'name': 'food_name',
+            'in': 'path',
+            'type': 'string',
+            'required': True,
+            'description': 'Nombre del alimento a eliminar (URL-encoded)',
+            'example': 'Pasta%20Carbonara'
+        },
+        {
+            'name': 'added_at',
+            'in': 'path',
+            'type': 'string',
+            'format': 'date-time',
+            'required': True,
+            'description': 'Fecha exacta cuando se agregó el alimento (formato ISO 8601)',
+            'example': '2024-01-15T10:30:00Z'
+        }
+    ],
+    'security': [{'Bearer': []}],
+    'responses': {
+        200: {
+            'description': 'Alimento eliminado exitosamente del inventario',
+            'examples': {
+                'application/json': {
+                    "message": "Comida eliminada exitosamente del inventario",
+                    "food": "Pasta Carbonara",
+                    "deleted_added_at": "2024-01-15T10:30:00Z",
+                    "operation_details": {
+                        "action": "delete_food_item",
+                        "timestamp": "2024-01-16T11:00:00Z",
+                        "user_uid": "firebase_user_123"
+                    }
+                }
+            }
+        },
+        404: {
+            'description': 'Alimento no encontrado en el inventario',
+            'examples': {
+                'application/json': {
+                    'error': 'Food item not found in inventory',
+                    'details': 'No se encontró el alimento "Pasta Carbonara" agregado en "2024-01-15T10:30:00Z"',
+                    'food_name': 'Pasta Carbonara',
+                    'added_at': '2024-01-15T10:30:00Z'
+                }
+            }
+        },
+        400: {
+            'description': 'Parámetros inválidos en la URL',
+            'examples': {
+                'application/json': {
+                    'error': 'Invalid parameters',
+                    'details': 'El formato de fecha added_at debe ser ISO 8601',
+                    'received_date': 'invalid-date',
+                    'expected_format': 'YYYY-MM-DDTHH:MM:SSZ'
+                }
+            }
+        },
+        403: {
+            'description': 'Sin permisos para eliminar este alimento',
+            'examples': {
+                'application/json': {
+                    'error': 'Permission denied',
+                    'details': 'No tienes permisos para eliminar alimentos de otro usuario'
+                }
+            }
+        },
+        401: {
+            'description': 'Token de autenticación inválido'
+        },
+        500: {
+            'description': 'Error interno del servidor',
+            'examples': {
+                'application/json': {
+                    'error': 'Database error',
+                    'details': 'Error interno al eliminar el alimento del inventario'
+                }
+            }
+        }
+    }
+})
 def delete_food_item(food_name, added_at):
     """
     Elimina un food item específico del inventario.
@@ -3109,6 +3217,183 @@ def mark_ingredient_stack_consumed(ingredient_name, added_at):
 
 @inventory_bp.route("/foods/<food_name>/<added_at>/consume", methods=["POST"])
 @jwt_required()
+@swag_from({
+    'tags': ['Inventory'],
+    'summary': 'Marcar alimento preparado como consumido (parcial o total)',
+    'description': '''
+Marca un alimento preparado como consumido, permitiendo consumo parcial o total del elemento.
+
+### Funcionalidades:
+- **Consumo flexible**: Permite consumo parcial o total del alimento
+- **Actualización automática**: Actualiza la cantidad restante en el inventario
+- **Eliminación automática**: Elimina el elemento si se consume completamente
+- **Validación de propiedad**: Solo el propietario puede marcar como consumido
+- **Tracking de consumo**: Registra patrones de consumo del usuario
+
+### Comportamiento del Consumo:
+- **Sin parámetros**: Consume todo el alimento (eliminación completa)
+- **Con porciones específicas**: Consume solo la cantidad indicada
+- **Consumo total**: Si las porciones consumidas >= porciones totales, elimina el elemento
+- **Consumo parcial**: Actualiza la cantidad restante y mantiene el elemento
+
+### Formato de Parámetros:
+- **food_name**: Debe estar URL-encoded si contiene espacios o caracteres especiales
+- **added_at**: Fecha ISO 8601 exacta de cuando se agregó el alimento
+- **consumed_portions**: Cantidad de porciones consumidas (opcional, por defecto consume todo)
+
+### Casos de Uso:
+- Registrar comidas consumidas para tracking nutricional
+- Actualizar inventario después de comer
+- Mantener control preciso de porciones restantes
+- Generar estadísticas de consumo alimentario
+
+### Ejemplos de Uso:
+- Consumo total: `POST /foods/Pizza/2024-01-15T19:00:00Z/consume` (sin body)
+- Consumo parcial: `POST /foods/Pizza/2024-01-15T19:00:00Z/consume` con `{"consumed_portions": 0.5}`
+    ''',
+    'parameters': [
+        {
+            'name': 'food_name',
+            'in': 'path',
+            'type': 'string',
+            'required': True,
+            'description': 'Nombre del alimento a marcar como consumido (URL-encoded)',
+            'example': 'Pizza%20Margherita'
+        },
+        {
+            'name': 'added_at',
+            'in': 'path',
+            'type': 'string',
+            'format': 'date-time',
+            'required': True,
+            'description': 'Fecha exacta cuando se agregó el alimento (formato ISO 8601)',
+            'example': '2024-01-15T19:00:00Z'
+        },
+        {
+            'name': 'body',
+            'in': 'body',
+            'required': False,
+            'schema': {
+                'type': 'object',
+                'properties': {
+                    'consumed_portions': {
+                        'type': 'number',
+                        'minimum': 0.1,
+                        'description': 'Número de porciones consumidas. Si no se especifica, consume todo el alimento.',
+                        'example': 1.5
+                    }
+                }
+            },
+            'description': 'Datos de consumo (opcional - sin body consume todo)'
+        }
+    ],
+    'security': [{'Bearer': []}],
+    'responses': {
+        200: {
+            'description': 'Alimento marcado como consumido exitosamente',
+            'examples': {
+                'application/json': {
+                    "message": "Comida marcada como consumida exitosamente",
+                    "food": "Pizza Margherita",
+                    "consumption_details": {
+                        "consumed_portions": 1.5,
+                        "remaining_portions": 0.5,
+                        "consumption_type": "partial",
+                        "consumed_at": "2024-01-16T12:30:00Z"
+                    },
+                    "updated_food": {
+                        "name": "Pizza Margherita",
+                        "quantity": 0.5,
+                        "type_unit": "porciones",
+                        "added_at": "2024-01-15T19:00:00Z",
+                        "status": "available"
+                    },
+                    "nutrition_tracking": {
+                        "estimated_calories_consumed": 450,
+                        "meal_type": "dinner",
+                        "consumption_time": "2024-01-16T12:30:00Z"
+                    }
+                }
+            }
+        },
+        200: {
+            'description': 'Alimento consumido completamente y eliminado del inventario',
+            'examples': {
+                'application/json': {
+                    "message": "Comida consumida completamente y eliminada del inventario",
+                    "food": "Pizza Margherita",
+                    "consumption_details": {
+                        "consumed_portions": 2.0,
+                        "remaining_portions": 0,
+                        "consumption_type": "complete",
+                        "consumed_at": "2024-01-16T12:30:00Z"
+                    },
+                    "inventory_action": "removed",
+                    "nutrition_tracking": {
+                        "estimated_calories_consumed": 600,
+                        "meal_type": "dinner",
+                        "consumption_time": "2024-01-16T12:30:00Z"
+                    }
+                }
+            }
+        },
+        400: {
+            'description': 'Datos de entrada inválidos',
+            'examples': {
+                'application/json': {
+                    'error': 'Invalid data',
+                    'details': 'consumed_portions debe ser un número positivo mayor a 0',
+                    'received_value': -1,
+                    'expected': 'Número >= 0.1'
+                }
+            }
+        },
+        404: {
+            'description': 'Alimento no encontrado en el inventario',
+            'examples': {
+                'application/json': {
+                    'error': 'Food item not found',
+                    'details': 'No se encontró el alimento "Pizza Margherita" agregado en "2024-01-15T19:00:00Z"',
+                    'food_name': 'Pizza Margherita',
+                    'added_at': '2024-01-15T19:00:00Z'
+                }
+            }
+        },
+        403: {
+            'description': 'Sin permisos para marcar como consumido',
+            'examples': {
+                'application/json': {
+                    'error': 'Permission denied',
+                    'details': 'No tienes permisos para modificar alimentos de otro usuario'
+                }
+            }
+        },
+        422: {
+            'description': 'Cantidad de consumo inválida',
+            'examples': {
+                'application/json': {
+                    'error': 'Invalid consumption amount',
+                    'details': 'No se puede consumir más de lo que está disponible',
+                    'requested_portions': 3.0,
+                    'available_portions': 2.0,
+                    'max_consumable': 2.0
+                }
+            }
+        },
+        401: {
+            'description': 'Token de autenticación inválido'
+        },
+        500: {
+            'description': 'Error interno del servidor',
+            'examples': {
+                'application/json': {
+                    'error': 'Database error',
+                    'details': 'Error interno al marcar el alimento como consumido'
+                }
+            }
+        }
+    }
+})
 def mark_food_item_consumed(food_name, added_at):
     """
     Marca un food item como consumido.
