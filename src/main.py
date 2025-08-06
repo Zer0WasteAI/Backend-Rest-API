@@ -24,6 +24,8 @@ from src.interface.controllers.environmental_savings_controller import environme
 from src.shared.exceptions.base import AppException
 from src.infrastructure.auth.jwt_callbacks import configure_jwt_callbacks
 from src.infrastructure.security.security_headers import add_security_headers
+from src.infrastructure.optimization.rate_limiter import rate_limiter
+from src.infrastructure.optimization.cache_service import cache_service
 
 # Importar modelos ORM para que se creen las tablas
 from src.infrastructure.db.models.recipe_orm import RecipeORM
@@ -52,6 +54,13 @@ def create_app():
     # Configurar JWT con callbacks de seguridad
     jwt_manager = JWTManager(application)
     configure_jwt_callbacks(jwt_manager)
+    
+    # 🚀 INICIALIZAR OPTIMIZACIONES DE PERFORMANCE
+    # Rate limiter para proteger contra abuso de recursos
+    rate_limiter.init_app(application)
+    
+    # Cache service para optimizar operaciones costosas de IA
+    cache_service.init_app(application)
 
     # Registrar blueprints de API
     application.register_blueprint(auth_bp, url_prefix='/api/auth')

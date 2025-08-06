@@ -67,7 +67,8 @@ class GenerateCustomRecipeUseCase:
             "ingredients": [{"name": ingredient, "quantity": "Al gusto", "unit": "porción"} for ingredient in filtered_ingredients],
             "priorities": filtered_ingredients,  # Priorizamos todos los ingredientes ingresados (ya filtrados)
             "preferences": combined_preferences,
-            "user_profile": user_profile  # Incluir perfil para uso adicional (idioma, medidas, etc.)
+            "user_profile": user_profile,  # Incluir perfil para uso adicional (idioma, medidas, etc.)
+            "user_uid": user_uid  # Pass user_uid for anti-duplication system
         }
         
         return self.recipe_service.generate_recipes(generation_data, num_recipes, recipe_categories)

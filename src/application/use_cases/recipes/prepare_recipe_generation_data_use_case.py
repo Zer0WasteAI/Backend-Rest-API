@@ -99,7 +99,8 @@ class PrepareRecipeGenerationDataUseCase:
             "ingredients": ingredients,
             "priorities": list(priority_names),
             "preferences": preferences,
-            "user_profile": user_profile  # Incluir perfil para uso adicional
+            "user_profile": user_profile,  # Incluir perfil para uso adicional
+            "user_uid": user_uid  # Pass user_uid for anti-duplication system
         }
 
     def _is_allergic_to_ingredient(self, ingredient_name: str, user_profile: dict) -> bool:

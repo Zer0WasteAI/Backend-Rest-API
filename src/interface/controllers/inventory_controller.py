@@ -44,11 +44,14 @@ make_mark_food_item_consumed_use_case
 from src.application.factories.inventory_image_upload_factory import make_upload_inventory_image_use_case
 
 from src.shared.exceptions.custom import InvalidRequestDataException
+from src.infrastructure.optimization.rate_limiter import smart_rate_limit
+from src.infrastructure.optimization.cache_service import smart_cache, cache_user_data
 
 inventory_bp = Blueprint('inventory', __name__)
 
 @inventory_bp.route("/ingredients", methods=["POST"])
 @jwt_required()
+@smart_rate_limit('inventory_bulk')  # 🛡️ Rate limit: 10 requests/min for bulk operations
 @swag_from({
     'tags': ['Inventory'],
     'summary': 'Agregar ingredientes al inventario por lotes',

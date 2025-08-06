@@ -518,216 +518,9 @@ def generate_custom_recipes():
 
     return jsonify(result), 200
 
-@recipes_bp.route("/save", methods=["POST"])
-@jwt_required()
-@swag_from({
-    'tags': ['Recipes'],
-    'summary': 'Guardar receta en favoritos del usuario',
-    'description': '''
-Guarda una receta generada o externa en la colección personal de recetas favoritas del usuario.
-
-### Funcionalidades:
-- **Guardado personalizado**: Almacena recetas con metadata del usuario
-- **Categorización**: Organiza recetas por categorías personalizadas
-- **Modificación permitida**: Permite editar la receta antes de guardarla
-- **Búsqueda futura**: Indexa para búsquedas rápidas posteriores
-- **Sincronización**: Mantiene consistencia entre dispositivos
-
-### Tipos de Recetas Soportadas:
-- **Generadas por IA**: Recetas creadas por el sistema
-- **Importadas**: Recetas de fuentes externas
-- **Modificadas**: Versiones editadas de recetas existentes
-- **Originales**: Recetas creadas completamente por el usuario
-
-### Datos Adicionales Almacenados:
-- Fecha y hora de guardado
-- Frecuencia de uso
-- Valoraciones personales
-- Notas y modificaciones del usuario
-- Historial de preparación
-
-### Casos de Uso:
-- Guardar recetas generadas que gustaron
-- Crear biblioteca personal de recetas
-- Organizar recetas por ocasiones o dietas
-- Compartir recetas favoritas con otros usuarios
-- Tracking de recetas más utilizadas
-    ''',
-    'parameters': [
-        {
-            'name': 'body',
-            'in': 'body',
-            'required': True,
-            'schema': {
-                'type': 'object',
-                'required': ['recipe'],
-                'properties': {
-                    'recipe': {
-                        'type': 'object',
-                        'description': 'Datos completos de la receta a guardar',
-                        'required': ['name', 'ingredients', 'instructions'],
-                        'properties': {
-                            'name': {
-                                'type': 'string',
-                                'description': 'Nombre de la receta',
-                                'example': 'Pasta carbonara casera'
-                            },
-                            'description': {
-                                'type': 'string',
-                                'description': 'Descripción de la receta',
-                                'example': 'Una deliciosa pasta italiana con huevos y bacon'
-                            },
-                            'ingredients': {
-                                'type': 'array',
-                                'items': {
-                                    'type': 'object',
-                                    'properties': {
-                                        'name': {'type': 'string'},
-                                        'quantity': {'type': 'number'},
-                                        'unit': {'type': 'string'}
-                                    }
-                                },
-                                'description': 'Lista de ingredientes'
-                            },
-                            'instructions': {
-                                'type': 'array',
-                                'items': {
-                                    'type': 'object',
-                                    'properties': {
-                                        'step': {'type': 'integer'},
-                                        'description': {'type': 'string'},
-                                        'time': {'type': 'integer'},
-                                        'temperature': {'type': 'string'}
-                                    }
-                                },
-                                'description': 'Pasos de preparación'
-                            },
-                            'prep_time': {
-                                'type': 'integer',
-                                'description': 'Tiempo de preparación en minutos'
-                            },
-                            'servings': {
-                                'type': 'integer',
-                                'description': 'Número de porciones'
-                            },
-                            'difficulty': {
-                                'type': 'string',
-                                'enum': ['fácil', 'intermedio', 'avanzado'],
-                                'description': 'Nivel de dificultad'
-                            },
-                            'cuisine_type': {
-                                'type': 'string',
-                                'description': 'Tipo de cocina'
-                            },
-                            'tags': {
-                                'type': 'array',
-                                'items': {'type': 'string'},
-                                'description': 'Etiquetas personalizadas'
-                            }
-                        }
-                    },
-                    'user_notes': {
-                        'type': 'string',
-                        'description': 'Notas personales sobre la receta (opcional)',
-                        'example': 'Receta favorita para domingos familiares'
-                    },
-                    'rating': {
-                        'type': 'integer',
-                        'minimum': 1,
-                        'maximum': 5,
-                        'description': 'Valoración personal (1-5 estrellas)',
-                        'example': 5
-                    },
-                    'custom_category': {
-                        'type': 'string',
-                        'description': 'Categoría personalizada del usuario',
-                        'example': 'Comidas familiares'
-                    }
-                }
-            }
-        }
-    ],
-    'responses': {
-        201: {
-            'description': 'Receta guardada exitosamente',
-            'examples': {
-                'application/json': {
-                    "message": "Receta guardada exitosamente en tu colección",
-                    "recipe_uid": "user_recipe_123456789",
-                    "saved_recipe": {
-                        "name": "Pasta carbonara casera",
-                        "description": "Una deliciosa pasta italiana con huevos y bacon",
-                        "recipe_uid": "user_recipe_123456789",
-                        "user_uid": "firebase_uid_123",
-                        "saved_at": "2024-01-16T16:00:00Z",
-                        "prep_time": 30,
-                        "servings": 4,
-                        "difficulty": "intermedio",
-                        "cuisine_type": "italiana",
-                        "user_rating": 5,
-                        "user_notes": "Receta favorita para domingos familiares",
-                        "custom_category": "Comidas familiares",
-                        "tags": ["pasta", "italiana", "familiar", "rápida"],
-                        "usage_stats": {
-                            "times_prepared": 0,
-                            "last_prepared": None,
-                            "favorite": True
-                        }
-                    },
-                    "collection_stats": {
-                        "total_saved_recipes": 25,
-                        "recipes_in_category": 6,
-                        "average_rating": 4.3
-                    }
-                }
-            }
-        },
-        400: {
-            'description': 'Datos de receta inválidos',
-            'examples': {
-                'application/json': {
-                    'error': 'Invalid recipe data',
-                    'details': 'La receta debe incluir nombre, ingredientes e instrucciones'
-                }
-            }
-        },
-        409: {
-            'description': 'Receta ya existe en la colección',
-            'examples': {
-                'application/json': {
-                    'error': 'Recipe already saved',
-                    'details': 'Ya tienes una receta con el mismo nombre en tu colección',
-                    'existing_recipe_uid': 'user_recipe_987654321'
-                }
-            }
-        },
-        401: {
-            'description': 'Token de autenticación inválido'
-        },
-        500: {
-            'description': 'Error interno al guardar la receta'
-        }
-    }
-})
-def save_recipe():
-    user_uid = get_jwt_identity()
-    schema = SaveRecipeRequestSchema()
-    json_data = request.get_json()
-
-    errors = schema.validate(json_data)
-    if errors:
-        raise InvalidRequestDataException(details=errors)
-
-    use_case = make_save_recipe_use_case()
-    saved_recipe = use_case.execute(user_uid, json_data)
-
-    recipe_schema = RecipeSchema()
-    result = recipe_schema.dump(saved_recipe)
-
-    return jsonify({
-        "message": "Receta guardada exitosamente",
-        "recipe": result
-    }), 201
+# ENDPOINT ELIMINADO: /save era confuso y duplicaba funcionalidad
+# Las recetas generadas se guardan automáticamente en recipes_generated
+# Para favoritos, usar los nuevos endpoints de favoritos más abajo
 
 @recipes_bp.route("/saved", methods=["GET"])
 @jwt_required()
@@ -1290,6 +1083,587 @@ def delete_user_recipe():
     }), 200
 
 
+@recipes_bp.route("/generated/gallery", methods=["GET"])
+@jwt_required()
+@swag_from({
+    'tags': ['Recipes'],
+    'summary': 'Obtener galería completa de recetas generadas del usuario',
+    'description': '''
+Obtiene todas las recetas generadas por IA para el usuario con contenido completo e imágenes.
+
+### Funcionalidades:
+- **Contenido completo**: Incluye ingredientes, pasos, tiempos, dificultad
+- **Imágenes**: URLs de imágenes generadas cuando están disponibles
+- **Metadatos**: Información de generación, fechas, tipo
+- **Filtros avanzados**: Por estado de imagen, tipo de generación, fecha
+- **Paginación**: Para optimizar rendimiento con muchas recetas
+- **Ordenamiento**: Por fecha de generación, nombre, dificultad
+
+### Información Incluida por Receta:
+- **Datos básicos**: Título, descripción, categoría, dificultad
+- **Ingredientes completos**: Con cantidades y unidades
+- **Pasos detallados**: Instrucciones paso a paso ordenadas
+- **Tiempos**: Duración de preparación y cocción
+- **Imagen**: URL cuando está disponible + estado de generación
+- **Metadatos**: Fecha generación, tipo (inventory/custom), generación ID
+
+### Casos de Uso:
+- Mostrar historial completo de recetas generadas
+- Galería visual de recetas con imágenes
+- Búsqueda y filtrado en historial personal
+- Exportar recetas generadas
+- Análisis de patrones de generación del usuario
+    ''',
+    'parameters': [
+        {
+            'name': 'page',
+            'in': 'query',
+            'type': 'integer',
+            'required': False,
+            'default': 1,
+            'description': 'Número de página para paginación'
+        },
+        {
+            'name': 'per_page',
+            'in': 'query',
+            'type': 'integer',
+            'required': False,
+            'default': 20,
+            'maximum': 50,
+            'description': 'Recetas por página (máximo 50)'
+        },
+        {
+            'name': 'image_status',
+            'in': 'query',
+            'type': 'string',
+            'required': False,
+            'enum': ['ready', 'generating', 'failed', 'pending'],
+            'description': 'Filtrar por estado de imagen'
+        },
+        {
+            'name': 'generation_type',
+            'in': 'query',
+            'type': 'string',
+            'required': False,
+            'enum': ['inventory', 'custom'],
+            'description': 'Filtrar por tipo de generación'
+        },
+        {
+            'name': 'category',
+            'in': 'query',
+            'type': 'string',
+            'required': False,
+            'description': 'Filtrar por categoría de receta'
+        },
+        {
+            'name': 'difficulty',
+            'in': 'query',
+            'type': 'string',
+            'required': False,
+            'enum': ['Fácil', 'Intermedio', 'Difícil'],
+            'description': 'Filtrar por nivel de dificultad'
+        },
+        {
+            'name': 'search',
+            'in': 'query',
+            'type': 'string',
+            'required': False,
+            'description': 'Búsqueda por texto en título o descripción'
+        },
+        {
+            'name': 'sort_by',
+            'in': 'query',
+            'type': 'string',
+            'required': False,
+            'enum': ['generated_at', 'title', 'difficulty', 'duration'],
+            'default': 'generated_at',
+            'description': 'Campo para ordenamiento'
+        },
+        {
+            'name': 'sort_order',
+            'in': 'query',
+            'type': 'string',
+            'required': False,
+            'enum': ['asc', 'desc'],
+            'default': 'desc',
+            'description': 'Orden ascendente o descendente'
+        },
+        {
+            'name': 'date_from',
+            'in': 'query',
+            'type': 'string',
+            'format': 'date',
+            'required': False,
+            'description': 'Filtrar desde fecha (YYYY-MM-DD)'
+        },
+        {
+            'name': 'date_to',
+            'in': 'query',
+            'type': 'string',
+            'format': 'date',
+            'required': False,
+            'description': 'Filtrar hasta fecha (YYYY-MM-DD)'
+        },
+        {
+            'name': 'favorites_only',
+            'in': 'query',
+            'type': 'boolean',
+            'required': False,
+            'default': False,
+            'description': 'Mostrar solo recetas marcadas como favoritas'
+        }
+    ],
+    'responses': {
+        200: {
+            'description': 'Galería de recetas generadas obtenida exitosamente',
+            'examples': {
+                'application/json': {
+                    "generated_recipes": [
+                        {
+                            "recipe_uid": "recipe_gen_123456789",
+                            "generation_id": "gen_abc123def456",
+                            "title": "Pasta Carbonara con Tomates Cherry",
+                            "description": "Deliciosa pasta italiana con tomates cherry frescos del inventario, cremosa salsa carbonara y hierbas aromáticas",
+                            "category": "almuerzo",
+                            "difficulty": "Intermedio",
+                            "duration": "25 min",
+                            "servings": 4,
+                            "generation_type": "inventory",
+                            "generated_at": "2024-01-16T15:30:00Z",
+                            "image_path": "https://storage.googleapis.com/bucket/recipe-images/pasta-carbonara-123456789.jpg",
+                            "image_status": "ready",
+                            "ingredients": [
+                                {
+                                    "name": "Pasta",
+                                    "quantity": 400,
+                                    "type_unit": "gr"
+                                },
+                                {
+                                    "name": "Tomates cherry",
+                                    "quantity": 200,
+                                    "type_unit": "gr"
+                                },
+                                {
+                                    "name": "Huevos",
+                                    "quantity": 3,
+                                    "type_unit": "unidades"
+                                },
+                                {
+                                    "name": "Queso parmesano",
+                                    "quantity": 100,
+                                    "type_unit": "gr"
+                                }
+                            ],
+                            "steps": [
+                                {
+                                    "step_order": 1,
+                                    "description": "Hervir agua con sal en una olla grande para la pasta"
+                                },
+                                {
+                                    "step_order": 2,
+                                    "description": "Cortar los tomates cherry por la mitad"
+                                },
+                                {
+                                    "step_order": 3,
+                                    "description": "Batir los huevos con el queso parmesano rallado"
+                                },
+                                {
+                                    "step_order": 4,
+                                    "description": "Cocinar la pasta según instrucciones del paquete hasta al dente"
+                                },
+                                {
+                                    "step_order": 5,
+                                    "description": "Saltear los tomates cherry en una sartén con aceite"
+                                },
+                                {
+                                    "step_order": 6,
+                                    "description": "Mezclar la pasta caliente con la mezcla de huevo y queso fuera del fuego"
+                                },
+                                {
+                                    "step_order": 7,
+                                    "description": "Agregar los tomates cherry salteados y servir inmediatamente"
+                                }
+                            ],
+                            "footer": "Aprovecha los tomates cherry antes de que se estropeen y disfruta de esta deliciosa pasta italiana",
+                            "nutritional_info": {
+                                "calories_per_serving": 420,
+                                "protein_g": 18,
+                                "carbs_g": 55,
+                                "fat_g": 14
+                            },
+                            "is_favorite": True,
+                            "favorite_data": {
+                                "favorite_uid": "fav_123456789",
+                                "rating": 5,
+                                "notes": "Mi receta favorita de pasta",
+                                "favorited_at": "2024-01-15T18:30:00Z"
+                            }
+                        },
+                        {
+                            "recipe_uid": "recipe_gen_987654321",
+                            "generation_id": "gen_xyz789abc123",
+                            "title": "Ensalada Mediterránea de Aguacate",
+                            "description": "Ensalada fresca y nutritiva con aguacate, perfecta para aprovechar vegetales del inventario",
+                            "category": "ensalada",
+                            "difficulty": "Fácil",
+                            "duration": "15 min",
+                            "servings": 2,
+                            "generation_type": "custom",
+                            "generated_at": "2024-01-15T12:45:00Z",
+                            "image_path": "https://storage.googleapis.com/bucket/recipe-images/ensalada-mediterranea-987654321.jpg",
+                            "image_status": "ready",
+                            "ingredients": [
+                                {
+                                    "name": "Aguacate",
+                                    "quantity": 2,
+                                    "type_unit": "unidades"
+                                },
+                                {
+                                    "name": "Tomate",
+                                    "quantity": 300,
+                                    "type_unit": "gr"
+                                },
+                                {
+                                    "name": "Pepino",
+                                    "quantity": 200,
+                                    "type_unit": "gr"
+                                },
+                                {
+                                    "name": "Aceitunas negras",
+                                    "quantity": 50,
+                                    "type_unit": "gr"
+                                }
+                            ],
+                            "steps": [
+                                {
+                                    "step_order": 1,
+                                    "description": "Cortar el aguacate en cubos medianos"
+                                },
+                                {
+                                    "step_order": 2,
+                                    "description": "Picar los tomates en cubos del mismo tamaño"
+                                },
+                                {
+                                    "step_order": 3,
+                                    "description": "Cortar el pepino en rodajas finas"
+                                },
+                                {
+                                    "step_order": 4,
+                                    "description": "Mezclar todos los ingredientes en un bowl grande"
+                                },
+                                {
+                                    "step_order": 5,
+                                    "description": "Aliñar con aceite de oliva, vinagre balsámico y sal"
+                                },
+                                {
+                                    "step_order": 6,
+                                    "description": "Servir fresco acompañado de pan pita"
+                                }
+                            ],
+                            "footer": "Una ensalada nutritiva y refrescante que aprovecha al máximo los vegetales frescos",
+                            "nutritional_info": {
+                                "calories_per_serving": 280,
+                                "protein_g": 6,
+                                "carbs_g": 15,
+                                "fat_g": 24
+                            },
+                            "is_favorite": False,
+                            "favorite_data": None
+                        }
+                    ],
+                    "pagination": {
+                        "current_page": 1,
+                        "per_page": 20,
+                        "total_recipes": 47,
+                        "total_pages": 3,
+                        "has_next": True,
+                        "has_previous": False
+                    },
+                    "gallery_stats": {
+                        "total_generated_recipes": 47,
+                        "recipes_with_images": 42,
+                        "images_ready": 38,
+                        "images_generating": 4,
+                        "images_failed": 5,
+                        "generation_types": {
+                            "inventory": 28,
+                            "custom": 19
+                        },
+                        "categories_distribution": {
+                            "almuerzo": 18,
+                            "cena": 15,
+                            "desayuno": 8,
+                            "ensalada": 6
+                        },
+                        "difficulty_distribution": {
+                            "Fácil": 20,
+                            "Intermedio": 22,
+                            "Difícil": 5
+                        },
+                        "recent_generations": {
+                            "last_7_days": 8,
+                            "last_30_days": 23
+                        }
+                    },
+                    "filters_applied": {
+                        "image_status": None,
+                        "generation_type": None,
+                        "category": None,
+                        "difficulty": None,
+                        "search": None,
+                        "date_from": None,
+                        "date_to": None,
+                        "favorites_only": False
+                    },
+                    "sort_applied": {
+                        "sort_by": "generated_at",
+                        "sort_order": "desc"
+                    }
+                }
+            }
+        },
+        404: {
+            'description': 'No se encontraron recetas generadas',
+            'examples': {
+                'application/json': {
+                    'message': 'No generated recipes found',
+                    'generated_recipes': [],
+                    'gallery_stats': {
+                        'total_generated_recipes': 0
+                    }
+                }
+            }
+        },
+        400: {
+            'description': 'Parámetros de filtros inválidos',
+            'examples': {
+                'application/json': {
+                    'error': 'Invalid filter parameters',
+                    'details': {
+                        'per_page': 'Debe ser un número entre 1 y 50',
+                        'date_from': 'Formato de fecha inválido, use YYYY-MM-DD'
+                    }
+                }
+            }
+        },
+        401: {
+            'description': 'Token de autenticación inválido'
+        },
+        500: {
+            'description': 'Error interno del servidor'
+        }
+    }
+})
+def get_generated_recipes_gallery():
+    """
+    🎨 GALERÍA DE RECETAS GENERADAS: Obtiene todas las recetas generadas del usuario con contenido e imágenes
+    """
+    user_uid = get_jwt_identity()
+    print(f"🎨 [RECIPE GALLERY] Starting gallery request for user: {user_uid}")
+    
+    try:
+        # Obtener parámetros de query
+        page = request.args.get('page', 1, type=int)
+        per_page = min(request.args.get('per_page', 20, type=int), 50)
+        image_status = request.args.get('image_status')
+        generation_type = request.args.get('generation_type')
+        category = request.args.get('category')
+        difficulty = request.args.get('difficulty')
+        search = request.args.get('search')
+        sort_by = request.args.get('sort_by', 'generated_at')
+        sort_order = request.args.get('sort_order', 'desc')
+        date_from = request.args.get('date_from')
+        date_to = request.args.get('date_to')
+        favorites_only = request.args.get('favorites_only', 'false').lower() == 'true'
+        
+        print(f"🎨 [RECIPE GALLERY] Filters: page={page}, per_page={per_page}, image_status={image_status}")
+        
+        from src.infrastructure.db.models.recipe_generated_orm import RecipeGeneratedORM
+        from src.infrastructure.db.models.recipe_favorites_orm import RecipeFavoritesORM
+        from src.infrastructure.db.base import db
+        from sqlalchemy import desc, asc, and_, or_
+        from datetime import datetime
+        
+        # Construir query base
+        if favorites_only:
+            # Si solo queremos favoritos, hacer JOIN con tabla de favoritos
+            query = db.session.query(RecipeGeneratedORM).join(
+                RecipeFavoritesORM, RecipeGeneratedORM.uid == RecipeFavoritesORM.recipe_uid
+            ).filter(
+                RecipeGeneratedORM.user_uid == user_uid,
+                RecipeFavoritesORM.user_uid == user_uid
+            )
+        else:
+            # Query normal para todas las recetas
+            query = db.session.query(RecipeGeneratedORM).filter(
+                RecipeGeneratedORM.user_uid == user_uid
+            )
+        
+        # Aplicar filtros
+        if image_status:
+            query = query.filter(RecipeGeneratedORM.image_status == image_status)
+        
+        if generation_type:
+            query = query.filter(RecipeGeneratedORM.generation_type == generation_type)
+        
+        if category:
+            query = query.filter(RecipeGeneratedORM.category == category)
+        
+        if difficulty:
+            query = query.filter(RecipeGeneratedORM.difficulty == difficulty)
+        
+        if search:
+            search_filter = or_(
+                RecipeGeneratedORM.title.contains(search),
+                RecipeGeneratedORM.description.contains(search)
+            )
+            query = query.filter(search_filter)
+        
+        # Filtros de fecha
+        if date_from:
+            try:
+                date_from_obj = datetime.strptime(date_from, '%Y-%m-%d')
+                query = query.filter(RecipeGeneratedORM.generated_at >= date_from_obj)
+            except ValueError:
+                return jsonify({
+                    'error': 'Invalid date_from format, use YYYY-MM-DD'
+                }), 400
+        
+        if date_to:
+            try:
+                date_to_obj = datetime.strptime(date_to, '%Y-%m-%d')
+                query = query.filter(RecipeGeneratedORM.generated_at <= date_to_obj)
+            except ValueError:
+                return jsonify({
+                    'error': 'Invalid date_to format, use YYYY-MM-DD'
+                }), 400
+        
+        # Aplicar ordenamiento
+        sort_column = getattr(RecipeGeneratedORM, sort_by, RecipeGeneratedORM.generated_at)
+        if sort_order == 'desc':
+            query = query.order_by(desc(sort_column))
+        else:
+            query = query.order_by(asc(sort_column))
+        
+        # Obtener conteo total
+        total_count = query.count()
+        print(f"🎨 [RECIPE GALLERY] Total recipes found: {total_count}")
+        
+        # Aplicar paginación
+        offset = (page - 1) * per_page
+        recipes_orm = query.offset(offset).limit(per_page).all()
+        
+        # Convertir a formato de respuesta
+        generated_recipes = []
+        
+        # Obtener favoritos del usuario para incluir en la respuesta
+        from src.infrastructure.db.models.recipe_favorites_orm import RecipeFavoritesORM
+        recipe_uids = [recipe_orm.uid for recipe_orm in recipes_orm]
+        favorites_query = db.session.query(RecipeFavoritesORM).filter(
+            RecipeFavoritesORM.user_uid == user_uid,
+            RecipeFavoritesORM.recipe_uid.in_(recipe_uids)
+        ).all()
+        favorites_map = {fav.recipe_uid: fav for fav in favorites_query}
+        
+        for recipe_orm in recipes_orm:
+            recipe_data = recipe_orm.recipe_data if recipe_orm.recipe_data else {}
+            favorite = favorites_map.get(recipe_orm.uid)
+            
+            recipe_response = {
+                "recipe_uid": recipe_orm.uid,
+                "generation_id": recipe_orm.generation_id,
+                "title": recipe_orm.title,
+                "description": recipe_orm.description,
+                "category": recipe_orm.category,
+                "difficulty": recipe_orm.difficulty,
+                "duration": recipe_orm.duration,
+                "servings": recipe_orm.servings,
+                "generation_type": recipe_orm.generation_type,
+                "generated_at": recipe_orm.generated_at.isoformat() if recipe_orm.generated_at else None,
+                "image_path": recipe_orm.image_path,
+                "image_status": recipe_orm.image_status,
+                "ingredients": recipe_data.get('ingredients', []),
+                "steps": recipe_data.get('steps', []),
+                "footer": recipe_data.get('footer', ''),
+                "nutritional_info": recipe_data.get('nutritional_info', {}),
+                # Información de favoritos
+                "is_favorite": favorite is not None,
+                "favorite_data": {
+                    "favorite_uid": favorite.uid if favorite else None,
+                    "rating": favorite.rating if favorite else None,
+                    "notes": favorite.notes if favorite else None,
+                    "favorited_at": favorite.favorited_at.isoformat() if favorite else None
+                } if favorite else None
+            }
+            generated_recipes.append(recipe_response)
+        
+        # Calcular estadísticas de galería
+        from sqlalchemy import func
+        stats_query = db.session.query(RecipeGeneratedORM).filter(
+            RecipeGeneratedORM.user_uid == user_uid
+        )
+        
+        gallery_stats = {
+            "total_generated_recipes": total_count,
+            "recipes_with_images": stats_query.filter(RecipeGeneratedORM.image_path.isnot(None)).count(),
+            "images_ready": stats_query.filter(RecipeGeneratedORM.image_status == 'ready').count(),
+            "images_generating": stats_query.filter(RecipeGeneratedORM.image_status == 'generating').count(),
+            "images_failed": stats_query.filter(RecipeGeneratedORM.image_status == 'failed').count()
+        }
+        
+        # Estadísticas adicionales
+        generation_types = db.session.query(
+            RecipeGeneratedORM.generation_type,
+            func.count(RecipeGeneratedORM.generation_type)
+        ).filter(RecipeGeneratedORM.user_uid == user_uid).group_by(RecipeGeneratedORM.generation_type).all()
+        
+        gallery_stats["generation_types"] = {gt[0]: gt[1] for gt in generation_types}
+        
+        # Paginación
+        total_pages = (total_count + per_page - 1) // per_page
+        pagination = {
+            "current_page": page,
+            "per_page": per_page,
+            "total_recipes": total_count,
+            "total_pages": total_pages,
+            "has_next": page < total_pages,
+            "has_previous": page > 1
+        }
+        
+        response = {
+            "generated_recipes": generated_recipes,
+            "pagination": pagination,
+            "gallery_stats": gallery_stats,
+            "filters_applied": {
+                "image_status": image_status,
+                "generation_type": generation_type,
+                "category": category,
+                "difficulty": difficulty,
+                "search": search,
+                "date_from": date_from,
+                "date_to": date_to,
+                "favorites_only": favorites_only
+            },
+            "sort_applied": {
+                "sort_by": sort_by,
+                "sort_order": sort_order
+            }
+        }
+        
+        print(f"✅ [RECIPE GALLERY] Successfully retrieved {len(generated_recipes)} recipes")
+        return jsonify(response), 200
+        
+    except Exception as e:
+        import traceback
+        print(f"🚨 [RECIPE GALLERY] Error: {str(e)}")
+        print(f"🚨 [RECIPE GALLERY] Traceback: {traceback.format_exc()}")
+        return jsonify({
+            "error": "Failed to retrieve generated recipes gallery",
+            "details": str(e),
+            "error_type": type(e).__name__
+        }), 500
+
+
 @recipes_bp.route("/default", methods=["GET"])
 @swag_from({
     'tags': ['Recipes'],
@@ -1511,5 +1885,749 @@ def get_default_recipes():
         print(f"❌ [DEFAULT RECIPES] Error: {str(e)}")
         return jsonify({
             "error": "Failed to fetch default recipes",
+            "details": str(e)
+        }), 500
+
+
+@recipes_bp.route("/generated/<recipe_uid>/favorite", methods=["POST"])
+@jwt_required()
+@swag_from({
+    'tags': ['Recipe Favorites'],
+    'summary': 'Marcar receta generada como favorita',
+    'description': '''
+Marca una receta generada como favorita para el usuario autenticado.
+
+### Funcionalidad:
+- **Favoritos personales**: Cada usuario tiene sus propios favoritos
+- **Prevención de duplicados**: No permite marcar la misma receta dos veces
+- **Metadatos opcionales**: Permite agregar rating y notas personales
+- **Validación de propiedad**: Solo se pueden marcar recetas del usuario actual
+
+### Casos de Uso:
+- Guardar recetas que te gustaron para acceso rápido
+- Crear una colección personal de mejores recetas
+- Organizar recetas por preferencias personales
+- Facilitar la re-preparación de platos favoritos
+    ''',
+    'parameters': [
+        {
+            'name': 'recipe_uid',
+            'in': 'path',
+            'type': 'string',
+            'required': True,
+            'description': 'UID de la receta generada a marcar como favorita',
+            'example': 'recipe_123456789'
+        },
+        {
+            'name': 'body',
+            'in': 'body',
+            'required': False,
+            'schema': {
+                'type': 'object',
+                'properties': {
+                    'rating': {
+                        'type': 'integer',
+                        'minimum': 1,
+                        'maximum': 5,
+                        'description': 'Rating personal de 1 a 5 estrellas',
+                        'example': 4
+                    },
+                    'notes': {
+                        'type': 'string',
+                        'maxLength': 500,
+                        'description': 'Notas personales sobre la receta',
+                        'example': 'Deliciosa, la próxima vez agregaré más especias'
+                    }
+                }
+            }
+        }
+    ],
+    'responses': {
+        201: {
+            'description': 'Receta marcada como favorita exitosamente',
+            'examples': {
+                'application/json': {
+                    "message": "Receta marcada como favorita",
+                    "favorite": {
+                        "uid": "fav_123456789",
+                        "recipe_uid": "recipe_123456789",
+                        "user_uid": "firebase_user_123",
+                        "rating": 4,
+                        "notes": "Deliciosa, la próxima vez agregaré más especias",
+                        "favorited_at": "2024-01-16T10:30:00Z"
+                    }
+                }
+            }
+        },
+        400: {
+            'description': 'Datos inválidos o receta ya marcada como favorita',
+            'examples': {
+                'application/json': {
+                    'error': 'Recipe already favorited',
+                    'details': 'Esta receta ya está en tus favoritos'
+                }
+            }
+        },
+        404: {
+            'description': 'Receta no encontrada',
+            'examples': {
+                'application/json': {
+                    'error': 'Recipe not found',
+                    'recipe_uid': 'recipe_invalid123'
+                }
+            }
+        }
+    }
+})
+def add_recipe_to_favorites(recipe_uid):
+    from src.infrastructure.db.models.recipe_generated_orm import RecipeGeneratedORM
+    from src.infrastructure.db.models.recipe_favorites_orm import RecipeFavoritesORM
+    from src.infrastructure.db.base import db
+    
+    user_uid = get_jwt_identity()
+    print(f"⭐ [ADD FAVORITE] User: {user_uid}, Recipe: {recipe_uid}")
+    
+    try:
+        # Verificar que la receta existe y pertenece al usuario
+        recipe = RecipeGeneratedORM.query.filter_by(
+            uid=recipe_uid,
+            user_uid=user_uid
+        ).first()
+        
+        if not recipe:
+            return jsonify({
+                "error": "Recipe not found",
+                "recipe_uid": recipe_uid
+            }), 404
+        
+        # Verificar si ya está marcada como favorita
+        existing_favorite = RecipeFavoritesORM.query.filter_by(
+            user_uid=user_uid,
+            recipe_uid=recipe_uid
+        ).first()
+        
+        if existing_favorite:
+            return jsonify({
+                "error": "Recipe already favorited",
+                "details": "Esta receta ya está en tus favoritos",
+                "favorite_uid": existing_favorite.uid
+            }), 400
+        
+        # Obtener datos opcionales del body
+        data = request.get_json() or {}
+        rating = data.get('rating')
+        notes = data.get('notes')
+        
+        # Validar rating
+        if rating is not None and (not isinstance(rating, int) or rating < 1 or rating > 5):
+            return jsonify({
+                "error": "Invalid rating",
+                "details": "Rating debe ser un número entero entre 1 y 5"
+            }), 400
+        
+        # Crear nuevo favorito
+        new_favorite = RecipeFavoritesORM(
+            uid=str(uuid.uuid4()),
+            user_uid=user_uid,
+            recipe_uid=recipe_uid,
+            rating=rating,
+            notes=notes,
+            favorited_at=datetime.now(timezone.utc)
+        )
+        
+        db.session.add(new_favorite)
+        db.session.commit()
+        
+        return jsonify({
+            "message": "Receta marcada como favorita",
+            "favorite": {
+                "uid": new_favorite.uid,
+                "recipe_uid": recipe_uid,
+                "user_uid": user_uid,
+                "rating": rating,
+                "notes": notes,
+                "favorited_at": new_favorite.favorited_at.isoformat()
+            }
+        }), 201
+        
+    except Exception as e:
+        db.session.rollback()
+        print(f"❌ [ADD FAVORITE] Error: {str(e)}")
+        return jsonify({
+            "error": "Failed to add favorite",
+            "details": str(e)
+        }), 500
+
+
+@recipes_bp.route("/generated/<recipe_uid>/favorite", methods=["DELETE"])
+@jwt_required()
+@swag_from({
+    'tags': ['Recipe Favorites'],
+    'summary': 'Desmarcar receta como favorita',
+    'description': '''
+Elimina una receta de la lista de favoritos del usuario autenticado.
+
+### Funcionalidad:
+- **Eliminación segura**: Solo el usuario propietario puede desmarcar
+- **Validación de existencia**: Verifica que el favorito existe antes de eliminar
+- **Limpieza completa**: Elimina completamente el registro de favorito
+- **Idempotente**: No genera error si la receta ya no está en favoritos
+
+### Casos de Uso:
+- Limpiar lista de favoritos de recetas que ya no interesan
+- Reorganizar colección personal de recetas
+- Corregir marcados accidentales como favoritos
+- Mantenimiento de lista de favoritos actualizada
+    ''',
+    'parameters': [
+        {
+            'name': 'recipe_uid',
+            'in': 'path',
+            'type': 'string',
+            'required': True,
+            'description': 'UID de la receta a desmarcar como favorita',
+            'example': 'recipe_123456789'
+        }
+    ],
+    'responses': {
+        200: {
+            'description': 'Receta desmarcada exitosamente',
+            'examples': {
+                'application/json': {
+                    "message": "Receta desmarcada de favoritos",
+                    "recipe_uid": "recipe_123456789"
+                }
+            }
+        },
+        404: {
+            'description': 'Favorito no encontrado',
+            'examples': {
+                'application/json': {
+                    'error': 'Favorite not found',
+                    'details': 'Esta receta no está en tus favoritos'
+                }
+            }
+        }
+    }
+})
+def remove_recipe_from_favorites(recipe_uid):
+    from src.infrastructure.db.models.recipe_favorites_orm import RecipeFavoritesORM
+    from src.infrastructure.db.base import db
+    
+    user_uid = get_jwt_identity()
+    print(f"❌ [REMOVE FAVORITE] User: {user_uid}, Recipe: {recipe_uid}")
+    
+    try:
+        # Buscar el favorito
+        favorite = RecipeFavoritesORM.query.filter_by(
+            user_uid=user_uid,
+            recipe_uid=recipe_uid
+        ).first()
+        
+        if not favorite:
+            return jsonify({
+                "error": "Favorite not found",
+                "details": "Esta receta no está en tus favoritos"
+            }), 404
+        
+        # Eliminar favorito
+        db.session.delete(favorite)
+        db.session.commit()
+        
+        return jsonify({
+            "message": "Receta desmarcada de favoritos",
+            "recipe_uid": recipe_uid
+        }), 200
+        
+    except Exception as e:
+        db.session.rollback()
+        print(f"❌ [REMOVE FAVORITE] Error: {str(e)}")
+        return jsonify({
+            "error": "Failed to remove favorite",
+            "details": str(e)
+        }), 500
+
+
+@recipes_bp.route("/generated/favorites", methods=["GET"])
+@jwt_required()
+@swag_from({
+    'tags': ['Recipe Favorites'],
+    'summary': 'Obtener todas las recetas favoritas del usuario',
+    'description': '''
+Obtiene la lista completa de recetas marcadas como favoritas por el usuario autenticado.
+
+### Funcionalidades de Listado:
+- **Paginación**: Control de página y límite de resultados
+- **Ordenamiento**: Por fecha de favorito, rating, nombre o dificultad
+- **Filtros**: Por categoría, dificultad, rating mínimo, tipo de generación
+- **Búsqueda**: Buscar por nombre de receta o ingredientes
+- **Metadata completa**: Incluye datos del favorito (rating, notas, fecha)
+
+### Datos Incluidos:
+- **Receta completa**: Todos los datos de la receta (ingredientes, pasos, etc.)
+- **Metadata de favorito**: Rating personal, notas, fecha de marcado
+- **Estado de imágenes**: URLs e información de imágenes generadas
+- **Estadísticas**: Resumen de favoritos por categoría y rating
+
+### Casos de Uso:
+- Mostrar colección personal de mejores recetas
+- Búsqueda rápida en recetas que gustan al usuario
+- Planificación de menús basada en favoritos
+- Análisis de preferencias personales de cocina
+    ''',
+    'parameters': [
+        {
+            'name': 'page',
+            'in': 'query',
+            'type': 'integer',
+            'required': False,
+            'default': 1,
+            'description': 'Número de página para paginación',
+            'example': 1
+        },
+        {
+            'name': 'limit',
+            'in': 'query',
+            'type': 'integer',
+            'required': False,
+            'default': 20,
+            'minimum': 1,
+            'maximum': 100,
+            'description': 'Número de recetas por página',
+            'example': 20
+        },
+        {
+            'name': 'sort_by',
+            'in': 'query',
+            'type': 'string',
+            'required': False,
+            'enum': ['favorited_at', 'rating', 'recipe_name', 'generated_at'],
+            'default': 'favorited_at',
+            'description': 'Campo para ordenamiento',
+            'example': 'favorited_at'
+        },
+        {
+            'name': 'sort_order',
+            'in': 'query',
+            'type': 'string',
+            'required': False,
+            'enum': ['desc', 'asc'],
+            'default': 'desc',
+            'description': 'Orden de clasificación',
+            'example': 'desc'
+        },
+        {
+            'name': 'category',
+            'in': 'query',
+            'type': 'string',
+            'required': False,
+            'description': 'Filtrar por categoría de receta',
+            'example': 'almuerzo'
+        },
+        {
+            'name': 'min_rating',
+            'in': 'query',
+            'type': 'integer',
+            'required': False,
+            'minimum': 1,
+            'maximum': 5,
+            'description': 'Rating mínimo para filtrar',
+            'example': 4
+        },
+        {
+            'name': 'search',
+            'in': 'query',
+            'type': 'string',
+            'required': False,
+            'description': 'Buscar en nombre de receta',
+            'example': 'pasta'
+        }
+    ],
+    'responses': {
+        200: {
+            'description': 'Lista de recetas favoritas obtenida exitosamente',
+            'examples': {
+                'application/json': {
+                    "favorites": [
+                        {
+                            "favorite_uid": "fav_123456789",
+                            "rating": 5,
+                            "notes": "Mi receta favorita de pasta",
+                            "favorited_at": "2024-01-16T10:30:00Z",
+                            "recipe": {
+                                "uid": "recipe_123456789",
+                                "title": "Pasta Carbonara Gourmet",
+                                "description": "Pasta cremosa con panceta y huevos",
+                                "duration": "25 minutos",
+                                "difficulty": "intermedio",
+                                "servings": 4,
+                                "category": "almuerzo",
+                                "generated_at": "2024-01-15T14:20:00Z",
+                                "image_path": "https://storage.googleapis.com/bucket/recipe_123.jpg",
+                                "image_status": "ready",
+                                "generation_type": "inventory",
+                                "recipe_data": {
+                                    "ingredients": [
+                                        {
+                                            "name": "pasta",
+                                            "quantity": 400,
+                                            "unit": "gr"
+                                        },
+                                        {
+                                            "name": "panceta",
+                                            "quantity": 150,
+                                            "unit": "gr"
+                                        }
+                                    ],
+                                    "steps": [
+                                        "Hervir agua con sal para la pasta",
+                                        "Cocinar la panceta hasta dorar",
+                                        "Mezclar pasta con huevos y queso"
+                                    ]
+                                }
+                            }
+                        }
+                    ],
+                    "pagination": {
+                        "current_page": 1,
+                        "total_pages": 3,
+                        "total_favorites": 45,
+                        "favorites_per_page": 20,
+                        "has_next": True,
+                        "has_prev": False
+                    },
+                    "statistics": {
+                        "total_favorites": 45,
+                        "average_rating": 4.2,
+                        "categories_count": {
+                            "almuerzo": 18,
+                            "cena": 15,
+                            "desayuno": 8,
+                            "postre": 4
+                        },
+                        "ratings_distribution": {
+                            "5": 20,
+                            "4": 15,
+                            "3": 8,
+                            "2": 2,
+                            "1": 0
+                        }
+                    },
+                    "filters_applied": {
+                        "sort_by": "favorited_at",
+                        "sort_order": "desc",
+                        "category": None,
+                        "min_rating": None,
+                        "search": None
+                    }
+                }
+            }
+        }
+    }
+})
+def get_user_favorite_recipes():
+    from src.infrastructure.db.models.recipe_favorites_orm import RecipeFavoritesORM
+    from src.infrastructure.db.models.recipe_generated_orm import RecipeGeneratedORM
+    from src.infrastructure.db.base import db
+    from sqlalchemy import desc, asc
+    
+    user_uid = get_jwt_identity()
+    print(f"⭐ [GET FAVORITES] User: {user_uid}")
+    
+    try:
+        # Parámetros de query
+        page = int(request.args.get('page', 1))
+        limit = min(int(request.args.get('limit', 20)), 100)
+        sort_by = request.args.get('sort_by', 'favorited_at')
+        sort_order = request.args.get('sort_order', 'desc')
+        category_filter = request.args.get('category')
+        min_rating = request.args.get('min_rating')
+        search = request.args.get('search')
+        
+        # Query base con JOIN
+        query = db.session.query(RecipeFavoritesORM, RecipeGeneratedORM).join(
+            RecipeGeneratedORM, RecipeFavoritesORM.recipe_uid == RecipeGeneratedORM.uid
+        ).filter(RecipeFavoritesORM.user_uid == user_uid)
+        
+        # Aplicar filtros
+        if category_filter:
+            query = query.filter(RecipeGeneratedORM.category == category_filter)
+        
+        if min_rating:
+            try:
+                min_rating_int = int(min_rating)
+                query = query.filter(RecipeFavoritesORM.rating >= min_rating_int)
+            except ValueError:
+                pass
+        
+        if search:
+            query = query.filter(RecipeGeneratedORM.title.contains(search))
+        
+        # Aplicar ordenamiento
+        if sort_by == 'favorited_at':
+            sort_field = RecipeFavoritesORM.favorited_at
+        elif sort_by == 'rating':
+            sort_field = RecipeFavoritesORM.rating
+        elif sort_by == 'recipe_name':
+            sort_field = RecipeGeneratedORM.title
+        elif sort_by == 'generated_at':
+            sort_field = RecipeGeneratedORM.generated_at
+        else:
+            sort_field = RecipeFavoritesORM.favorited_at
+        
+        if sort_order == 'desc':
+            query = query.order_by(desc(sort_field))
+        else:
+            query = query.order_by(asc(sort_field))
+        
+        # Paginación
+        offset = (page - 1) * limit
+        total_query = query
+        total_count = total_query.count()
+        
+        results = query.offset(offset).limit(limit).all()
+        
+        # Construir respuesta
+        favorites_list = []
+        categories_count = {}
+        ratings_distribution = {"1": 0, "2": 0, "3": 0, "4": 0, "5": 0}
+        total_rating = 0
+        rated_count = 0
+        
+        for favorite, recipe in results:
+            # Contar estadísticas
+            category = recipe.category or "sin_categoria"
+            categories_count[category] = categories_count.get(category, 0) + 1
+            
+            if favorite.rating:
+                ratings_distribution[str(favorite.rating)] += 1
+                total_rating += favorite.rating
+                rated_count += 1
+            
+            # Construir objeto favorito
+            favorite_data = {
+                "favorite_uid": favorite.uid,
+                "rating": favorite.rating,
+                "notes": favorite.notes,
+                "favorited_at": favorite.favorited_at.isoformat(),
+                "recipe": {
+                    "uid": recipe.uid,
+                    "title": recipe.title,
+                    "description": recipe.description,
+                    "duration": recipe.duration,
+                    "difficulty": recipe.difficulty,
+                    "servings": recipe.servings,
+                    "category": recipe.category,
+                    "generated_at": recipe.generated_at.isoformat(),
+                    "image_path": recipe.image_path,
+                    "image_status": recipe.image_status,
+                    "generation_type": recipe.generation_type,
+                    "recipe_data": recipe.recipe_data
+                }
+            }
+            
+            favorites_list.append(favorite_data)
+        
+        # Calcular paginación
+        total_pages = (total_count + limit - 1) // limit
+        has_next = page < total_pages
+        has_prev = page > 1
+        
+        # Calcular estadísticas
+        avg_rating = round(total_rating / rated_count, 1) if rated_count > 0 else 0
+        
+        return jsonify({
+            "favorites": favorites_list,
+            "pagination": {
+                "current_page": page,
+                "total_pages": total_pages,
+                "total_favorites": total_count,
+                "favorites_per_page": limit,
+                "has_next": has_next,
+                "has_prev": has_prev
+            },
+            "statistics": {
+                "total_favorites": total_count,
+                "average_rating": avg_rating,
+                "categories_count": categories_count,
+                "ratings_distribution": ratings_distribution
+            },
+            "filters_applied": {
+                "sort_by": sort_by,
+                "sort_order": sort_order,
+                "category": category_filter,
+                "min_rating": min_rating,
+                "search": search
+            }
+        }), 200
+        
+    except Exception as e:
+        print(f"❌ [GET FAVORITES] Error: {str(e)}")
+        return jsonify({
+            "error": "Failed to fetch favorites",
+            "details": str(e)
+        }), 500
+
+
+@recipes_bp.route("/generated/<recipe_uid>/favorite", methods=["PUT"])
+@jwt_required()
+@swag_from({
+    'tags': ['Recipe Favorites'],
+    'summary': 'Actualizar rating y notas de receta favorita',
+    'description': '''
+Actualiza el rating personal y/o notas de una receta ya marcada como favorita.
+
+### Funcionalidad:
+- **Actualización parcial**: Permite actualizar solo rating o solo notas
+- **Validación de existencia**: Verifica que la receta esté marcada como favorita
+- **Validación de propiedad**: Solo el usuario propietario puede actualizar
+- **Flexibilidad**: Acepta campos opcionales en el body
+
+### Casos de Uso:
+- Actualizar rating después de preparar la receta nuevamente
+- Agregar notas con mejoras o variaciones probadas
+- Corregir rating inicial después de más experiencia
+- Documentar modificaciones exitosas a la receta original
+    ''',
+    'parameters': [
+        {
+            'name': 'recipe_uid',
+            'in': 'path',
+            'type': 'string',
+            'required': True,
+            'description': 'UID de la receta favorita a actualizar',
+            'example': 'recipe_123456789'
+        },
+        {
+            'name': 'body',
+            'in': 'body',
+            'required': True,
+            'schema': {
+                'type': 'object',
+                'properties': {
+                    'rating': {
+                        'type': 'integer',
+                        'minimum': 1,
+                        'maximum': 5,
+                        'description': 'Nuevo rating personal de 1 a 5 estrellas',
+                        'example': 5
+                    },
+                    'notes': {
+                        'type': 'string',
+                        'maxLength': 500,
+                        'description': 'Nuevas notas personales sobre la receta',
+                        'example': 'Excelente! Agregué un poco más de ajo y quedó perfecta'
+                    }
+                }
+            }
+        }
+    ],
+    'responses': {
+        200: {
+            'description': 'Favorito actualizado exitosamente',
+            'examples': {
+                'application/json': {
+                    "message": "Favorito actualizado exitosamente",
+                    "favorite": {
+                        "uid": "fav_123456789",
+                        "recipe_uid": "recipe_123456789",
+                        "user_uid": "firebase_user_123",
+                        "rating": 5,
+                        "notes": "Excelente! Agregué un poco más de ajo y quedó perfecta",
+                        "favorited_at": "2024-01-15T10:30:00Z",
+                        "updated_at": "2024-01-16T14:45:00Z"
+                    }
+                }
+            }
+        },
+        400: {
+            'description': 'Datos inválidos',
+            'examples': {
+                'application/json': {
+                    'error': 'Invalid rating',
+                    'details': 'Rating debe ser un número entero entre 1 y 5'
+                }
+            }
+        },
+        404: {
+            'description': 'Favorito no encontrado',
+            'examples': {
+                'application/json': {
+                    'error': 'Favorite not found',
+                    'details': 'Esta receta no está en tus favoritos'
+                }
+            }
+        }
+    }
+})
+def update_recipe_favorite(recipe_uid):
+    from src.infrastructure.db.models.recipe_favorites_orm import RecipeFavoritesORM
+    from src.infrastructure.db.base import db
+    
+    user_uid = get_jwt_identity()
+    print(f"✏️ [UPDATE FAVORITE] User: {user_uid}, Recipe: {recipe_uid}")
+    
+    try:
+        # Buscar el favorito
+        favorite = RecipeFavoritesORM.query.filter_by(
+            user_uid=user_uid,
+            recipe_uid=recipe_uid
+        ).first()
+        
+        if not favorite:
+            return jsonify({
+                "error": "Favorite not found",
+                "details": "Esta receta no está en tus favoritos"
+            }), 404
+        
+        # Obtener datos del body
+        data = request.get_json()
+        if not data:
+            return jsonify({
+                "error": "No data provided",
+                "details": "Se requiere enviar al menos rating o notes"
+            }), 400
+        
+        # Validar y actualizar campos
+        if 'rating' in data:
+            rating = data['rating']
+            if not isinstance(rating, int) or rating < 1 or rating > 5:
+                return jsonify({
+                    "error": "Invalid rating",
+                    "details": "Rating debe ser un número entero entre 1 y 5"
+                }), 400
+            favorite.rating = rating
+        
+        if 'notes' in data:
+            notes = data['notes']
+            if isinstance(notes, str) and len(notes) <= 500:
+                favorite.notes = notes
+            elif isinstance(notes, str):
+                return jsonify({
+                    "error": "Notes too long",
+                    "details": "Las notas no pueden exceder 500 caracteres"
+                }), 400
+        
+        # Guardar cambios
+        db.session.commit()
+        
+        return jsonify({
+            "message": "Favorito actualizado exitosamente",
+            "favorite": {
+                "uid": favorite.uid,
+                "recipe_uid": recipe_uid,
+                "user_uid": user_uid,
+                "rating": favorite.rating,
+                "notes": favorite.notes,
+                "favorited_at": favorite.favorited_at.isoformat(),
+                "updated_at": datetime.now(timezone.utc).isoformat()
+            }
+        }), 200
+        
+    except Exception as e:
+        db.session.rollback()
+        print(f"❌ [UPDATE FAVORITE] Error: {str(e)}")
+        return jsonify({
+            "error": "Failed to update favorite",
             "details": str(e)
         }), 500

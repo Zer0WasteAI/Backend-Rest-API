@@ -20,45 +20,62 @@ class GeminiRecipeGeneratorService(IARecipeGeneratorService):
     def generate_recipes(self, data: Dict[str, Any], num_recipes: int = 2, recipe_categories: List[str] = []) -> Dict[str, Any]:
         print(f"🍳 [GEMINI SERVICE] Starting recipe generation with data: {data.keys()}")
         try:
+            # Get user's previous recipes to avoid duplicates
+            user_uid = data.get('user_uid')
+            previous_recipes = self._get_user_recent_recipes(user_uid) if user_uid else []
+            
+            # Add anti-duplication context
+            data['previous_recipes'] = previous_recipes
+            data['generation_session_id'] = data.get('generation_session_id', self._generate_session_id())
+            
             # Use optimized prompt if performance mode is enabled
             if self.performance_mode:
                 prompt = self._build_optimized_prompt(data, num_recipes, recipe_categories)
                 generation_config = {
-                    "temperature": 0.5,  # Balanced creativity/consistency
-                    "max_output_tokens": 1500 * num_recipes,  # Proportional limit
+                    "temperature": 0.7,  # Increased for more variation
+                    "max_output_tokens": 1500 * num_recipes,
                     "candidate_count": 1,
-                    "top_k": 40,
-                    "top_p": 0.9
+                    "top_k": 50,  # Increased for more diversity
+                    "top_p": 0.95  # Increased for more variety
                 }
                 print(f"🚀 [OPTIMIZED] Using compact prompt: {len(prompt)} chars (75% reduction)")
             else:
                 prompt = self._build_prompt(data, num_recipes, recipe_categories)
-                generation_config = {"temperature": 0.6}
+                generation_config = {"temperature": 0.8}  # Increased for more variation
                 print(f"🍳 [GEMINI SERVICE] Prompt length: {len(prompt)} characters")
             
-            # Check cache first
+            # Modified cache strategy for anti-duplication
             cache_params = {
                 'temperature': generation_config.get('temperature'),
                 'num_recipes': num_recipes,
-                'language': data.get('user_profile', {}).get('language', 'es')
+                'language': data.get('user_profile', {}).get('language', 'es'),
+                'session_id': data.get('generation_session_id'),
+                'user_uid': user_uid,
+                'has_previous': len(previous_recipes) > 0
             }
             
-            cached_response = ai_cache.get_cached_response(
-                'recipe_generation', prompt, **cache_params
-            )
+            # Skip cache if user has recent recipes to ensure freshness
+            use_cache = len(previous_recipes) == 0
+            cached_response = None
             
-            if cached_response:
+            if use_cache:
+                cached_response = ai_cache.get_cached_response(
+                    'recipe_generation', prompt, **cache_params
+                )
+            
+            if cached_response and use_cache:
                 response_text = cached_response
                 print(f"🎯 [CACHE HIT] Using cached response (API call saved)")
             else:
-                print(f"💾 [CACHE MISS] Generating new response")
+                print(f"💾 [GENERATING] Creating fresh response to avoid duplicates")
                 response = self.model.generate_content(prompt, generation_config=generation_config)
                 response_text = response.text
                 
-                # Cache the response
-                ai_cache.cache_response(
-                    'recipe_generation', prompt, response_text, **cache_params
-                )
+                # Cache only for new users without previous recipes
+                if use_cache:
+                    ai_cache.cache_response(
+                        'recipe_generation', prompt, response_text, **cache_params
+                    )
             print(f"🍳 [GEMINI SERVICE] Got response from Gemini")
             print(f"🍳 [GEMINI SERVICE] Response text (first 200 chars): {response_text[:200]}...")
             
@@ -297,6 +314,7 @@ class GeminiRecipeGeneratorService(IARecipeGeneratorService):
         priorities = data.get("priorities", [])
         preferences = data.get("preferences", [])
         user_profile = data.get("user_profile", {})
+        previous_recipes = data.get("previous_recipes", [])
         
         # Limit input data to most relevant items
         top_ingredients = ingredients[:8]  # Top 8 ingredients only
@@ -317,16 +335,25 @@ class GeminiRecipeGeneratorService(IARecipeGeneratorService):
         # Compact category list
         categories = ", ".join(recipe_categories[:2]) if recipe_categories else "ninguna"
         
+        # Anti-duplication context
+        avoid_duplicates = ""
+        if previous_recipes:
+            recent_titles = previous_recipes[:10]  # Last 10 recipes
+            if language == "en":
+                avoid_duplicates = f" AVOID repeating these recent recipes: {', '.join(recent_titles)}. Create completely different dishes."
+            else:
+                avoid_duplicates = f" EVITA repetir estas recetas recientes: {', '.join(recent_titles)}. Crea platos completamente diferentes."
+        
         if language == "en":
-            return f"""Peruvian chef: generate {num_recipes} recipes JSON using: {ingredients_str}.
-Prioritize: {', '.join(top_priorities)}. Preferences: {', '.join(top_preferences)}. Categories: {categories}.
+            return f"""Peruvian chef: generate {num_recipes} UNIQUE recipes JSON using: {ingredients_str}.
+Prioritize: {', '.join(top_priorities)}. Preferences: {', '.join(top_preferences)}. Categories: {categories}.{avoid_duplicates}
 
 Exact format: [{{"title":"str","duration":"15-45 min","difficulty":"Easy|Intermediate|Difficult","category":"breakfast|lunch|dinner|dessert","description":"realistic dish description for image","ingredients":[{{"name":"str","quantity":num,"type_unit":"str"}}],"steps":[{{"step_order":1,"description":"detailed step"}}],"footer":"food waste tip"}}]
 
 Measurement units {units_hint}. Reply only valid JSON."""
         else:
-            return f"""Chef peruano: genera {num_recipes} recetas JSON usando: {ingredients_str}.
-Prioriza: {', '.join(top_priorities)}. Preferencias: {', '.join(top_preferences)}. Categorías: {categories}.
+            return f"""Chef peruano: genera {num_recipes} recetas ÚNICAS JSON usando: {ingredients_str}.
+Prioriza: {', '.join(top_priorities)}. Preferencias: {', '.join(top_preferences)}. Categorías: {categories}.{avoid_duplicates}
 
 Formato exacto: [{{"title":"str","duration":"15-45 min","difficulty":"Fácil|Intermedio|Difícil","category":"desayuno|almuerzo|cena|postre","description":"descripción realista del plato para imagen","ingredients":[{{"name":"str","quantity":num,"type_unit":"str"}}],"steps":[{{"step_order":1,"description":"paso detallado"}}],"footer":"consejo de aprovechamiento"}}]
 
@@ -380,6 +407,38 @@ Unidades {units_hint}. Responde solo JSON válido."""
         json_text = re.sub(r'(\w+):', r'"\1":', json_text)
         
         return json_text
+    
+    def _get_user_recent_recipes(self, user_uid: str) -> List[str]:
+        """Get user's recently generated recipe titles to avoid duplicates"""
+        try:
+            from src.infrastructure.db.models.recipe_generated_orm import RecipeGeneratedORM
+            from src.infrastructure.db.base import db
+            from datetime import datetime, timedelta
+            
+            # Get recipes from last 7 days
+            cutoff_date = datetime.now() - timedelta(days=7)
+            
+            recent_recipes = db.session.query(RecipeGeneratedORM.title)\
+                .filter(RecipeGeneratedORM.user_uid == user_uid)\
+                .filter(RecipeGeneratedORM.generated_at >= cutoff_date)\
+                .limit(20)\
+                .all()
+            
+            titles = [recipe.title for recipe in recent_recipes]
+            print(f"📋 [ANTI-DUP] Found {len(titles)} recent recipes for user {user_uid}")
+            return titles
+            
+        except Exception as e:
+            print(f"⚠️ [ANTI-DUP] Error fetching recent recipes: {e}")
+            return []
+    
+    def _generate_session_id(self) -> str:
+        """Generate unique session ID for this generation request"""
+        import uuid
+        from datetime import datetime
+        session_id = f"{datetime.now().strftime('%Y%m%d_%H%M%S')}_{uuid.uuid4().hex[:8]}"
+        print(f"🎲 [SESSION] Generated session ID: {session_id}")
+        return session_id
     
     def _calculate_token_metrics(self, prompt: str, response: str) -> Dict[str, Any]:
         """Calculate token usage metrics for monitoring"""
