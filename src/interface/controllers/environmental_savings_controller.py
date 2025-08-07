@@ -9,6 +9,8 @@ from src.application.factories.environmental_savings_factory import (
     make_get_environmental_calculations_by_status_use_case,
 make_sum_environmental_calculations_by_user
 )
+from src.infrastructure.optimization.rate_limiter import smart_rate_limit
+from src.infrastructure.optimization.cache_service import smart_cache, cache_user_data
 from src.shared.exceptions.custom import InvalidRequestDataException, RecipeNotFoundException
 
 environmental_savings_bp = Blueprint("environmental_savings", __name__)
@@ -16,6 +18,8 @@ environmental_savings_bp = Blueprint("environmental_savings", __name__)
 
 @environmental_savings_bp.route("/calculate/from-title", methods=["POST"])
 @jwt_required()
+@smart_rate_limit('ai_environmental')  # 🛡️ Rate limit: 10 requests/min for environmental AI
+@smart_cache('ai_environmental_impact', timeout=3600)  # 🚀 Cache: 1 hour for environmental calculations
 @swag_from({
     'tags': ['Environmental'],
     'summary': 'Calcular ahorro ambiental por título de receta',
@@ -171,6 +175,8 @@ def calculate_savings_from_title():
 
 @environmental_savings_bp.route("/calculate/from-uid/<recipe_uid>", methods=["POST"])
 @jwt_required()
+@smart_rate_limit('ai_environmental')  # 🛡️ Rate limit: 10 requests/min for environmental AI
+@smart_cache('ai_environmental_impact', timeout=3600)  # 🚀 Cache: 1 hour for environmental calculations
 @swag_from({
     'tags': ['Environmental Impact'],
     'summary': 'Calcular ahorro ambiental por UID de receta',
@@ -674,6 +680,7 @@ def get_calculations_by_status():
 
 @environmental_savings_bp.route("/summary", methods=["GET"])
 @jwt_required()
+@cache_user_data('environmental_summary', timeout=1800)  # 🚀 Cache: 30 min for environmental summary
 @swag_from({
     'tags': ['Environmental Impact'],
     'summary': 'Obtener resumen consolidado de impacto ambiental del usuario',

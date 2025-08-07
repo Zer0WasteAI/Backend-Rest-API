@@ -137,7 +137,7 @@ class ZeroWasteCacheService:
             return False
     
     def clear_user_cache(self, user_uid: str) -> bool:
-        """Limpia todo el caché de un usuario específico"""
+        """Limpia to/do el caché de un usuario específico"""
         
         if not self.enabled or not self.cache:
             return False

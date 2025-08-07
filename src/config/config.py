@@ -20,6 +20,16 @@ class Config:
         f"mysql+pymysql://{DB_USER}:{DB_PASS}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
     )
     SQLALCHEMY_TRACK_MODIFICATIONS = False
+    
+    # Optimización de pool de conexiones DB
+    SQLALCHEMY_ENGINE_OPTIONS = {
+        'pool_size': 20,           # Conexiones permanentes en el pool
+        'max_overflow': 40,        # Conexiones adicionales si se necesitan
+        'pool_timeout': 30,        # Timeout esperando una conexión libre
+        'pool_recycle': 3600,      # Reciclar conexiones cada hora
+        'pool_pre_ping': True,     # Validar conexiones antes de usar
+        'echo': False              # No mostrar queries SQL (producción)
+    }
 
     GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
     FIREBASE_CREDENTIALS_PATH = os.getenv("FIREBASE_CREDENTIALS_PATH")

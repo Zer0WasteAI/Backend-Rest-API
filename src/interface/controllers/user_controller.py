@@ -5,12 +5,14 @@ from src.infrastructure.db.schemas.profile_user_schema import ProfileUser
 from src.application.factories.auth_usecase_factory import make_profile_repository, make_firestore_profile_service
 from src.infrastructure.security.rate_limiter import api_rate_limit
 from src.infrastructure.security.security_logger import security_logger, SecurityEventType
+from src.infrastructure.optimization.cache_service import cache_user_data
 
 user_bp = Blueprint('user_bp', __name__)
 
 @user_bp.route('/profile', methods=['GET'])
 @jwt_required()
 @api_rate_limit
+@cache_user_data('user_profile', timeout=600)  # 🚀 Cache: 10 min for user profile data
 @swag_from(
     {
         'tags': ['User'],

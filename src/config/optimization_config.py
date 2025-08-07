@@ -13,6 +13,13 @@ class OptimizationConfig:
     CACHE_TYPE = 'redis'
     CACHE_DEFAULT_TIMEOUT = 300  # 5 minutos por defecto
     
+    # Optimización de pool de conexiones Redis
+    REDIS_CONNECTION_POOL_KWARGS = {
+        'max_connections': 50,
+        'retry_on_timeout': True,
+        'socket_keepalive': True
+    }
+    
     # =================== RATE LIMITING CONFIG ===================
     RATELIMIT_STORAGE_URL = os.getenv('REDIS_URL', 'redis://localhost:6379/1')
     RATELIMIT_STRATEGY = "fixed-window"
@@ -105,6 +112,7 @@ class OptimizationConfig:
             'CACHE_REDIS_URL': cls.REDIS_URL,
             'CACHE_DEFAULT_TIMEOUT': cls.CACHE_DEFAULT_TIMEOUT,
             'CACHE_KEY_PREFIX': 'zerowasteai:',
+            'CACHE_REDIS_CONNECTION_POOL_KWARGS': cls.REDIS_CONNECTION_POOL_KWARGS
         }
     
     @classmethod

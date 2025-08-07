@@ -15,12 +15,18 @@ from src.application.factories.planning_usecase_factory import (
 )
 from src.application.factories.recipe_usecase_factory import make_recipe_image_generator_service
 from src.infrastructure.async_tasks.async_task_service import async_task_service
+from src.infrastructure.optimization.rate_limiter import smart_rate_limit
+from src.infrastructure.optimization.cache_service import cache_user_data
 from src.shared.exceptions.custom import InvalidRequestDataException
+import logging
+
+logger = logging.getLogger(__name__)
 
 planning_bp = Blueprint("planning", __name__)
 
 @planning_bp.route("/save", methods=["POST"])
 @jwt_required()
+@smart_rate_limit('planning_crud')  # 🛡️ Rate limit: 30 requests/min for meal plan CRUD
 @swag_from({
     'tags': ['Planning'],
     'summary': 'Guardar plan de comidas',
@@ -158,6 +164,7 @@ def save_meal_plan():
 
 @planning_bp.route("/update", methods=["PUT"])
 @jwt_required()
+@smart_rate_limit('planning_crud')  # 🛡️ Rate limit: 30 requests/min for meal plan CRUD
 @swag_from({
     'tags': ['Meal Planning'],
     'summary': 'Actualizar plan de comidas existente',
@@ -387,6 +394,7 @@ def update_meal_plan():
 
 @planning_bp.route("/delete", methods=["DELETE"])
 @jwt_required()
+@smart_rate_limit('planning_crud')  # 🛡️ Rate limit: 30 requests/min for meal plan CRUD
 @swag_from({
     'tags': ['Meal Planning'],
     'summary': 'Eliminar plan de comidas de fecha específica',
@@ -511,6 +519,7 @@ def delete_meal_plan():
 
 @planning_bp.route("/get", methods=["GET"])
 @jwt_required()
+@cache_user_data('meal_plans', timeout=300)  # 🚀 Cache: 5 min for meal plan data
 @swag_from({
     'tags': ['Meal Planning'],
     'summary': 'Obtener plan de comidas para fecha específica',
@@ -676,6 +685,7 @@ def get_meal_plan_by_date():
 
 @planning_bp.route("/all", methods=["GET"])
 @jwt_required()
+@cache_user_data('meal_plans', timeout=300)  # 🚀 Cache: 5 min for all meal plans
 @swag_from({
     'tags': ['Meal Planning'],
     'summary': 'Obtener todos los planes de comidas del usuario',
@@ -855,6 +865,7 @@ def get_all_meal_plans():
 
 @planning_bp.route("/dates", methods=["GET"])
 @jwt_required()
+@cache_user_data('meal_plan_dates', timeout=600)  # 🚀 Cache: 10 min for meal plan dates
 @swag_from({
     'tags': ['Meal Planning'],
     'summary': 'Obtener fechas con planes de comidas existentes',
@@ -987,4 +998,145 @@ def get_meal_plan_dates():
 
     return jsonify({"dates": [d.isoformat() for d in dates]})
 
-#TODO: Actualizar images cuando ya se generaron
+@planning_bp.route("/images/update", methods=["POST"])
+@jwt_required()
+@swag_from({
+    'tags': ['Planning'],
+    'summary': 'Actualizar estado de imágenes en meal plans',
+    'description': '''
+Actualiza el estado de las imágenes de recetas en los meal plans cuando ya han sido generadas.
+
+### Funcionalidades:
+- **Sincronización automática**: Actualiza meal plans con imágenes generadas recientemente
+- **Verificación de estado**: Revisa el estado actual de generación de imágenes
+- **Bulk update**: Actualiza múltiples meal plans en una sola operación
+
+### Casos de uso:
+- Después de que se complete la generación de imágenes en background
+- Sincronización manual de estados de imágenes
+- Recuperación de imágenes que fallaron en actualizarse automáticamente
+
+### Response:
+- **updated_meal_plans**: Número de meal plans actualizados
+- **updated_recipes**: Número de recetas con imágenes actualizadas
+- **details**: Lista detallada de actualizaciones realizadas
+    ''',
+    'responses': {
+        200: {
+            'description': 'Imágenes actualizadas exitosamente',
+            'schema': {
+                'type': 'object',
+                'properties': {
+                    'success': {'type': 'boolean', 'example': True},
+                    'message': {'type': 'string', 'example': 'Imágenes de meal plans actualizadas exitosamente'},
+                    'updated_meal_plans': {'type': 'integer', 'example': 5},
+                    'updated_recipes': {'type': 'integer', 'example': 12},
+                    'details': {
+                        'type': 'array',
+                        'items': {
+                            'type': 'object',
+                            'properties': {
+                                'meal_plan_date': {'type': 'string', 'example': '2024-01-20'},
+                                'recipe_uid': {'type': 'string', 'example': 'recipe_123'},
+                                'recipe_name': {'type': 'string', 'example': 'Pasta Carbonara'},
+                                'old_image_status': {'type': 'string', 'example': 'generating'},
+                                'new_image_status': {'type': 'string', 'example': 'ready'},
+                                'image_path': {'type': 'string', 'example': 'https://storage.googleapis.com/bucket/images/pasta-123.jpg'}
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        401: {'description': 'Token de autenticación inválido'},
+        500: {'description': 'Error interno del servidor'}
+    }
+})
+def update_meal_plan_images():
+    """Actualiza las imágenes de recetas en meal plans cuando ya se han generado"""
+    user_uid = get_jwt_identity()
+    
+    try:
+        from src.infrastructure.db.models.daily_meal_plan_orm import DailyMealPlanORM
+        from src.infrastructure.db.models.recipe_generated_orm import RecipeGeneratedORM
+        from src.infrastructure.db.base import db
+        
+        # Obtener todos los meal plans del usuario
+        meal_plans = db.session.query(DailyMealPlanORM)\
+            .filter_by(user_uid=user_uid)\
+            .all()
+        
+        updated_meal_plans = 0
+        updated_recipes = 0
+        update_details = []
+        
+        for meal_plan in meal_plans:
+            meal_plan_updated = False
+            
+            # Parsear el JSON de meal_data
+            meal_data = meal_plan.meal_data if meal_plan.meal_data else {}
+            
+            # Revisar cada comida (breakfast, lunch, dinner, snacks)
+            for meal_type in ['breakfast', 'lunch', 'dinner', 'snacks']:
+                if meal_type in meal_data:
+                    recipes_list = meal_data[meal_type]
+                    
+                    for i, recipe_item in enumerate(recipes_list):
+                        if 'recipe_uid' in recipe_item:
+                            recipe_uid = recipe_item['recipe_uid']
+                            
+                            # Buscar la receta generada más reciente
+                            recipe_orm = db.session.query(RecipeGeneratedORM)\
+                                .filter_by(uid=recipe_uid)\
+                                .first()
+                            
+                            if recipe_orm and recipe_orm.image_path:
+                                # Verificar si necesita actualización
+                                current_image_status = recipe_item.get('image_status', 'generating')
+                                current_image_path = recipe_item.get('image_path')
+                                
+                                # Actualizar si el estado o path cambió
+                                if (current_image_status != recipe_orm.image_status or 
+                                    current_image_path != recipe_orm.image_path):
+                                    
+                                    # Actualizar datos en meal_plan
+                                    recipe_item['image_status'] = recipe_orm.image_status
+                                    recipe_item['image_path'] = recipe_orm.image_path
+                                    recipe_item['recipe_name'] = recipe_orm.name
+                                    
+                                    meal_plan_updated = True
+                                    updated_recipes += 1
+                                    
+                                    update_details.append({
+                                        'meal_plan_date': meal_plan.date.isoformat(),
+                                        'meal_type': meal_type,
+                                        'recipe_uid': recipe_uid,
+                                        'recipe_name': recipe_orm.name,
+                                        'old_image_status': current_image_status,
+                                        'new_image_status': recipe_orm.image_status,
+                                        'image_path': recipe_orm.image_path
+                                    })
+            
+            # Guardar cambios si hubo actualizaciones
+            if meal_plan_updated:
+                meal_plan.meal_data = meal_data
+                updated_meal_plans += 1
+        
+        # Commit todos los cambios
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'message': f'Imágenes actualizadas exitosamente en {updated_meal_plans} meal plans',
+            'updated_meal_plans': updated_meal_plans,
+            'updated_recipes': updated_recipes,
+            'details': update_details
+        }), 200
+        
+    except Exception as e:
+        db.session.rollback()
+        logger.error(f"Error updating meal plan images: {str(e)}")
+        return jsonify({
+            'success': False,
+            'message': f'Error actualizando imágenes de meal plans: {str(e)}'
+        }), 500

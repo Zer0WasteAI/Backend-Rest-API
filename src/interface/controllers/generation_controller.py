@@ -5,11 +5,13 @@ from src.infrastructure.db.base import db
 from src.application.factories.generation_usecase_factory import make_generation_repository
 from src.infrastructure.async_tasks.async_task_service import async_task_service
 from src.infrastructure.db.models.async_task_orm import AsyncTaskORM
+from src.infrastructure.optimization.rate_limiter import smart_rate_limit
 
 generation_bp = Blueprint("generation", __name__)
 
 @generation_bp.route("/images/status/<task_id>", methods=["GET"])
 @jwt_required()
+@smart_rate_limit('data_read')  # 🛡️ Rate limit: 100 requests/min for status checks
 @swag_from({
     'tags': ['Image Generation'],
     'summary': 'Verificar estado de generación de imagen',
@@ -172,6 +174,7 @@ def get_generation_images_status(task_id):
 
 @generation_bp.route("/<generation_id>/images", methods=["GET"])
 @jwt_required()
+@smart_rate_limit('data_read')  # 🛡️ Rate limit: 100 requests/min for status checks
 @swag_from({
     'tags': ['Image Generation'],
     'summary': 'Obtener recetas generadas con imágenes actualizadas',

@@ -15,6 +15,7 @@ from src.application.factories.auth_usecase_factory import (
 )
 from src.interface.middlewares.firebase_auth_decorator import verify_firebase_token
 from src.infrastructure.security.rate_limiter import auth_rate_limit, refresh_rate_limit, api_rate_limit
+from src.infrastructure.optimization.rate_limiter import smart_rate_limit
 from src.infrastructure.security.security_logger import security_logger, SecurityEventType
 from src.shared.exceptions.custom import InvalidTokenException
 from datetime import datetime, timezone
@@ -108,6 +109,7 @@ def firebase_debug():
     return jsonify(debug_info), 200
 
 @auth_bp.route("/refresh", methods=["POST"])
+@smart_rate_limit('auth_refresh')  # 🛡️ Rate limit: 3 requests/min for token refresh
 @jwt_required(refresh=True)
 @swag_from({
     'tags': ['Auth'],
@@ -319,6 +321,7 @@ def logout():
         return jsonify({"error": "Logout failed"}), 500
 
 @auth_bp.route("/firebase-signin", methods=["POST"])
+@smart_rate_limit('auth_signin')  # 🛡️ Rate limit: 5 requests/min for auth signin 
 @verify_firebase_token
 @swag_from({
     'tags': ['Auth'],

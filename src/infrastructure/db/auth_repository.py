@@ -34,7 +34,7 @@ class AuthRepository:
 
     def update_jwt_token(self, uid: str, jwt_token: str):
         """Actualiza el estado del JWT para un usuario (para logout)"""
-        # Nota: Este método está aquí para compatibilidad con LogoutUseCase
+        # Nota: Este méto/do está aquí para compatibilidad con LogoutUseCase
         # pero la nueva implementación usa el sistema de blacklist
         auth_user = AuthUser.query.filter_by(uid=uid).first()
         if auth_user:

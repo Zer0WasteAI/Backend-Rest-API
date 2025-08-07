@@ -272,6 +272,8 @@ def add_ingredients():
 
 @inventory_bp.route("", methods=["GET"])
 @jwt_required()
+@smart_rate_limit('data_read')  # 🛡️ Rate limit: 100 requests/min for data reads
+@cache_user_data('inventory_basic', timeout=300)  # 🚀 Cache: 5 min for basic inventory
 @swag_from({
     'tags': ['Inventory'],
     'summary': 'Obtener inventario completo del usuario',
@@ -491,6 +493,7 @@ def get_inventory():
 
 @inventory_bp.route("/complete", methods=["GET"])
 @jwt_required()
+@cache_user_data('inventory_complete', timeout=600)  # 🚀 Cache: 10 min for complete inventory with AI data
 @swag_from({
     'tags': ['Inventory'],
     'summary': 'Obtener inventario completo con análisis IA enriquecido',
@@ -741,6 +744,7 @@ def get_inventory_complete():
 
 @inventory_bp.route("/ingredients/<ingredient_name>/<added_at>", methods=["PUT"])
 @jwt_required()
+@smart_rate_limit('inventory_crud')  # 🛡️ Rate limit: 50 requests/min for CRUD operations
 @swag_from({
     'tags': ['Inventory'],
     'summary': 'Actualizar información completa de un stack de ingrediente',
@@ -956,6 +960,7 @@ def update_ingredient(ingredient_name, added_at):
 
 @inventory_bp.route("/ingredients/<ingredient_name>/<added_at>", methods=["DELETE"])
 @jwt_required()
+@smart_rate_limit('inventory_crud')  # 🛡️ Rate limit: 50 requests/min for CRUD operations
 @swag_from({
     'tags': ['Inventory'],
     'summary': 'Eliminar stack específico de ingrediente',
@@ -1123,6 +1128,8 @@ def delete_ingredient(ingredient_name, added_at):
 
 @inventory_bp.route("/expiring", methods=["GET"])
 @jwt_required()
+@smart_rate_limit('data_read')  # 🛡️ Rate limit: 100 requests/min for data reads
+@cache_user_data('expiring_items', timeout=900)  # 🚀 Cache: 15 min for expiring items
 @swag_from({
     'tags': ['Inventory'],
     'summary': 'Obtener elementos próximos a vencer',
@@ -1227,6 +1234,7 @@ def get_expiring_items():
 
 @inventory_bp.route("/ingredients/from-recognition", methods=["POST"])
 @jwt_required()
+@smart_rate_limit('inventory_bulk')  # 🛡️ Rate limit: 10 requests/min for recognition operations
 @swag_from({
     'tags': ['Inventory'],
     'summary': 'Agregar ingredientes desde reconocimiento IA con enriquecimiento automático',
@@ -1670,6 +1678,7 @@ def _enrich_ingredients_with_enhanced_data(ingredients_data: list[dict], ai_serv
 
 @inventory_bp.route("/foods/from-recognition", methods=["POST"])
 @jwt_required()
+@smart_rate_limit('inventory_bulk')  # 🛡️ Rate limit: 10 requests/min for recognition operations
 @swag_from({
     'tags': ['Inventory'],
     'summary': 'Agregar comidas desde reconocimiento IA con enriquecimiento automático',
@@ -2633,6 +2642,7 @@ def update_food_quantity(food_name, added_at):
 
 @inventory_bp.route("/ingredients/<ingredient_name>", methods=["DELETE"])
 @jwt_required()
+@smart_rate_limit('inventory_crud')  # 🛡️ Rate limit: 50 requests/min for CRUD operations
 @swag_from({
     'tags': ['Inventory'],
     'summary': 'Eliminar ingrediente completo del inventario',
@@ -3092,7 +3102,7 @@ def mark_ingredient_stack_consumed(ingredient_name, added_at):
     Puede ser consumo parcial o total.
     
     URL: POST /api/inventory/ingredients/Tomate/2025-01-01T10:00:00Z/consume
-    Body: { "consumed_quantity": 2.5 } (opcional - por defecto consume todo)
+    Body: { "consumed_quantity": 2.5 } (opcional - por defecto consume to/do)
     """
     from urllib.parse import unquote
     
@@ -3403,7 +3413,7 @@ def mark_food_item_consumed(food_name, added_at):
     Puede ser consumo parcial o total.
     
     URL: POST /api/inventory/foods/Pasta con Tomate/2025-01-01T10:00:00Z/consume
-    Body: { "consumed_portions": 1.5 } (opcional - por defecto consume todo)
+    Body: { "consumed_portions": 1.5 } (opcional - por defecto consume to/do)
     """
     from urllib.parse import unquote
     

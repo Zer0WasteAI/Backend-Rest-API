@@ -28,7 +28,7 @@ class RecognizeIngredientsCompleteUseCase:
             file = self.storage_adapter.get_image(path)
             images_files.append(file)
 
-        # Usar el nuevo método de reconocimiento completo (ya incluye environmental + utilization en paralelo)
+        # Usar el nuevo méto/do de reconocimiento completo (ya incluye environmental + utilization en paralelo)
         result = self.ai_service.recognize_ingredients_complete(images_files)
         print(f"🎯 AI processing complete for {len(result['ingredients'])} ingredients")
 
@@ -47,7 +47,7 @@ class RecognizeIngredientsCompleteUseCase:
         current_time = datetime.now(timezone.utc)
         print(f"🚀 Final processing for {len(result['ingredients'])} ingredients with MAXIMUM parallelization...")
         
-        # 1. Función para procesar TODO de cada ingrediente en paralelo
+        # 1. Función para procesar TO/DO de cada ingrediente en paralelo
         def process_complete_ingredient(ingredient_data):
             ingredient, user_uid, current_time = ingredient_data
             ingredient_name = ingredient["name"]
@@ -85,7 +85,7 @@ class RecognizeIngredientsCompleteUseCase:
                     "added_at": current_time.isoformat()
                 }, str(e)
         
-        # 2. Procesar TODO en paralelo (máximo 3 threads)
+        # 2. Procesar TO/DO en paralelo (máximo 3 threads)
         final_results = {}
         with ThreadPoolExecutor(max_workers=3) as executor:
             thread_data = [(ingredient, user_uid, current_time) for ingredient in result["ingredients"]]

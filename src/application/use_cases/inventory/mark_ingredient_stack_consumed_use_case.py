@@ -15,7 +15,7 @@ class MarkIngredientStackConsumedUseCase:
             user_uid: UID del usuario
             ingredient_name: Nombre del ingrediente
             added_at: Timestamp del stack (ISO format)
-            consumed_quantity: Cantidad consumida (opcional, por defecto consume todo el stack)
+            consumed_quantity: Cantidad consumida (opcional, por defecto consume to/do el stack)
             
         Returns:
             dict: Información sobre lo que se marcó como consumido
@@ -35,7 +35,7 @@ class MarkIngredientStackConsumedUseCase:
         
         # Determinar cantidad a consumir
         if consumed_quantity is None:
-            # Consumir todo el stack
+            # Consumir to/do el stack
             consumed_quantity = current_quantity
             action = "full_consumption"
         else:

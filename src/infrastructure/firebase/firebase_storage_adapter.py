@@ -63,7 +63,7 @@ class FirebaseStorageAdapter:
             print(f"🔍 Extracted bucket path: {bucket_path}")
             return bucket_path
         else:
-            # Fallback: tomar todo después de la última barra, antes de parámetros
+            # Fallback: tomar to/do después de la última barra, antes de parámetros
             path_part = url.split('/')[-1].split('?')[0]
             print(f"🔍 Fallback bucket path: {path_part}")
             return path_part

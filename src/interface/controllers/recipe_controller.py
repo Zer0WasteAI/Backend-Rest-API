@@ -22,14 +22,20 @@ from src.application.factories.recipe_usecase_factory import (
 )
 
 from src.infrastructure.async_tasks.async_task_service import async_task_service
+from src.infrastructure.optimization.rate_limiter import smart_rate_limit
+from src.infrastructure.optimization.cache_service import smart_cache, cache_user_data
 from src.shared.exceptions.custom import InvalidRequestDataException
 from datetime import datetime, timezone
+from sqlalchemy.orm import joinedload, selectinload
+from sqlalchemy import select
 import uuid
 
 recipes_bp = Blueprint("recipes", __name__)
 
 @recipes_bp.route("/generate-from-inventory", methods=["POST"])
 @jwt_required()
+@smart_rate_limit('ai_recipe_generation')  # 🛡️ Rate limit: 8 requests/min for AI recipe generation
+@cache_user_data('ai_recipe_generation', timeout=1800)  # 🚀 Cache: 30 min for recipe generation
 @swag_from({
     'tags': ['Recipe'],
     'summary': 'Generar recetas inteligentes basadas en inventario',
@@ -264,6 +270,7 @@ def generate_recipes():
 
 @recipes_bp.route("/generate-custom", methods=["POST"])
 @jwt_required()
+@smart_rate_limit('ai_recipe_generation')  # 🛡️ Rate limit: 8 requests/min for AI recipe generation
 @swag_from({
     'tags': ['Recipes'],
     'summary': 'Generar receta personalizada con ingredientes específicos',
@@ -1797,8 +1804,10 @@ def get_default_recipes():
         # Obtener parámetro de categoría opcional
         category_filter = request.args.get('category')
         
-        # Construir query base
-        query = select(RecipeORM).where(RecipeORM.user_uid == SYSTEM_USER_UID)
+        # Construir query base con eager loading para evitar N+1 queries
+        query = select(RecipeORM).options(
+            joinedload(RecipeORM.ingredients)
+        ).where(RecipeORM.user_uid == SYSTEM_USER_UID)
         
         # Aplicar filtro de categoría si se especifica
         if category_filter:

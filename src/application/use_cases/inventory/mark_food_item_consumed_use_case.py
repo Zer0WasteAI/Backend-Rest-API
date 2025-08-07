@@ -15,7 +15,7 @@ class MarkFoodItemConsumedUseCase:
             user_uid: UID del usuario
             food_name: Nombre de la comida
             added_at: Timestamp del food item (ISO format)
-            consumed_portions: Porciones consumidas (opcional, por defecto consume todo)
+            consumed_portions: Porciones consumidas (opcional, por defecto consume to/do)
             
         Returns:
             dict: Información sobre lo que se marcó como consumido
@@ -35,7 +35,7 @@ class MarkFoodItemConsumedUseCase:
         
         # Determinar porciones a consumir
         if consumed_portions is None:
-            # Consumir todo el food item
+            # Consumir to/do el food item
             consumed_portions = current_portions
             action = "full_consumption"
         else:

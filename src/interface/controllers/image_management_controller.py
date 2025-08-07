@@ -12,6 +12,7 @@ from src.application.factories.image_management_usecase_factory import (
     make_sync_image_loader_use_case,
     make_upload_image_use_case
 )
+from src.infrastructure.optimization.rate_limiter import smart_rate_limit
 from src.shared.exceptions.custom import InvalidRequestDataException
 from src.shared.decorators.internal_only import internal_only
 from src.domain.value_objects.upload_request import UploadRequest
@@ -24,6 +25,7 @@ upload_response_schema = UploadImageResponseSchema()
 
 @image_management_bp.route("/assign_image", methods=["POST"])
 @jwt_required()
+@smart_rate_limit('data_write')  # 🛡️ Rate limit: 40 requests/min for image processing
 @swag_from({
     'tags': ['Image Management'],
     'summary': 'Asignar imagen de referencia a un ingrediente',
@@ -148,6 +150,7 @@ def assign_image():
 
 @image_management_bp.route("/search_similar_images", methods=["POST"])
 @jwt_required()
+@smart_rate_limit('data_read')  # 🛡️ Rate limit: 100 requests/min for image search
 @swag_from({
     'tags': ['Image Management'],
     'summary': 'Buscar imágenes similares a un ingrediente',
@@ -411,6 +414,7 @@ def sync_images():
 
 @image_management_bp.route("/upload_image", methods=["POST"])
 @jwt_required()
+@smart_rate_limit('data_write')  # 🛡️ Rate limit: 40 requests/min for image uploads
 @swag_from({
     'tags': ['Image Management'],
     'summary': 'Upload image file to Firebase Storage',

@@ -12,6 +12,8 @@ from src.application.factories.recognition_usecase_factory import (
 )
 from src.application.factories.auth_usecase_factory import make_firestore_profile_service
 from src.infrastructure.async_tasks.async_task_service import async_task_service
+from src.infrastructure.optimization.rate_limiter import smart_rate_limit
+from src.infrastructure.optimization.cache_service import smart_cache, cache_user_data
 from datetime import datetime, timezone, timedelta
 import uuid
 
@@ -19,6 +21,7 @@ recognition_bp = Blueprint("recognition", __name__)
 
 @recognition_bp.route("/ingredients", methods=["POST"])
 @jwt_required()
+@smart_rate_limit('ai_recognition')  # 🛡️ Rate limit: 5 requests/min for AI recognition
 @swag_from({
     'tags': ['Recognition'],
     'summary': 'Reconocimiento de ingredientes por IA con imágenes',
@@ -297,6 +300,8 @@ def recognize_ingredients():
 
 @recognition_bp.route("/ingredients/complete", methods=["POST"])
 @jwt_required()
+@smart_rate_limit('ai_inventory_complete')  # 🛡️ Rate limit: 3 requests/min for expensive AI operations
+@cache_user_data('ai_inventory_complete', timeout=3600)  # 🚀 Cache: 1 hour for expensive AI results
 @swag_from({
     'tags': ['Recognition'],
     'summary': 'Reconocimiento completo de ingredientes con información detallada',

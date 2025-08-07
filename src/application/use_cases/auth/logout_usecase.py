@@ -16,7 +16,7 @@ class LogoutUseCase:
             # Invalidar todos los tokens del usuario
             revoked_count = self.jwt_service.revoke_all_user_tokens(uid, 'logout')
             
-            # Mantener compatibilidad con el método anterior (aunque no haga nada real)
+            # Mantener compatibilidad con el méto/do anterior (aunque no haga nada real)
             self.auth_repository.update_jwt_token(uid, None)
             
             return {
