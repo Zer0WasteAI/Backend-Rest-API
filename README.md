@@ -129,7 +129,7 @@ git clone https://github.com/Zer0WasteAI/Backend-Rest-API.git
 cd Backend-Rest-API
 
 # Setup environment variables
-cp .env.example .env
+cp .env .env
 # Configure Firebase credentials
 
 # Start services
