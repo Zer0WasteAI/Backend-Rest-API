@@ -9,8 +9,8 @@ class SaveRecipeUseCase:
 
     def execute(self, user_uid: str, recipe_data: dict) -> Recipe:
         # Validar que no exista ya una receta con el mismo título para el usuario
-        if self.recipe_repository.exists_by_user_and_title(user_uid, recipe_data["title"]):
-            raise InvalidRequestDataException("Ya tienes una receta guardada con este título")
+        #if self.recipe_repository.exists_by_user_and_title(user_uid, recipe_data["title"]):
+        #    raise InvalidRequestDataException("Ya tienes una receta guardada con este título")
 
         # Crear la receta
         recipe = Recipe(

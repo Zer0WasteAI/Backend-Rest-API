@@ -1,6 +1,9 @@
 from src.infrastructure.db.base import db
 from datetime import datetime, timezone
 
+from src.infrastructure.db.models.user_favorite_recipes import user_favorite_recipes
+
+
 class RecipeORM(db.Model):
     __tablename__ = "recipes"
 
@@ -21,5 +24,12 @@ class RecipeORM(db.Model):
 
     ingredients = db.relationship("RecipeIngredientORM", back_populates="recipe", cascade="all, delete-orphan")
     steps = db.relationship("RecipeStepORM", back_populates="recipe", cascade="all, delete-orphan")
+
+    favorited_by = db.relationship(
+        'User',
+        secondary=user_favorite_recipes,
+        back_populates='favorite_recipes',
+        lazy='dynamic'
+    )
 
     user = db.relationship("User", backref=db.backref("saved_recipes", lazy=True))

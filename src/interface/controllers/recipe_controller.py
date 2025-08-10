@@ -4,6 +4,7 @@ from flask_jwt_extended import jwt_required, get_jwt_identity
 
 from src.application.factories.generation_usecase_factory import make_generation_repository
 from src.domain.models.generation import Generation
+from src.infrastructure.ai.gemini_recipe_generator_service import logger
 from src.interface.serializers.recipe_serializers import (
     CustomRecipeRequestSchema,
     SaveRecipeRequestSchema,
@@ -176,9 +177,7 @@ def generate_recipes():
 
     try:
         prepare_use_case = make_prepare_recipe_generation_data_use_case()
-        print(f"🍳 [RECIPE CONTROLLER] Preparing data...")
         structured_data = prepare_use_case.execute(user_uid)
-        print(f"🍳 [RECIPE CONTROLLER] Data prepared successfully. Ingredients: {len(structured_data.get('ingredients', []))}")
 
         generate_use_case = make_generate_recipes_use_case()
         print(f"🍳 [RECIPE CONTROLLER] Generating recipes...")
@@ -1513,3 +1512,50 @@ def get_default_recipes():
             "error": "Failed to fetch default recipes",
             "details": str(e)
         }), 500
+
+
+@recipes_bp.route("/generate-save-from-inventory", methods=["POST"]) # This shit works
+@jwt_required()
+def generate_and_save_recipes():
+    user_uid = get_jwt_identity()
+
+    try:
+        # --- Generar las recetas ---
+        prepare_use_case = make_prepare_recipe_generation_data_use_case()
+        structured_data = prepare_use_case.execute(user_uid)
+
+        generate_use_case = make_generate_recipes_use_case()
+        generation_result = generate_use_case.execute(structured_data)
+
+        generated_recipes_data = generation_result.get("generated_recipes", [])
+
+        if not generated_recipes_data:
+            return jsonify({"message": "No se pudieron generar recetas."}), 200
+
+        # --- Guardar cada receta generada ---
+        save_use_case = make_save_recipe_use_case()
+        saved_recipes = []
+
+        print(f"💾 [CONTROLLER] Saving {len(generated_recipes_data)} generated recipes to user's collection...")
+        for recipe_data in generated_recipes_data:
+            try:
+                saved_recipe = save_use_case.execute(user_uid=user_uid, recipe_data=recipe_data)
+                saved_recipes.append(RecipeSchema().dump(saved_recipe))
+            except InvalidRequestDataException as e:
+                # Manejar el caso de que una receta ya exista.
+                print(f"⚠️ [CONTROLLER] Could not save recipe '{recipe_data.get('title')}': {e}")
+                # Continuar o parar.
+                pass
+
+                # --- Preparar la respuesta ---
+        # (Iniciar la tarea asíncrona para las imágenes, etc.) TODO
+
+        return jsonify({
+            "message": f"Se generaron {len(generated_recipes_data)} recetas y se guardaron {len(saved_recipes)} en tu colección.",
+            "saved_recipes": saved_recipes,
+            "generation_metadata": generation_result
+        }), 200
+
+    except Exception as e:
+        logger.error(f"Error in generate_and_save_recipes:  {e}", exc_info=True)
+        return jsonify({"error": "Ocurrió un error inesperado."}), 500
