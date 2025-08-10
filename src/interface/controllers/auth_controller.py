@@ -14,7 +14,6 @@ from src.application.factories.auth_usecase_factory import (
     make_firestore_profile_service
 )
 from src.interface.middlewares.firebase_auth_decorator import verify_firebase_token
-from src.infrastructure.security.rate_limiter import auth_rate_limit, refresh_rate_limit, api_rate_limit
 from src.infrastructure.optimization.rate_limiter import smart_rate_limit
 from src.infrastructure.security.security_logger import security_logger, SecurityEventType
 from src.shared.exceptions.custom import InvalidTokenException
@@ -224,7 +223,7 @@ def refresh_token():
 
 @auth_bp.route("/logout", methods=["POST"])
 @jwt_required()
-@api_rate_limit
+@smart_rate_limit('auth_sensitive')
 @swag_from({
     'tags': ['Auth'],
     'summary': 'Cerrar sesión (logout) seguro',

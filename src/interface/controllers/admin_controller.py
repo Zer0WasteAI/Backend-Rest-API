@@ -1,7 +1,7 @@
 from flask import Blueprint, jsonify
 from src.infrastructure.db.token_security_repository import TokenSecurityRepository
 from src.shared.decorators.internal_only import internal_only
-from src.infrastructure.security.rate_limiter import api_rate_limit
+from src.infrastructure.optimization.rate_limiter import smart_rate_limit
 from src.infrastructure.security.security_logger import security_logger, SecurityEventType
 from flasgger import swag_from
 
@@ -9,7 +9,7 @@ admin_bp = Blueprint('admin', __name__)
 
 @admin_bp.route('/cleanup-tokens', methods=['POST'])
 @internal_only
-@api_rate_limit
+@smart_rate_limit('data_write')
 @swag_from({
     'tags': ['Admin'],
     'summary': 'Limpieza de tokens expirados',
@@ -49,7 +49,7 @@ def cleanup_expired_tokens():
 
 @admin_bp.route('/security-stats', methods=['GET'])
 @internal_only
-@api_rate_limit
+@smart_rate_limit('data_read')
 @swag_from({
     'tags': ['Admin'],
     'summary': 'Estadísticas de seguridad',
