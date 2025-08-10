@@ -21,5 +21,4 @@ class RecipeORM(db.Model):
 
     ingredients = db.relationship("RecipeIngredientORM", back_populates="recipe", cascade="all, delete-orphan")
     steps = db.relationship("RecipeStepORM", back_populates="recipe", cascade="all, delete-orphan")
-
     user = db.relationship("User", backref=db.backref("saved_recipes", lazy=True))

@@ -39,7 +39,7 @@ class RecipeSchema(Schema):
     ingredients = fields.List(fields.Nested(RecipeIngredientSchema), required=True)
     steps = fields.List(fields.Nested(RecipeStepSchema), required=True)
     footer = fields.String(allow_none=True)
-    generated_by_ai = fields.Boolean(required=True)
+    generated_by_ai = fields.Boolean(required=False)
     saved_at = fields.DateTime(required=True)
     category = fields.String(required=True)
     description = fields.String(allow_none=True, required=True)

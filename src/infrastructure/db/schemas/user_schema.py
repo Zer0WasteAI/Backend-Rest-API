@@ -9,5 +9,6 @@ class User(db.Model):
     updated_at = db.Column(db.DateTime, default=datetime.now(timezone.utc))
 
 
+
 User.auth = db.relationship("AuthUser", backref="user", uselist=False)
 User.profile = db.relationship("ProfileUser", backref="user", uselist=False)
