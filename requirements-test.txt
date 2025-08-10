@@ -1,0 +1,21 @@
+# Testing Dependencies
+pytest==8.3.5
+pytest-cov==4.0.0
+pytest-mock==3.11.1
+pytest-xdist==3.3.1
+pytest-flask==1.2.0
+pytest-asyncio==0.21.1
+
+# Mocking and Testing Utilities
+responses==0.23.3
+factory-boy==3.3.0
+faker==19.6.2
+
+# Coverage and Reporting
+coverage==7.8.0
+pytest-html==4.1.1
+
+# Code Quality
+pylint==2.17.5
+flake8==6.0.0
+mypy==1.5.1
