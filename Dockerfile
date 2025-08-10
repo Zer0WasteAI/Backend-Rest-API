@@ -22,4 +22,4 @@ ENV FLASK_ENV=production
 EXPOSE 3000
 
 # Usar Gunicorn con 4 workers para producción
-CMD ["sh", "-c", "python wait-for-mysql.py && gunicorn --bind 0.0.0.0:3000 --workers 4 --worker-class gevent --worker-connections 1000 --timeout 120 src.main:app"]
+CMD ["sh", "-c", "python wait-for-mysql.py && gunicorn --bind 0.0.0.0:3000 --workers 4 --worker-class gevent --worker-connections 1000 --timeout 120 --max-requests 2000 --max-requests-jitter 200 --keep-alive 30 --backlog 2048 src.main:app"]

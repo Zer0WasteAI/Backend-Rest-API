@@ -21,7 +21,8 @@ class OptimizationConfig:
     }
     
     # =================== RATE LIMITING CONFIG ===================
-    RATELIMIT_STORAGE_URL = os.getenv('REDIS_URL', 'redis://localhost:6379/1')
+    # Usar un Redis DB separado para rate limiting (evita mezclar con caché)
+    RATELIMIT_STORAGE_URL = os.getenv('RATELIMIT_STORAGE_URL', 'redis://localhost:6379/1')
     RATELIMIT_STRATEGY = "fixed-window"
     RATELIMIT_DEFAULT = "1000 per hour"  # Límite general
     
@@ -44,6 +45,9 @@ class OptimizationConfig:
         'auth_login': "10 per minute",              # Login attempts
         'auth_signup': "5 per minute",              # Registro
         'auth_sensitive': "3 per minute",           # Operaciones sensibles
+        # Faltantes usados por controladores de auth
+        'auth_refresh': "10 per minute",            # Refresh tokens
+        'auth_signin': "5 per minute",              # Firebase signin
         
         # 📊 DATA ENDPOINTS - NORMALES  
         'data_read': "100 per minute",              # Lectura general

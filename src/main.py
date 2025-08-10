@@ -3,6 +3,7 @@ from sqlalchemy.exc import OperationalError
 from sqlalchemy.sql import text
 from flasgger import Swagger
 from flask import Flask, jsonify
+from flask_compress import Compress
 from flask_cors import CORS
 from flask_jwt_extended import JWTManager
 
@@ -44,6 +45,9 @@ def create_app():
     application = Flask(__name__)
     CORS(application)
     application.config.from_object(Config)
+    
+    # Compresión HTTP para respuestas grandes
+    Compress(application)
     
     # Configurar headers de seguridad
     add_security_headers(application)

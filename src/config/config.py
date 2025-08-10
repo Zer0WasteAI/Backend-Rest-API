@@ -36,4 +36,18 @@ class Config:
     FIREBASE_STORAGE_BUCKET = os.getenv("FIREBASE_STORAGE_BUCKET")
     INTERNAL_SECRET_KEY = os.getenv("INTERNAL_SECRET_KEY")
 
+    # Seguridad de requests y compresión
+    # Limitar tamaño máximo de request (por defecto 10MB)
+    MAX_CONTENT_LENGTH = int(os.getenv("MAX_CONTENT_LENGTH", 10 * 1024 * 1024))
+    # Config de compresión HTTP
+    COMPRESS_LEVEL = int(os.getenv("COMPRESS_LEVEL", 6))
+    COMPRESS_ALGORITHM = os.getenv("COMPRESS_ALGORITHM", "gzip")
+    # Comprimir JSON y otros tipos comunes
+    COMPRESS_MIMETYPES = [
+        "application/json",
+        "text/plain",
+        "text/css",
+        "application/javascript",
+        "application/octet-stream"
+    ]
 

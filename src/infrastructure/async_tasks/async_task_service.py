@@ -10,7 +10,8 @@ from src.infrastructure.db.models.async_task_orm import AsyncTaskORM
 
 class AsyncTaskService:
     def __init__(self):
-        self.executor = ThreadPoolExecutor(max_workers=3, thread_name_prefix="AsyncTask")
+        # Aumentar workers para tareas IO-bound (generación imágenes, reconocimiento)
+        self.executor = ThreadPoolExecutor(max_workers=8, thread_name_prefix="AsyncTask")
     
     def create_task(self, user_uid: str, task_type: str, input_data: Dict[str, Any]) -> str:
         """Crea una nueva tarea asíncrona y retorna el task_id"""
