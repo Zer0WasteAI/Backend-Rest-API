@@ -7,6 +7,7 @@ os.environ.setdefault("FLASK_ENV", "testing")
 os.environ.setdefault("TESTING", "1")
 
 from src.main import create_app
+from flask_jwt_extended import create_access_token
 
 
 @pytest.fixture(scope="session")
@@ -24,3 +25,9 @@ def app() -> Flask:
 def client(app):
     return app.test_client()
 
+
+@pytest.fixture()
+def auth_header(app):
+    with app.app_context():
+        token = create_access_token(identity="test-user-uid")
+    return {"Authorization": f"Bearer {token}"}
