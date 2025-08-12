@@ -517,7 +517,7 @@ def generate_custom_recipes():
 
     return jsonify(result), 200
 
-@recipes_bp.route("/save", methods=["POST"])
+@recipes_bp.route("/save", methods=["POST"]) # Se usa para guardar manualente una receta
 @jwt_required()
 @swag_from({
     'tags': ['Recipes'],
@@ -728,7 +728,7 @@ def save_recipe():
         "recipe": result
     }), 201
 
-@recipes_bp.route("/saved", methods=["GET"])
+@recipes_bp.route("/saved", methods=["GET"]) #Obtiene todas las recetas guardadas del usuario
 @jwt_required()
 @swag_from({
     'tags': ['Recipes'],
@@ -964,7 +964,7 @@ def get_saved_recipes():
         "count": len(result)
     }), 200
 
-@recipes_bp.route("/all", methods=["GET"])
+@recipes_bp.route("/all", methods=["GET"]) # Obtiene todas las recetas guardadas del sistema
 @jwt_required()
 @swag_from({
     'tags': ['Recipes'],
@@ -1518,44 +1518,152 @@ def get_default_recipes():
 @jwt_required()
 def generate_and_save_recipes():
     user_uid = get_jwt_identity()
+    logger.info(f"🍳 Iniciando generación desde inventario para el usuario: {user_uid}")
 
     try:
-        # --- Generar las recetas ---
         prepare_use_case = make_prepare_recipe_generation_data_use_case()
         structured_data = prepare_use_case.execute(user_uid)
-
         generate_use_case = make_generate_recipes_use_case()
-        generation_result = generate_use_case.execute(structured_data)
-
-        generated_recipes_data = generation_result.get("generated_recipes", [])
-
-        if not generated_recipes_data:
-            return jsonify({"message": "No se pudieron generar recetas."}), 200
-
-        # --- Guardar cada receta generada ---
-        save_use_case = make_save_recipe_use_case()
-        saved_recipes = []
-
-        print(f"💾 [CONTROLLER] Saving {len(generated_recipes_data)} generated recipes to user's collection...")
-        for recipe_data in generated_recipes_data:
-            try:
-                saved_recipe = save_use_case.execute(user_uid=user_uid, recipe_data=recipe_data)
-                saved_recipes.append(RecipeSchema().dump(saved_recipe))
-            except InvalidRequestDataException as e:
-                # Manejar el caso de que una receta ya exista.
-                print(f"⚠️ [CONTROLLER] Could not save recipe '{recipe_data.get('title')}': {e}")
-                # Continuar o parar.
-                pass
-
-                # --- Preparar la respuesta ---
-        # (Iniciar la tarea asíncrona para las imágenes, etc.) TODO
-
-        return jsonify({
-            "message": f"Se generaron {len(generated_recipes_data)} recetas y se guardaron {len(saved_recipes)} en tu colección.",
-            "saved_recipes": saved_recipes,
-            "generation_metadata": generation_result
-        }), 200
+        result = generate_use_case.execute(structured_data)
+        generated_recipes = result.get("generated_recipes", [])
+        logger.info(f"✅ {len(generated_recipes)} recetas generadas por la IA.")
 
     except Exception as e:
-        logger.error(f"Error in generate_and_save_recipes:  {e}", exc_info=True)
-        return jsonify({"error": "Ocurrió un error inesperado."}), 500
+        logger.error(f"🚨 Error en la generación de recetas: {e}", exc_info=True)
+        return jsonify({
+            "error": "Failed to generate recipes from inventory",
+            "details": str(e),
+            "error_type": type(e).__name__
+        }), 500
+
+    saved_recipe_uids = _save_generated_recipes(user_uid, generated_recipes)
+    logger.info(f"💾 {len(saved_recipe_uids)} recetas fueron guardadas exitosamente en la base de datos.")
+
+    generation_id = str(uuid.uuid4())
+    image_task_id = async_task_service.create_task(
+        user_uid=user_uid,
+        task_type='recipe_images',
+        input_data={
+            'generation_id': generation_id,
+            'recipes': generated_recipes
+        }
+    )
+
+    current_time = datetime.now(timezone.utc)
+    for recipe in generated_recipes:
+        recipe["image_path"] = None
+        recipe["image_status"] = "generating"
+        recipe["generated_at"] = current_time.isoformat()
+
+    result["images"] = {
+        "status": "generating",
+        "task_id": image_task_id,
+        "check_images_url": f"/api/generation/images/status/{image_task_id}",
+        "estimated_time": "15-30 segundos"
+    }
+
+    return jsonify(result), 200
+
+@recipes_bp.route("/generate-save-custom", methods=["POST"])
+@jwt_required()
+def generate_and_save_custom_recipes():
+    """
+    Genera recetas basadas en ingredientes específicos proporcionados,
+    las guarda inmediatamente y lanza la generación de imágenes en segundo plano.
+    """
+    user_uid = get_jwt_identity()
+    logger.info(f"🍳 Iniciando generación y guardado personalizado para el usuario: {user_uid}")
+
+    schema = CustomRecipeRequestSchema()
+    json_data = request.get_json()
+    errors = schema.validate(json_data)
+    if errors:
+        raise InvalidRequestDataException(details=errors)
+
+    try:
+        use_case = make_generate_custom_recipe_use_case()
+        result = use_case.execute(
+            user_uid=user_uid,
+            custom_ingredients=json_data["ingredients"],
+            preferences=json_data.get("preferences", []),
+            num_recipes=json_data.get("num_recipes", 2),
+            recipe_categories=json_data.get("recipe_categories", [])
+        )
+        generated_recipes = result.get("generated_recipes", [])
+        logger.info(f"✅ {len(generated_recipes)} recetas personalizadas generadas por la IA.")
+
+    except Exception as e:
+        logger.error(f"🚨 Error en la generación de recetas personalizadas: {e}", exc_info=True)
+        return jsonify({
+            "error": "Failed to generate custom recipes",
+            "details": str(e),
+            "error_type": type(e).__name__
+        }), 500
+
+    saved_recipe_uids = _save_generated_recipes(user_uid, generated_recipes)
+    logger.info(f"💾 {len(saved_recipe_uids)} recetas fueron guardadas exitosamente en la base de datos.")
+
+    generation_id = str(uuid.uuid4())
+
+    image_task_id = async_task_service.create_task(
+        user_uid=user_uid,
+        task_type='recipe_images',
+        input_data={
+            'generation_id': generation_id,
+            'recipes': generated_recipes
+        }
+    )
+
+    recipe_image_generator_service = make_recipe_image_generator_service()
+    '''
+    async_task_service.run_async_recipe_image_generation(
+        task_id=image_task_id,
+        user_uid=user_uid,
+        recipes=generated_recipes,
+        recipe_image_generator_service=recipe_image_generator_service,
+        generation_id=generation_id
+    )
+    '''
+    current_time = datetime.now(timezone.utc)
+    for recipe in generated_recipes:
+        recipe["image_path"] = None
+        recipe["image_status"] = "generating"
+        recipe["generated_at"] = current_time.isoformat()
+
+    result["images"] = {
+        "status": "generating",
+        "task_id": image_task_id,
+        "check_images_url": f"/api/generation/images/status/{image_task_id}",
+        "estimated_time": "15-30 segundos"
+    }
+
+    return jsonify(result), 200
+
+def _save_generated_recipes(user_uid: str, generated_recipes: list) -> list:
+    """
+    Toma una lista de recetas generadas (dicts), las guarda en la base de datos
+    usando SaveRecipeUseCase y devuelve una lista de los UIDs de las recetas guardadas.
+    """
+    save_use_case = make_save_recipe_use_case()
+    saved_recipe_uids = []
+
+    if not generated_recipes:
+        return []
+
+    logger.info(f"💾 Guardando {len(generated_recipes)} recetas generadas para el usuario {user_uid}...")
+
+    for recipe_data in generated_recipes:
+        try:
+            # SaveRecipeUseCase espera un formato específico, asegúrate que recipe_data lo cumpla
+            saved_recipe = save_use_case.execute(user_uid=user_uid, recipe_data=recipe_data)
+            saved_recipe_uids.append(saved_recipe.uid)
+            logger.info(f"✅ Receta '{saved_recipe.title}' guardada con UID {saved_recipe.uid}")
+
+        except InvalidRequestDataException as e:
+            # Esto puede pasar si una receta con el mismo título ya existe para el usuario.
+            # Lo registramos como una advertencia y continuamos con las demás.
+            logger.warning(f"⚠️ No se pudo guardar la receta '{recipe_data.get('title')}': {e}")
+        except Exception as e:
+            logger.error(f"🚨 Error inesperado al guardar la receta '{recipe_data.get('title')}': {e}", exc_info=True)
+
+    return saved_recipe_uids
