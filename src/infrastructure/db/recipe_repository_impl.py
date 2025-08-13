@@ -176,4 +176,7 @@ class RecipeRepositoryImpl(RecipeRepository):
         )
         return self.db.session.execute(stmt).scalar()
 
+    def find_orm_by_id(self, recipe_uid: str) -> RecipeORM:
+        """Encuentra y devuelve el objeto ORM directamente."""
+        return self.db.session.get(RecipeORM, recipe_uid)
 

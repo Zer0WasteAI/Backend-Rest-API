@@ -19,11 +19,14 @@ from src.application.factories.recipe_usecase_factory import (
     make_get_saved_recipes_use_case,
     make_get_all_recipes_use_case,
     make_delete_user_recipe_use_case,
-    make_recipe_image_generator_service
+    make_recipe_image_generator_service,
+make_add_recipe_to_favorites_use_case,
+make_get_favorite_recipes_use_case,
+make_remove_recipe_from_favorites_use_case
 )
 
 from src.infrastructure.async_tasks.async_task_service import async_task_service
-from src.shared.exceptions.custom import InvalidRequestDataException
+from src.shared.exceptions.custom import InvalidRequestDataException, RecipeNotFoundException
 from datetime import datetime, timezone
 import uuid
 
@@ -1667,3 +1670,56 @@ def _save_generated_recipes(user_uid: str, generated_recipes: list) -> list:
             logger.error(f"🚨 Error inesperado al guardar la receta '{recipe_data.get('title')}': {e}", exc_info=True)
 
     return saved_recipe_uids
+
+@recipes_bp.route("/<string:recipe_uid>/favorite", methods=["POST"])
+@jwt_required()
+def add_recipe_to_favorites(recipe_uid: str):
+    """Añade una receta a la lista de favoritos del usuario actual."""
+    user_uid = get_jwt_identity()
+
+    try:
+        use_case = make_add_recipe_to_favorites_use_case()
+        use_case.execute(user_uid=user_uid, recipe_uid=recipe_uid)
+
+        return jsonify({"message": "Receta añadida a favoritos exitosamente."}), 201
+
+    except RecipeNotFoundException as e:
+        return jsonify({"error": str(e)}), 404
+    except Exception as e:
+        logger.error(f"Error al añadir favorito: {e}", exc_info=True)
+        return jsonify({"error": "Ocurrió un error inesperado."}), 500
+
+
+@recipes_bp.route("/favorites", methods=["GET"])
+@jwt_required()
+def get_user_favorites():
+    """Obtiene todas las recetas favoritas del usuario actual."""
+    user_uid = get_jwt_identity()
+
+    try:
+        use_case = make_get_favorite_recipes_use_case()
+        favorite_recipes = use_case.execute(user_uid=user_uid)
+
+        schema = RecipeSchema(many=True)
+        return jsonify(schema.dump(favorite_recipes)), 200
+
+    except Exception as e:
+        logger.error(f"Error al obtener favoritos: {e}", exc_info=True)
+        return jsonify({"error": "No se pudieron obtener las recetas favoritas."}), 500
+
+
+@recipes_bp.route("/favorites/<string:recipe_uid>", methods=["DELETE"])
+@jwt_required()
+def remove_recipe_from_favorites(recipe_uid: str):
+    """Elimina una receta de la lista de favoritos del usuario actual."""
+    user_uid = get_jwt_identity()
+
+    try:
+        use_case = make_remove_recipe_from_favorites_use_case()
+        use_case.execute(user_uid=user_uid, recipe_uid=recipe_uid)
+
+        return '', 204
+
+    except Exception as e:
+        logger.error(f"Error al eliminar favorito: {e}", exc_info=True)
+        return jsonify({"error": "No se pudo eliminar la receta de favoritos."}), 500

@@ -33,6 +33,7 @@ class SaveRecipeRequestSchema(Schema):
     generated_at = fields.DateTime(allow_none=True, missing=None)
 
 class RecipeSchema(Schema):
+    uid = fields.String(required=False)
     title = fields.String(required=True)
     duration = fields.String(required=True)
     difficulty = fields.String(required=True)
