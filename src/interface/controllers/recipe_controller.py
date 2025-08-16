@@ -19,13 +19,16 @@ from src.application.factories.recipe_usecase_factory import (
     make_get_saved_recipes_use_case,
     make_get_all_recipes_use_case,
     make_delete_user_recipe_use_case,
-    make_recipe_image_generator_service
+    make_recipe_image_generator_service,
+    make_add_recipe_to_favorites_use_case,
+    make_get_favorite_recipes_use_case,
+    make_remove_recipe_from_favorites_use_case
 )
 
 from src.infrastructure.async_tasks.async_task_service import async_task_service
 from src.infrastructure.optimization.rate_limiter import smart_rate_limit
 from src.infrastructure.optimization.cache_service import smart_cache, cache_user_data
-from src.shared.exceptions.custom import InvalidRequestDataException
+from src.shared.exceptions.custom import InvalidRequestDataException, RecipeNotFoundException
 from datetime import datetime, timezone
 from sqlalchemy.orm import joinedload, selectinload
 from sqlalchemy import select

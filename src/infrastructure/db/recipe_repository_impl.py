@@ -97,6 +97,38 @@ class RecipeRepositoryImpl(RecipeRepository):
         matched_uid = next(uid for title, uid in options if title == best_match)
         return self.find_by_uid(matched_uid)
 
+    def find_orm_by_id(self, uid: str) -> Optional[RecipeORM]:
+        """Find recipe ORM by UID, used for favorites functionality"""
+        return self.db.session.get(RecipeORM, uid)
+
+    def map_to_domain(self, recipe_orm: RecipeORM) -> Recipe:
+        """Map RecipeORM to Recipe domain object"""
+        domain_ingredients = [
+            RecipeIngredient(i.name, i.quantity, i.type_unit)
+            for i in recipe_orm.ingredients
+        ]
+
+        domain_steps = sorted(
+            [RecipeStep(s.step_order, s.description) for s in recipe_orm.steps],
+            key=lambda s: s.step_order
+        )
+
+        return Recipe(
+            uid=recipe_orm.uid,
+            user_uid=recipe_orm.user_uid,
+            title=recipe_orm.title,
+            duration=recipe_orm.duration,
+            difficulty=recipe_orm.difficulty,
+            ingredients=domain_ingredients,
+            steps=domain_steps,
+            footer=recipe_orm.footer,
+            generated_by_ai=recipe_orm.generated_by_ai,
+            saved_at=recipe_orm.saved_at,
+            category=recipe_orm.category,
+            image_path=recipe_orm.image_path,
+            description=recipe_orm.description,
+        )
+
     def delete(self, recipe_uid: str, title: str) -> None:
         stmt = delete(RecipeORM).where(RecipeORM.uid == recipe_uid)
         recipe = self.db.session.execute(stmt).scalar_one_or_none()
