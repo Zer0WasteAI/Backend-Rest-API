@@ -1,0 +1,46 @@
+[run]
+source = src
+omit = 
+    */tests/*
+    */test/*
+    */__pycache__/*
+    */venv/*
+    */env/*
+    */.env/*
+    */migrations/*
+    */alembic/*
+    setup.py
+    conftest.py
+    */conftest.py
+    */.pytest_cache/*
+    */node_modules/*
+    */static/*
+    */templates/*
+    */dist/*
+    */build/*
+    */.git/*
+    */docs/*
+
+[report]
+exclude_lines =
+    pragma: no cover
+    def __repr__
+    if self.debug:
+    if settings.DEBUG
+    raise AssertionError
+    raise NotImplementedError
+    if 0:
+    if __name__ == .__main__.:
+    class .*\bProtocol\):
+    @(abc\.)?abstractmethod
+
+show_missing = True
+skip_covered = False
+precision = 2
+
+[html]
+directory = htmlcov
+title = ZeroWasteAI API Coverage Report
+
+[xml]
+output = coverage.xml

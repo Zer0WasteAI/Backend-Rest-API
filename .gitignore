@@ -9,6 +9,9 @@ mcp/
 # Archivos de configuración de Python
 *.pyc
 
+.cursor/
+.claude/
+
 # Archivos de Python compilados
 __pycache__/
 *.py[cod]
@@ -39,3 +42,22 @@ firebase_credentials.json
 *.tar
 *.img
 docker-compose.override.yml
+
+# Coverage reports
+htmlcov/
+.coverage
+coverage.xml
+coverage.json
+coverage_*.xml
+coverage_*.json
+.pytest_cache/
+.coverage.*
+
+# Test reports
+.tox/
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+.hypothesis/
+pytest_cache/
