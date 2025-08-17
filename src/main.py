@@ -21,6 +21,7 @@ from src.interface.controllers.inventory_controller import inventory_bp
 from src.interface.controllers.recipe_controller import recipes_bp
 from src.interface.controllers.generation_controller import generation_bp
 from src.interface.controllers.environmental_savings_controller import environmental_savings_bp
+from src.interface.controllers.cooking_session_controller import cooking_session_bp
 
 from src.shared.exceptions.base import AppException
 from src.infrastructure.auth.jwt_callbacks import configure_jwt_callbacks
@@ -40,6 +41,12 @@ from src.infrastructure.db.models.async_task_orm import AsyncTaskORM
 from src.infrastructure.db.models.daily_meal_plan_orm import DailyMealPlanORM
 from src.infrastructure.db.models.generation_orm import GenerationORM
 from src.infrastructure.db.models.environmental_savings_orm import EnvironmentalSavingsORM
+from src.infrastructure.db.models.ingredient_batch_orm import IngredientBatchORM
+from src.infrastructure.db.models.cooking_session_orm import CookingSessionORM
+from src.infrastructure.db.models.consumption_log_orm import ConsumptionLogORM
+from src.infrastructure.db.models.leftover_orm import LeftoverORM
+from src.infrastructure.db.models.waste_log_orm import WasteLogORM
+from src.infrastructure.db.models.idempotency_key_orm import IdempotencyKeyORM
 
 def create_app():
     application = Flask(__name__)
@@ -77,6 +84,7 @@ def create_app():
     application.register_blueprint(planning_bp, url_prefix='/api/planning')
     application.register_blueprint(generation_bp, url_prefix='/api/generation')
     application.register_blueprint(environmental_savings_bp, url_prefix='/api/environmental_savings')
+    application.register_blueprint(cooking_session_bp, url_prefix='/api/recipes')
 
     @application.errorhandler(AppException)
     def handle_app_exception(error):

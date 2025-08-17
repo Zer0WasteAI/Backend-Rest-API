@@ -9,6 +9,8 @@ from src.application.use_cases.recipes.calculate_enviromental_savings_from_recip
 from src.application.use_cases.recipes.get_all_environmental_calculations_by_user import GetAllEnvironmentalCalculationsByUser
 from src.application.use_cases.recipes.get_environmental_calculations_by_user_and_status import GetEnvironmentalCalculationsByUserAndStatus
 from src.application.use_cases.recipes.sum_environmental_calculations_by_user import SumEnvironmentalCalculationsByUser
+from src.application.use_cases.recipes.calculate_environmental_savings_from_session import CalculateEnvironmentalSavingsFromSessionUseCase
+from src.infrastructure.db.cooking_session_repository_impl import CookingSessionRepository
 
 
 def make_environmental_savings_repository():
@@ -48,3 +50,9 @@ def make_get_environmental_calculations_by_status_use_case():
 
 def make_sum_environmental_calculations_by_user():
     return SumEnvironmentalCalculationsByUser(EnvironmentalSavingsRepositoryImpl(db))
+
+def make_calculate_environmental_savings_from_session_use_case():
+    return CalculateEnvironmentalSavingsFromSessionUseCase(
+        session_repository=CookingSessionRepository(db),
+        environmental_repository=EnvironmentalSavingsRepositoryImpl(db)
+    )

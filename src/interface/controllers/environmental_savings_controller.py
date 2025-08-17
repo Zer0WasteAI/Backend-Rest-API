@@ -7,7 +7,8 @@ from src.application.factories.environmental_savings_factory import (
     make_estimate_savings_by_uid_use_case,
     make_get_all_environmental_calculations_use_case,
     make_get_environmental_calculations_by_status_use_case,
-make_sum_environmental_calculations_by_user
+    make_sum_environmental_calculations_by_user,
+    make_calculate_environmental_savings_from_session_use_case
 )
 from src.infrastructure.optimization.rate_limiter import smart_rate_limit
 from src.infrastructure.optimization.cache_service import smart_cache, cache_user_data
@@ -860,4 +861,100 @@ def get_environmental_summary():
     use_case = make_sum_environmental_calculations_by_user()
     result = use_case.execute(user_uid)
     return jsonify(result), 200
+
+
+@environmental_savings_bp.route("/calculate/from-session", methods=["POST"])
+@jwt_required()
+@smart_rate_limit('ai_environmental')
+@smart_cache('ai_environmental_session', timeout=1800)  # 30 minutes cache for session calculations
+@swag_from({
+    'tags': ['Environmental Impact'],
+    'summary': 'Calcular ahorro ambiental por sesión de cocina',
+    'description': '''
+Calcula el impacto ambiental real basado en una sesión de cocina específica con consumos reales.
+
+### Ventajas sobre Cálculo por Receta:
+- **Consumos reales**: Usa ingredientes y cantidades efectivamente consumidas
+- **Precisión mejorada**: Evita estimaciones basadas en recetas teóricas
+- **Trazabilidad**: Vincula impacto con sesión específica de cocina
+- **Personalización**: Considera hábitos reales del usuario
+
+### Metodología de Cálculo:
+- **Base de datos de factores**: Factores ambientales por tipo de ingrediente
+- **Conversión a kg**: Normalización de unidades para cálculo
+- **Multiplicador por porciones**: Escala impacto según número de comensales
+- **Comparación vs. alternativas**: Impacto evitado vs. comida procesada/restaurante
+    ''',
+    'parameters': [
+        {
+            'name': 'body',
+            'in': 'body',
+            'required': True,
+            'schema': {
+                'type': 'object',
+                'required': ['session_id'],
+                'properties': {
+                    'session_id': {
+                        'type': 'string',
+                        'description': 'ID de la sesión de cocina completada',
+                        'example': 'cook_9a1f'
+                    },
+                    'actual_consumptions': {
+                        'type': 'array',
+                        'description': 'Lista opcional de consumos reales',
+                        'items': {
+                            'type': 'object',
+                            'required': ['ingredient_uid', 'qty', 'unit'],
+                            'properties': {
+                                'ingredient_uid': {'type': 'string'},
+                                'qty': {'type': 'number'},
+                                'unit': {'type': 'string'}
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    ],
+    'responses': {
+        200: {
+            'description': 'Cálculo ambiental por sesión exitoso',
+            'examples': {
+                'application/json': {
+                    "calculation_id": "calc_session_123456",
+                    "session_id": "cook_9a1f",
+                    "co2e_kg": 0.42,
+                    "water_l": 120.0,
+                    "waste_kg": 0.18,
+                    "basis": "per_session",
+                    "consumptions_analyzed": 5,
+                    "calculated_at": "2024-01-16T15:30:00Z"
+                }
+            }
+        },
+        404: {'description': 'Sesión de cocina no encontrada'}
+    }
+})
+def calculate_savings_from_session():
+    """Calculate environmental savings based on actual cooking session"""
+    user_uid = get_jwt_identity()
+    data = request.get_json()
+
+    if not data or "session_id" not in data:
+        raise InvalidRequestDataException(details={"session_id": "El campo 'session_id' es obligatorio."})
+
+    try:
+        use_case = make_calculate_environmental_savings_from_session_use_case()
+        result = use_case.execute(
+            session_id=data["session_id"],
+            user_uid=user_uid,
+            actual_consumptions=data.get("actual_consumptions")
+        )
+        
+        return jsonify(result), 200
+        
+    except RecipeNotFoundException as e:
+        return jsonify({"error": "Cooking session not found", "details": str(e)}), 404
+    except ValueError as e:
+        return jsonify({"error": str(e)}), 400
 

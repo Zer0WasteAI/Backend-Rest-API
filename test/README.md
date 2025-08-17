@@ -1,8 +1,103 @@
-# 🧪 Sistema de Tests de Integración
+# Test Organization Structure
 
-Este sistema de tests permite validar el funcionamiento completo del Backend Rest API, incluyendo autenticación Firebase, reconocimiento de ingredientes, y manejo de inventarios.
+This directory contains all tests for the Backend REST API project, organized by test type and scope.
 
-## 🌟 Características Principales
+## Directory Structure
+
+```
+test/
+├── unit/                          # Unit tests (isolated, fast)
+│   ├── interface/
+│   │   └── controllers/           # Controller endpoint tests
+│   ├── application/
+│   │   ├── use_cases/            # Business logic tests
+│   │   └── factories/            # Factory pattern tests
+│   ├── domain/
+│   │   ├── models/               # Domain model tests
+│   │   └── services/             # Domain service tests
+│   └── infrastructure/
+│       ├── db/                   # Repository and database tests
+│       ├── services/             # Infrastructure service tests
+│       ├── ai/                   # AI service tests
+│       └── auth/                 # Authentication tests
+├── integration/                   # Integration tests (multiple components)
+├── functional/                    # End-to-end functional tests
+├── performance/                   # Performance and load tests
+├── production_validation/         # Production environment validation
+├── fixtures/                     # Test data and resources
+│   ├── images/                   # Test images
+│   └── data/                     # JSON, CSV, and other test data
+├── utils/                        # Test utilities and helpers
+└── conftest.py                   # Global pytest configuration
+```
+
+## Test Categories
+
+### Unit Tests (`/unit/`)
+- **Purpose**: Test individual components in isolation
+- **Speed**: Fast (< 1s per test)
+- **Dependencies**: Mocked external dependencies
+- **Coverage**: High code coverage, focused on edge cases
+
+### Integration Tests (`/integration/`)
+- **Purpose**: Test component interactions
+- **Speed**: Medium (1-10s per test)
+- **Dependencies**: Real database, mocked external APIs
+- **Coverage**: Critical workflows and data flows
+
+### Functional Tests (`/functional/`)
+- **Purpose**: End-to-end user scenarios
+- **Speed**: Slow (10s+ per test)
+- **Dependencies**: Full application stack
+- **Coverage**: User journeys and business processes
+
+### Performance Tests (`/performance/`)
+- **Purpose**: Load, stress, and performance validation
+- **Speed**: Variable (seconds to minutes)
+- **Dependencies**: Production-like environment
+- **Coverage**: Performance benchmarks and limits
+
+### Production Validation (`/production_validation/`)
+- **Purpose**: Validate production environment health
+- **Speed**: Medium to slow
+- **Dependencies**: Production APIs and services
+- **Coverage**: Critical production workflows
+
+## Running Tests
+
+### Run all tests:
+```bash
+pytest test/
+```
+
+### Run by category:
+```bash
+pytest test/unit/                    # Unit tests only
+pytest test/integration/             # Integration tests only
+pytest test/functional/              # Functional tests only
+pytest test/performance/             # Performance tests only
+pytest test/production_validation/   # Production validation only
+```
+
+### Run specific test files:
+```bash
+pytest test/unit/interface/controllers/test_auth_controller.py
+pytest test/integration/test_cooking_session.py
+```
+
+### Run with coverage:
+```bash
+pytest test/unit/ --cov=src --cov-report=html
+```
+
+## Test Naming Conventions
+
+- **Files**: `test_<component_name>.py`
+- **Classes**: `Test<ComponentName>`
+- **Methods**: `test_<scenario_description>`
+- **Fixtures**: `<resource_name>_fixture`
+
+## 🌟 Características Principales Heredadas
 
 - **🔥 Autenticación Firebase**: Tests completos con usuarios anónimos reales
 - **🧪 Tests Simplificados**: Validación sin requerir credenciales Firebase

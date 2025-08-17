@@ -1,0 +1,1 @@
+# Tests for ZeroWasteAI API v1.3 features

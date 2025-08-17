@@ -43,6 +43,23 @@ make_mark_food_item_consumed_use_case
 
 from src.application.factories.inventory_image_upload_factory import make_upload_inventory_image_use_case
 
+# New v1.3 imports for batch management
+from src.application.use_cases.inventory.get_expiring_soon_batches_use_case import GetExpiringSoonBatchesUseCase
+from src.application.use_cases.inventory.batch_management_use_cases import (
+    ReserveBatchUseCase, FreezeBatchUseCase, TransformBatchUseCase, 
+    QuarantineBatchUseCase, DiscardBatchUseCase
+)
+from src.application.factories.batch_management_factory import (
+    make_get_expiring_soon_batches_use_case,
+    make_reserve_batch_use_case,
+    make_freeze_batch_use_case,
+    make_transform_batch_use_case,
+    make_quarantine_batch_use_case,
+    make_discard_batch_use_case
+)
+from src.application.use_cases.inventory.create_leftover_use_case import CreateLeftoverUseCase
+from src.application.factories.leftover_factory import make_create_leftover_use_case
+
 from src.shared.exceptions.custom import InvalidRequestDataException
 from src.infrastructure.optimization.rate_limiter import smart_rate_limit
 from src.infrastructure.optimization.cache_service import smart_cache, cache_user_data
@@ -4782,6 +4799,400 @@ def add_item_to_inventory():
             "error": "Failed to add item to inventory",
             "details": str(e)
         }), 500
+
+
+# ===============================
+# NEW v1.3 BATCH MANAGEMENT ENDPOINTS
+# ===============================
+
+@inventory_bp.route("/expiring_soon", methods=["GET"])
+@jwt_required()
+@smart_rate_limit('data_read')
+@swag_from({
+    'tags': ['Inventory Batch Management'],
+    'summary': 'Obtener lotes próximos a vencer',
+    'description': '''
+Obtiene lotes de ingredientes próximos a vencer con puntuaciones de urgencia.
+
+### Funcionalidades:
+- Filtrado por días hasta vencimiento
+- Filtrado opcional por ubicación de almacenamiento
+- Puntuación de urgencia calculada automáticamente
+- Ordenamiento por urgencia (más urgente primero)
+
+### Algoritmo de Urgencia:
+- **use_by**: Más estricto - urgencia alta cerca del vencimiento
+- **best_before**: Menos estricto - permite consumo después del vencimiento
+- Puntuación 0.0 (baja) a 1.0 (crítica)
+    ''',
+    'parameters': [
+        {
+            'name': 'withinDays',
+            'in': 'query',
+            'type': 'integer',
+            'default': 3,
+            'description': 'Días de anticipación para considerar próximo a vencer'
+        },
+        {
+            'name': 'storage',
+            'in': 'query',
+            'type': 'string',
+            'enum': ['fridge', 'pantry', 'freezer'],
+            'description': 'Filtrar por ubicación de almacenamiento'
+        }
+    ],
+    'responses': {
+        200: {
+            'description': 'Lotes próximos a vencer obtenidos exitosamente',
+            'examples': {
+                'application/json': [
+                    {
+                        "batch_id": "batch_321",
+                        "ingredient_uid": "ing_spinach",
+                        "qty": 150,
+                        "unit": "g",
+                        "expiry_date": "2025-08-17T00:00:00",
+                        "storage_location": "fridge",
+                        "label_type": "use_by",
+                        "state": "expiring_soon",
+                        "urgency_score": 0.92,
+                        "days_to_expiry": 1
+                    }
+                ]
+            }
+        }
+    }
+})
+def get_expiring_soon():
+    """Get batches expiring soon with urgency scores"""
+    user_uid = get_jwt_identity()
+    within_days = request.args.get('withinDays', default=3, type=int)
+    storage = request.args.get('storage')
+    
+    try:
+        use_case = make_get_expiring_soon_batches_use_case()
+        result = use_case.execute(
+            user_uid=user_uid,
+            within_days=within_days,
+            storage=storage
+        )
+        
+        return jsonify(result), 200
+        
+    except ValueError as e:
+        return jsonify({"error": str(e)}), 400
+
+@inventory_bp.route("/batch/<batch_id>/reserve", methods=["POST"])
+@jwt_required()
+@smart_rate_limit('data_write')
+@swag_from({
+    'tags': ['Inventory Batch Management'],
+    'summary': 'Reservar lote para planificación',
+    'description': 'Reserva un lote específico para uso planificado en una comida',
+    'parameters': [
+        {
+            'name': 'batch_id',
+            'in': 'path',
+            'required': True,
+            'type': 'string'
+        },
+        {
+            'name': 'body',
+            'in': 'body',
+            'required': True,
+            'schema': {
+                'type': 'object',
+                'required': ['planner_date', 'meal_type'],
+                'properties': {
+                    'planner_date': {'type': 'string', 'format': 'date'},
+                    'meal_type': {'type': 'string', 'enum': ['breakfast', 'lunch', 'dinner']}
+                }
+            }
+        }
+    ],
+    'responses': {
+        200: {'description': 'Lote reservado exitosamente'},
+        400: {'description': 'Error en reserva del lote'}
+    }
+})
+def reserve_batch(batch_id: str):
+    """Reserve a batch for planned consumption"""
+    user_uid = get_jwt_identity()
+    data = request.get_json()
+    
+    if not data or not all(k in data for k in ['planner_date', 'meal_type']):
+        raise InvalidRequestDataException(details={"required": "planner_date and meal_type are required"})
+    
+    try:
+        use_case = make_reserve_batch_use_case()
+        result = use_case.execute(
+            batch_id=batch_id,
+            user_uid=user_uid,
+            planner_date=data['planner_date'],
+            meal_type=data['meal_type']
+        )
+        
+        return jsonify(result), 200
+        
+    except InvalidRequestDataException as e:
+        return jsonify({"error": str(e)}), 400
+
+@inventory_bp.route("/batch/<batch_id>/freeze", methods=["POST"])
+@jwt_required()
+@smart_rate_limit('data_write')
+@swag_from({
+    'tags': ['Inventory Batch Management'],
+    'summary': 'Congelar lote para extender vida útil',
+    'parameters': [
+        {
+            'name': 'batch_id',
+            'in': 'path',
+            'required': True,
+            'type': 'string'
+        },
+        {
+            'name': 'body',
+            'in': 'body',
+            'required': True,
+            'schema': {
+                'type': 'object',
+                'required': ['new_best_before'],
+                'properties': {
+                    'new_best_before': {'type': 'string', 'format': 'date-time'}
+                }
+            }
+        }
+    ],
+    'responses': {
+        200: {'description': 'Lote congelado exitosamente'},
+        400: {'description': 'Error al congelar lote'}
+    }
+})
+def freeze_batch(batch_id: str):
+    """Freeze a batch to extend its life"""
+    user_uid = get_jwt_identity()
+    data = request.get_json()
+    
+    if not data or 'new_best_before' not in data:
+        raise InvalidRequestDataException(details={"new_best_before": "This field is required"})
+    
+    try:
+        use_case = make_freeze_batch_use_case()
+        result = use_case.execute(
+            batch_id=batch_id,
+            user_uid=user_uid,
+            new_best_before=data['new_best_before']
+        )
+        
+        return jsonify(result), 200
+        
+    except InvalidRequestDataException as e:
+        return jsonify({"error": str(e)}), 400
+
+@inventory_bp.route("/batch/<batch_id>/transform", methods=["POST"])
+@jwt_required()
+@smart_rate_limit('data_write')
+@swag_from({
+    'tags': ['Inventory Batch Management'],
+    'summary': 'Transformar lote en producto preparado',
+    'description': 'Transforma un lote (ej: verduras) en un producto preparado (ej: sofrito)',
+    'responses': {
+        200: {'description': 'Lote transformado exitosamente'}
+    }
+})
+def transform_batch(batch_id: str):
+    """Transform a batch into a prepared item"""
+    user_uid = get_jwt_identity()
+    data = request.get_json()
+    
+    required_fields = ['output_type', 'yield_qty', 'unit', 'eat_by']
+    if not data or not all(k in data for k in required_fields):
+        raise InvalidRequestDataException(details={"required": f"Fields {required_fields} are required"})
+    
+    try:
+        use_case = make_transform_batch_use_case()
+        result = use_case.execute(
+            batch_id=batch_id,
+            user_uid=user_uid,
+            output_type=data['output_type'],
+            yield_qty=data['yield_qty'],
+            unit=data['unit'],
+            eat_by=data['eat_by']
+        )
+        
+        return jsonify(result), 200
+        
+    except InvalidRequestDataException as e:
+        return jsonify({"error": str(e)}), 400
+
+@inventory_bp.route("/batch/<batch_id>/quarantine", methods=["POST"])
+@jwt_required()
+@smart_rate_limit('data_write')
+@swag_from({
+    'tags': ['Inventory Batch Management'],
+    'summary': 'Poner lote en cuarentena',
+    'description': 'Mueve un lote a cuarentena para revisión de calidad',
+    'responses': {
+        204: {'description': 'Lote puesto en cuarentena exitosamente'}
+    }
+})
+def quarantine_batch(batch_id: str):
+    """Move batch to quarantine for quality check"""
+    user_uid = get_jwt_identity()
+    
+    try:
+        use_case = make_quarantine_batch_use_case()
+        result = use_case.execute(batch_id=batch_id, user_uid=user_uid)
+        
+        return '', 204
+        
+    except InvalidRequestDataException as e:
+        return jsonify({"error": str(e)}), 400
+
+@inventory_bp.route("/batch/<batch_id>/discard", methods=["POST"])
+@jwt_required()
+@smart_rate_limit('data_write')
+@swag_from({
+    'tags': ['Inventory Batch Management'],
+    'summary': 'Descartar lote y registrar desperdicio',
+    'description': 'Descarta un lote y registra el desperdicio con impacto ambiental',
+    'parameters': [
+        {
+            'name': 'body',
+            'in': 'body',
+            'required': True,
+            'schema': {
+                'type': 'object',
+                'required': ['estimated_weight', 'unit', 'reason'],
+                'properties': {
+                    'estimated_weight': {'type': 'number'},
+                    'unit': {'type': 'string'},
+                    'reason': {'type': 'string', 'enum': ['expired', 'bad_condition', 'other']}
+                }
+            }
+        }
+    ],
+    'responses': {
+        201: {
+            'description': 'Lote descartado y desperdicio registrado',
+            'examples': {
+                'application/json': {
+                    "waste_id": "w_88",
+                    "co2e_wasted_kg": 0.11
+                }
+            }
+        }
+    }
+})
+def discard_batch(batch_id: str):
+    """Discard a batch and log the waste"""
+    user_uid = get_jwt_identity()
+    data = request.get_json()
+    
+    required_fields = ['estimated_weight', 'unit', 'reason']
+    if not data or not all(k in data for k in required_fields):
+        raise InvalidRequestDataException(details={"required": f"Fields {required_fields} are required"})
+    
+    try:
+        use_case = make_discard_batch_use_case()
+        result = use_case.execute(
+            batch_id=batch_id,
+            user_uid=user_uid,
+            estimated_weight=data['estimated_weight'],
+            unit=data['unit'],
+            reason=data['reason']
+        )
+        
+        return jsonify(result), 201
+        
+    except InvalidRequestDataException as e:
+        return jsonify({"error": str(e)}), 400
+
+
+@inventory_bp.route("/leftovers", methods=["POST"])
+@jwt_required()
+@smart_rate_limit('data_write')
+@swag_from({
+    'tags': ['Inventory Leftovers'],
+    'summary': 'Crear elemento de sobras',
+    'description': '''
+Crea un elemento de sobras después de cocinar una receta.
+
+### Funcionalidades:
+- Registra sobras con información de conservación
+- Genera sugerencia automática para planificador
+- Calcula fecha óptima de consumo
+- Integra con sistema de planificación de comidas
+
+### Flujo Típico:
+1. Usuario cocina receta con más porciones de las necesarias
+2. Al finalizar cooking session, se detectan sobras potenciales
+3. Usuario confirma creación de sobras con este endpoint
+4. Sistema sugiere fecha/comida para planificador
+    ''',
+    'parameters': [
+        {
+            'name': 'body',
+            'in': 'body',
+            'required': True,
+            'schema': {
+                'type': 'object',
+                'required': ['recipe_uid', 'title', 'portions', 'eat_by', 'storage_location'],
+                'properties': {
+                    'recipe_uid': {'type': 'string'},
+                    'title': {'type': 'string', 'example': 'Ají de gallina (sobras)'},
+                    'portions': {'type': 'integer', 'minimum': 1},
+                    'eat_by': {'type': 'string', 'format': 'date'},
+                    'storage_location': {'type': 'string', 'enum': ['fridge', 'pantry', 'freezer']},
+                    'session_id': {'type': 'string', 'description': 'Optional cooking session ID'}
+                }
+            }
+        }
+    ],
+    'responses': {
+        201: {
+            'description': 'Sobras creadas exitosamente',
+            'examples': {
+                'application/json': {
+                    "leftover_id": "left_123",
+                    "title": "Ají de gallina (sobras)",
+                    "portions": 2,
+                    "eat_by": "2025-08-18",
+                    "storage_location": "fridge",
+                    "planner_suggestion": {
+                        "date": "2025-08-17",
+                        "meal_type": "dinner"
+                    }
+                }
+            }
+        }
+    }
+})
+def create_leftover():
+    """Create leftover item from cooking session"""
+    user_uid = get_jwt_identity()
+    data = request.get_json()
+    
+    required_fields = ['recipe_uid', 'title', 'portions', 'eat_by', 'storage_location']
+    if not data or not all(k in data for k in required_fields):
+        raise InvalidRequestDataException(details={"required": f"Fields {required_fields} are required"})
+    
+    try:
+        use_case = make_create_leftover_use_case()
+        result = use_case.execute(
+            recipe_uid=data['recipe_uid'],
+            title=data['title'],
+            portions=data['portions'],
+            eat_by=data['eat_by'],
+            storage_location=data['storage_location'],
+            user_uid=user_uid,
+            session_id=data.get('session_id')
+        )
+        
+        return jsonify(result), 201
+        
+    except InvalidRequestDataException as e:
+        return jsonify({"error": str(e)}), 400
 
 
 
