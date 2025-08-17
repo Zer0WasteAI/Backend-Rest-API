@@ -1,0 +1,1303 @@
+{
+  "info": {
+    "name": "ZeroWasteAI API - Complete Collection",
+    "description": "Colección completa de la API ZeroWasteAI con todos los endpoints y mensajes bonitos implementados",
+    "version": "2.0.0",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:3000",
+      "type": "string"
+    },
+    {
+      "key": "access_token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "refresh_token", 
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "user_uid",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{access_token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "item": [
+    {
+      "name": "🔐 Authentication",
+      "description": "Endpoints de autenticación y gestión de sesiones",
+      "item": [
+        {
+          "name": "🎯 Guest Login (TESTING)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    if (response.success && response.data) {",
+                  "        pm.collectionVariables.set('access_token', response.data.access_token);",
+                  "        pm.collectionVariables.set('refresh_token', response.data.refresh_token);", 
+                  "        pm.collectionVariables.set('user_uid', response.data.user.uid);",
+                  "        console.log('✅ Tokens guardados automáticamente');",
+                  "        console.log('🎉 ' + response.message);",
+                  "    }",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"guest@test.com\",\n  \"name\": \"Usuario Invitado\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/auth/guest-login",
+              "host": ["{{base_url}}"],
+              "path": ["api", "auth", "guest-login"]
+            },
+            "description": "🎯 Login especial para testing sin Firebase. Perfecto para probar la API rápidamente."
+          }
+        },
+        {
+          "name": "🔄 Refresh Token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    if (response.success && response.data) {",
+                  "        pm.collectionVariables.set('access_token', response.data.access_token);",
+                  "        pm.collectionVariables.set('refresh_token', response.data.refresh_token);",
+                  "        console.log('🔄 Tokens renovados automáticamente');",
+                  "    }",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token", 
+                  "value": "{{refresh_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/auth/refresh",
+              "host": ["{{base_url}}"],
+              "path": ["api", "auth", "refresh"]
+            },
+            "description": "Renovar tokens JWT con rotación segura"
+          }
+        },
+        {
+          "name": "🚪 Logout",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/auth/logout",
+              "host": ["{{base_url}}"],
+              "path": ["api", "auth", "logout"]
+            },
+            "description": "Cerrar sesión e invalidar todos los tokens"
+          }
+        },
+        {
+          "name": "🔧 Firebase Debug",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/auth/firebase-debug",
+              "host": ["{{base_url}}"],
+              "path": ["api", "auth", "firebase-debug"]
+            },
+            "description": "Debug de configuración Firebase (desarrollo)"
+          }
+        }
+      ]
+    },
+    {
+      "name": "🍳 Recipes",
+      "description": "Gestión de recetas, generación con IA y favoritas",
+      "item": [
+        {
+          "name": "✨ Generate from Inventory",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"preferences\": {\n    \"cuisine_type\": \"peruana\",\n    \"difficulty\": \"intermediate\",\n    \"max_time\": 60\n  },\n  \"servings\": 4,\n  \"dietary_restrictions\": []\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/recipes/generate-from-inventory",
+              "host": ["{{base_url}}"],
+              "path": ["api", "recipes", "generate-from-inventory"]
+            },
+            "description": "Generar recetas inteligentes basadas en inventario"
+          }
+        },
+        {
+          "name": "🎨 Generate Custom Recipe",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Pasta especial\",\n  \"ingredients\": [\"pasta\", \"tomate\", \"queso\"],\n  \"cuisine_type\": \"italiana\",\n  \"difficulty\": \"beginner\",\n  \"max_time\": 30,\n  \"servings\": 2\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/recipes/generate-custom",
+              "host": ["{{base_url}}"],
+              "path": ["api", "recipes", "generate-custom"]
+            },
+            "description": "Generar receta personalizada con ingredientes específicos"
+          }
+        },
+        {
+          "name": "📋 Get All Recipes",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/recipes/all",
+              "host": ["{{base_url}}"],
+              "path": ["api", "recipes", "all"]
+            },
+            "description": "Obtener todas las recetas del usuario"
+          }
+        },
+        {
+          "name": "💾 Get Saved Recipes",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/recipes/saved",
+              "host": ["{{base_url}}"],
+              "path": ["api", "recipes", "saved"]
+            },
+            "description": "Obtener recetas guardadas del usuario"
+          }
+        },
+        {
+          "name": "❤️ Get Favorite Recipes",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/recipes/generated/favorites",
+              "host": ["{{base_url}}"],
+              "path": ["api", "recipes", "generated", "favorites"]
+            },
+            "description": "Obtener recetas favoritas del usuario"
+          }
+        },
+        {
+          "name": "🖼️ Recipe Gallery",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/recipes/generated/gallery",
+              "host": ["{{base_url}}"],
+              "path": ["api", "recipes", "generated", "gallery"]
+            },
+            "description": "Galería de recetas generadas"
+          }
+        },
+        {
+          "name": "⭐ Add to Favorites",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"notes\": \"Me encanta esta receta\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/recipes/generated/RECIPE_UID_HERE/favorite",
+              "host": ["{{base_url}}"],
+              "path": ["api", "recipes", "generated", "RECIPE_UID_HERE", "favorite"]
+            },
+            "description": "Añadir receta a favoritas (reemplazar RECIPE_UID_HERE)"
+          }
+        },
+        {
+          "name": "💔 Remove from Favorites",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/recipes/generated/RECIPE_UID_HERE/favorite",
+              "host": ["{{base_url}}"],
+              "path": ["api", "recipes", "generated", "RECIPE_UID_HERE", "favorite"]
+            },
+            "description": "Eliminar receta de favoritas (reemplazar RECIPE_UID_HERE)"
+          }
+        },
+        {
+          "name": "🗑️ Delete Recipe",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"recipe_uid\": \"RECIPE_UID_HERE\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/recipes/delete",
+              "host": ["{{base_url}}"],
+              "path": ["api", "recipes", "delete"]
+            },
+            "description": "Eliminar receta del usuario"
+          }
+        },
+        {
+          "name": "🏠 Default Recipes",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/recipes/default",
+              "host": ["{{base_url}}"],
+              "path": ["api", "recipes", "default"]
+            },
+            "description": "Obtener recetas por defecto del sistema"
+          }
+        }
+      ]
+    },
+    {
+      "name": "📦 Inventory",
+      "description": "Gestión inteligente de inventario con IA",
+      "item": [
+        {
+          "name": "📋 Get Inventory Complete",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/inventory/complete",
+              "host": ["{{base_url}}"],
+              "path": ["api", "inventory", "complete"]
+            },
+            "description": "Obtener inventario completo del usuario"
+          }
+        },
+        {
+          "name": "📊 Get Inventory Simple",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/inventory/simple",
+              "host": ["{{base_url}}"],
+              "path": ["api", "inventory", "simple"]
+            },
+            "description": "Vista simplificada del inventario"
+          }
+        },
+        {
+          "name": "➕ Add Item to Inventory",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Tomates\",\n  \"quantity\": 5,\n  \"unit\": \"pieces\",\n  \"storage_type\": \"refrigerated\",\n  \"category\": \"ingredient\",\n  \"image_url\": null\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/inventory/add_item",
+              "host": ["{{base_url}}"],
+              "path": ["api", "inventory", "add_item"]
+            },
+            "description": "Agregar item al inventario con generación IA"
+          }
+        },
+        {
+          "name": "📥 Add Ingredients Batch",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"ingredients\": [\n    {\n      \"name\": \"Cebolla\",\n      \"quantity\": 3,\n      \"unit\": \"pieces\",\n      \"storage_type\": \"pantry\",\n      \"expiration_date\": \"2024-02-15\"\n    },\n    {\n      \"name\": \"Ajo\",\n      \"quantity\": 1,\n      \"unit\": \"head\",\n      \"storage_type\": \"pantry\",\n      \"expiration_date\": \"2024-02-20\"\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/inventory/ingredients",
+              "host": ["{{base_url}}"],
+              "path": ["api", "inventory", "ingredients"]
+            },
+            "description": "Agregar múltiples ingredientes al inventario"
+          }
+        },
+        {
+          "name": "⏰ Get Expiring Soon",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/inventory/expiring_soon?days=7",
+              "host": ["{{base_url}}"],
+              "path": ["api", "inventory", "expiring_soon"],
+              "query": [
+                {
+                  "key": "days",
+                  "value": "7"
+                }
+              ]
+            },
+            "description": "Obtener productos próximos a vencer"
+          }
+        },
+        {
+          "name": "📸 Upload Inventory Image",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "image",
+                  "type": "file",
+                  "src": [],
+                  "description": "Imagen del inventario"
+                },
+                {
+                  "key": "upload_type",
+                  "value": "recognition",
+                  "type": "text"
+                },
+                {
+                  "key": "item_name",
+                  "value": "Inventario",
+                  "type": "text"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/api/inventory/upload_image",
+              "host": ["{{base_url}}"],
+              "path": ["api", "inventory", "upload_image"]
+            },
+            "description": "Subir imagen para reconocimiento de inventario"
+          }
+        },
+        {
+          "name": "📊 Update Ingredient Quantity",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"new_quantity\": 8\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/inventory/ingredients/INGREDIENT_NAME/ADDED_AT_TIMESTAMP/quantity",
+              "host": ["{{base_url}}"],
+              "path": ["api", "inventory", "ingredients", "INGREDIENT_NAME", "ADDED_AT_TIMESTAMP", "quantity"]
+            },
+            "description": "Actualizar cantidad de ingrediente (reemplazar INGREDIENT_NAME y ADDED_AT_TIMESTAMP)"
+          }
+        },
+        {
+          "name": "🗑️ Delete Ingredient",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/inventory/ingredients/INGREDIENT_NAME",
+              "host": ["{{base_url}}"],
+              "path": ["api", "inventory", "ingredients", "INGREDIENT_NAME"]
+            },
+            "description": "Eliminar ingrediente completo (reemplazar INGREDIENT_NAME)"
+          }
+        },
+        {
+          "name": "✅ Mark Ingredient Consumed",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"consumed_quantity\": 2,\n  \"notes\": \"Usado para cocinar pasta\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/inventory/ingredients/INGREDIENT_NAME/ADDED_AT_TIMESTAMP/consume",
+              "host": ["{{base_url}}"],
+              "path": ["api", "inventory", "ingredients", "INGREDIENT_NAME", "ADDED_AT_TIMESTAMP", "consume"]
+            },
+            "description": "Marcar ingrediente como consumido (reemplazar parámetros)"
+          }
+        },
+        {
+          "name": "🔍 Get Ingredient Detail",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/inventory/ingredients/INGREDIENT_NAME/detail",
+              "host": ["{{base_url}}"],
+              "path": ["api", "inventory", "ingredients", "INGREDIENT_NAME", "detail"]
+            },
+            "description": "Obtener detalles de ingrediente específico"
+          }
+        },
+        {
+          "name": "📋 List All Ingredients",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/inventory/ingredients/list",
+              "host": ["{{base_url}}"],
+              "path": ["api", "inventory", "ingredients", "list"]
+            },
+            "description": "Listar todos los ingredientes del usuario"
+          }
+        },
+        {
+          "name": "🍽️ List All Foods",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/inventory/foods/list",
+              "host": ["{{base_url}}"],
+              "path": ["api", "inventory", "foods", "list"]
+            },
+            "description": "Listar todas las comidas del usuario"
+          }
+        }
+      ]
+    },
+    {
+      "name": "👨‍🍳 Cooking Sessions",
+      "description": "Sesiones de cocina paso a paso con seguimiento",
+      "item": [
+        {
+          "name": "📝 Get Mise en Place",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/cooking_session/RECIPE_UID/mise_en_place?servings=4",
+              "host": ["{{base_url}}"],
+              "path": ["api", "cooking_session", "RECIPE_UID", "mise_en_place"],
+              "query": [
+                {
+                  "key": "servings",
+                  "value": "4"
+                }
+              ]
+            },
+            "description": "Obtener mise en place para una receta (reemplazar RECIPE_UID)"
+          }
+        },
+        {
+          "name": "🔥 Start Cooking Session",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{$randomUUID}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"recipe_uid\": \"RECIPE_UID_HERE\",\n  \"servings\": 4,\n  \"level\": \"intermediate\",\n  \"started_at\": \"{{$isoTimestamp}}\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/cooking_session/start",
+              "host": ["{{base_url}}"],
+              "path": ["api", "cooking_session", "start"]
+            },
+            "description": "Iniciar nueva sesión de cocina"
+          }
+        },
+        {
+          "name": "✅ Complete Cooking Step",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{$randomUUID}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"session_id\": \"SESSION_ID_HERE\",\n  \"step_id\": \"step_1\",\n  \"timer_ms\": 300000,\n  \"consumptions\": [\n    {\n      \"ingredient_uid\": \"ing_onion\",\n      \"lot_id\": \"batch_123\",\n      \"qty\": 2,\n      \"unit\": \"pieces\"\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/cooking_session/complete_step",
+              "host": ["{{base_url}}"],
+              "path": ["api", "cooking_session", "complete_step"]
+            },
+            "description": "Completar paso de cocina con consumos"
+          }
+        },
+        {
+          "name": "🎉 Finish Cooking Session",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{$randomUUID}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"session_id\": \"SESSION_ID_HERE\",\n  \"notes\": \"¡Quedó delicioso!\",\n  \"photo_url\": \"https://example.com/my-dish.jpg\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/cooking_session/finish",
+              "host": ["{{base_url}}"],
+              "path": ["api", "cooking_session", "finish"]
+            },
+            "description": "Finalizar sesión de cocina"
+          }
+        }
+      ]
+    },
+    {
+      "name": "🤖 Recognition",
+      "description": "Reconocimiento de alimentos con IA",
+      "item": [
+        {
+          "name": "🔍 Recognize Ingredients",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "image",
+                  "type": "file",
+                  "src": [],
+                  "description": "Imagen de ingredientes"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/api/recognition/ingredients",
+              "host": ["{{base_url}}"],
+              "path": ["api", "recognition", "ingredients"]
+            },
+            "description": "Reconocer ingredientes en imagen"
+          }
+        },
+        {
+          "name": "🔍 Recognize Ingredients Complete",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "image",
+                  "type": "file",
+                  "src": [],
+                  "description": "Imagen de ingredientes"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/api/recognition/ingredients/complete",
+              "host": ["{{base_url}}"],
+              "path": ["api", "recognition", "ingredients", "complete"]
+            },
+            "description": "Reconocimiento completo de ingredientes"
+          }
+        },
+        {
+          "name": "🍽️ Recognize Foods",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "image",
+                  "type": "file",
+                  "src": [],
+                  "description": "Imagen de alimentos"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/api/recognition/foods",
+              "host": ["{{base_url}}"],
+              "path": ["api", "recognition", "foods"]
+            },
+            "description": "Reconocer alimentos preparados"
+          }
+        },
+        {
+          "name": "📦 Recognize Batch",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"images\": [\n    \"image_url_1\",\n    \"image_url_2\",\n    \"image_url_3\"\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/recognition/batch",
+              "host": ["{{base_url}}"],
+              "path": ["api", "recognition", "batch"]
+            },
+            "description": "Reconocimiento por lotes de múltiples imágenes"
+          }
+        },
+        {
+          "name": "⚡ Recognize Ingredients Async",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "image",
+                  "type": "file",
+                  "src": [],
+                  "description": "Imagen para reconocimiento asíncrono"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/api/recognition/ingredients/async",
+              "host": ["{{base_url}}"],
+              "path": ["api", "recognition", "ingredients", "async"]
+            },
+            "description": "Reconocimiento asíncrono de ingredientes"
+          }
+        },
+        {
+          "name": "📊 Check Task Status",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/recognition/status/TASK_ID_HERE",
+              "host": ["{{base_url}}"],
+              "path": ["api", "recognition", "status", "TASK_ID_HERE"]
+            },
+            "description": "Verificar estado de tarea asíncrona (reemplazar TASK_ID_HERE)"
+          }
+        }
+      ]
+    },
+    {
+      "name": "📸 Image Management",
+      "description": "Gestión y upload de imágenes",
+      "item": [
+        {
+          "name": "📤 Upload Image",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "image",
+                  "type": "file",
+                  "src": [],
+                  "description": "Archivo de imagen"
+                },
+                {
+                  "key": "item_name",
+                  "value": "tomate_fresco",
+                  "type": "text"
+                },
+                {
+                  "key": "image_type",
+                  "value": "ingredient",
+                  "type": "text"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/api/image_management/upload_image",
+              "host": ["{{base_url}}"],
+              "path": ["api", "image_management", "upload_image"]
+            },
+            "description": "Subir imagen a Firebase Storage"
+          }
+        },
+        {
+          "name": "🎯 Assign Image to Ingredient",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"item_name\": \"tomate\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/image_management/assign_image",
+              "host": ["{{base_url}}"],
+              "path": ["api", "image_management", "assign_image"]
+            },
+            "description": "Asignar imagen de referencia a ingrediente"
+          }
+        },
+        {
+          "name": "🔍 Search Similar Images",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"item_name\": \"tomate\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/image_management/search_similar_images",
+              "host": ["{{base_url}}"],
+              "path": ["api", "image_management", "search_similar_images"]
+            },
+            "description": "Buscar imágenes similares en base de datos"
+          }
+        }
+      ]
+    },
+    {
+      "name": "📅 Meal Planning",
+      "description": "Planificación de comidas y menús",
+      "item": [
+        {
+          "name": "💾 Save Meal Plan",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"date\": \"2024-02-15\",\n  \"meals\": {\n    \"breakfast\": {\n      \"recipe_uid\": \"rec_avena_123\",\n      \"title\": \"Avena con frutas\",\n      \"servings\": 1\n    },\n    \"lunch\": {\n      \"recipe_uid\": \"rec_pasta_456\",\n      \"title\": \"Pasta con vegetales\",\n      \"servings\": 2\n    },\n    \"dinner\": {\n      \"recipe_uid\": \"rec_ensalada_789\",\n      \"title\": \"Ensalada César\",\n      \"servings\": 1\n    }\n  }\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/planning/save",
+              "host": ["{{base_url}}"],
+              "path": ["api", "planning", "save"]
+            },
+            "description": "Guardar plan de comidas para una fecha"
+          }
+        },
+        {
+          "name": "🔄 Update Meal Plan",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"date\": \"2024-02-15\",\n  \"meals\": {\n    \"breakfast\": {\n      \"recipe_uid\": \"rec_avena_updated\",\n      \"title\": \"Avena con plátano\",\n      \"servings\": 1\n    }\n  }\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/planning/update",
+              "host": ["{{base_url}}"],
+              "path": ["api", "planning", "update"]
+            },
+            "description": "Actualizar plan de comidas existente"
+          }
+        },
+        {
+          "name": "📋 Get Meal Plan",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/planning/get?date=2024-02-15",
+              "host": ["{{base_url}}"],
+              "path": ["api", "planning", "get"],
+              "query": [
+                {
+                  "key": "date",
+                  "value": "2024-02-15"
+                }
+              ]
+            },
+            "description": "Obtener plan de comidas para fecha específica"
+          }
+        },
+        {
+          "name": "📊 Get All Meal Plans",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/planning/all",
+              "host": ["{{base_url}}"],
+              "path": ["api", "planning", "all"]
+            },
+            "description": "Obtener todos los planes de comida del usuario"
+          }
+        },
+        {
+          "name": "📅 Get Planning Dates",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/planning/dates",
+              "host": ["{{base_url}}"],
+              "path": ["api", "planning", "dates"]
+            },
+            "description": "Obtener fechas con planes de comida"
+          }
+        },
+        {
+          "name": "🗑️ Delete Meal Plan",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"date\": \"2024-02-15\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/planning/delete",
+              "host": ["{{base_url}}"],
+              "path": ["api", "planning", "delete"]
+            },
+            "description": "Eliminar plan de comidas"
+          }
+        }
+      ]
+    },
+    {
+      "name": "🌱 Environmental Savings",
+      "description": "Cálculo de impacto ambiental y sostenibilidad",
+      "item": [
+        {
+          "name": "🧮 Calculate from Recipe Title",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"recipe_title\": \"Pasta con verduras casera\",\n  \"servings\": 4\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/environmental_savings/calculate/from-title",
+              "host": ["{{base_url}}"],
+              "path": ["api", "environmental_savings", "calculate", "from-title"]
+            },
+            "description": "Calcular impacto ambiental por título de receta"
+          }
+        },
+        {
+          "name": "🧮 Calculate from Recipe UID",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"servings\": 4\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/environmental_savings/calculate/from-uid/RECIPE_UID_HERE",
+              "host": ["{{base_url}}"],
+              "path": ["api", "environmental_savings", "calculate", "from-uid", "RECIPE_UID_HERE"]
+            },
+            "description": "Calcular impacto ambiental por UID de receta"
+          }
+        },
+        {
+          "name": "📊 Get All Calculations",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/environmental_savings/calculations",
+              "host": ["{{base_url}}"],
+              "path": ["api", "environmental_savings", "calculations"]
+            },
+            "description": "Obtener todos los cálculos ambientales del usuario"
+          }
+        },
+        {
+          "name": "📈 Get Calculations by Status",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/environmental_savings/calculations/status?is_cooked=true",
+              "host": ["{{base_url}}"],
+              "path": ["api", "environmental_savings", "calculations", "status"],
+              "query": [
+                {
+                  "key": "is_cooked",
+                  "value": "true"
+                }
+              ]
+            },
+            "description": "Obtener cálculos por estado de cocción"
+          }
+        },
+        {
+          "name": "📋 Get Environmental Summary",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/environmental_savings/summary",
+              "host": ["{{base_url}}"],
+              "path": ["api", "environmental_savings", "summary"]
+            },
+            "description": "Obtener resumen de impacto ambiental"
+          }
+        },
+        {
+          "name": "👨‍🍳 Calculate from Cooking Session",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"session_id\": \"SESSION_ID_HERE\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/environmental_savings/calculate/from-session",
+              "host": ["{{base_url}}"],
+              "path": ["api", "environmental_savings", "calculate", "from-session"]
+            },
+            "description": "Calcular impacto basado en sesión de cocina"
+          }
+        }
+      ]
+    },
+    {
+      "name": "👤 User Profile",
+      "description": "Gestión de perfil de usuario",
+      "item": [
+        {
+          "name": "👤 Get User Profile",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/user/profile",
+              "host": ["{{base_url}}"],
+              "path": ["api", "user", "profile"]
+            },
+            "description": "Obtener perfil completo del usuario"
+          }
+        },
+        {
+          "name": "✏️ Update User Profile",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Juan Pérez Actualizado\",\n  \"phone\": \"+51987654321\",\n  \"preferences\": {\n    \"language\": \"es\",\n    \"cookingLevel\": \"intermediate\",\n    \"measurementUnit\": \"metric\",\n    \"allergies\": [\"lactose\"],\n    \"preferredFoodTypes\": [\"vegetarian\", \"peruvian\"]\n  }\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/user/profile",
+              "host": ["{{base_url}}"],
+              "path": ["api", "user", "profile"]
+            },
+            "description": "Actualizar perfil del usuario"
+          }
+        }
+      ]
+    },
+    {
+      "name": "🛡️ Admin",
+      "description": "Herramientas administrativas (requiere permisos)",
+      "item": [
+        {
+          "name": "🧹 Cleanup Tokens",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/admin/cleanup-tokens",
+              "host": ["{{base_url}}"],
+              "path": ["api", "admin", "cleanup-tokens"]
+            },
+            "description": "Limpiar tokens expirados (solo admin)"
+          }
+        },
+        {
+          "name": "📊 Security Stats",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/admin/security-stats",
+              "host": ["{{base_url}}"],
+              "path": ["api", "admin", "security-stats"]
+            },
+            "description": "Obtener estadísticas de seguridad (solo admin)"
+          }
+        }
+      ]
+    },
+    {
+      "name": "🎨 Generation",
+      "description": "Generación de contenido e imágenes",
+      "item": [
+        {
+          "name": "📊 Check Image Generation Status",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/generation/images/status/TASK_ID_HERE",
+              "host": ["{{base_url}}"],
+              "path": ["api", "generation", "images", "status", "TASK_ID_HERE"]
+            },
+            "description": "Verificar estado de generación de imagen (reemplazar TASK_ID_HERE)"
+          }
+        },
+        {
+          "name": "🖼️ Get Generated Images",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/generation/GENERATION_ID_HERE/images",
+              "host": ["{{base_url}}"],
+              "path": ["api", "generation", "GENERATION_ID_HERE", "images"]
+            },
+            "description": "Obtener imágenes generadas (reemplazar GENERATION_ID_HERE)"
+          }
+        }
+      ]
+    },
+    {
+      "name": "🏠 System",
+      "description": "Endpoints del sistema y status",
+      "item": [
+        {
+          "name": "🏠 Welcome",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/",
+              "host": ["{{base_url}}"],
+              "path": [""]
+            },
+            "description": "Endpoint de bienvenida con información de la API"
+          }
+        },
+        {
+          "name": "⚡ Health Check",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/status",
+              "host": ["{{base_url}}"],
+              "path": ["status"]
+            },
+            "description": "Verificar estado de la API y base de datos"
+          }
+        }
+      ]
+    }
+  ],
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// Auto-set Bearer token for requests that need authentication",
+          "if (pm.request.auth && pm.request.auth.type === 'bearer') {",
+          "    const token = pm.collectionVariables.get('access_token');",
+          "    if (token) {",
+          "        pm.request.headers.add({",
+          "            key: 'Authorization',",
+          "            value: 'Bearer ' + token",
+          "        });",
+          "    }",
+          "}"
+        ]
+      }
+    },
+    {
+      "listen": "test",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// Auto-log beautiful messages from API responses",
+          "if (pm.response.code >= 200 && pm.response.code < 300) {",
+          "    try {",
+          "        const response = pm.response.json();",
+          "        if (response.message) {",
+          "            console.log('📩 API Response: ' + response.message);",
+          "        }",
+          "        if (response.success === false && response.error_details) {",
+          "            console.log('❌ Error Details: ' + response.error_details);",
+          "        }",
+          "    } catch (e) {",
+          "        // Not JSON response, ignore",
+          "    }",
+          "} else {",
+          "    console.log('❌ Request failed with status: ' + pm.response.code);",
+          "}"
+        ]
+      }
+    }
+  ]
+}

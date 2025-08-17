@@ -41,7 +41,9 @@ make_mark_ingredient_stack_consumed_use_case,
 make_mark_food_item_consumed_use_case
 )
 
-from src.application.factories.inventory_image_upload_factory import make_upload_inventory_image_use_case
+from src.application.factories.unified_upload_factory import make_unified_upload_use_case
+from src.shared.decorators.response_handler import api_response, ResponseHelper
+from src.shared.messages.response_messages import ServiceType
 
 # New v1.3 imports for batch management
 from src.application.use_cases.inventory.get_expiring_soon_batches_use_case import GetExpiringSoonBatchesUseCase
@@ -67,6 +69,7 @@ from src.infrastructure.optimization.cache_service import smart_cache, cache_use
 inventory_bp = Blueprint('inventory', __name__)
 
 @inventory_bp.route("/ingredients", methods=["POST"])
+@api_response(service=ServiceType.INVENTORY, action="ingredients_recognized")
 @jwt_required()
 @smart_rate_limit('inventory_bulk')  # 🛡️ Rate limit: 10 requests/min for bulk operations
 @swag_from({
@@ -509,6 +512,7 @@ def get_inventory():
         raise e
 
 @inventory_bp.route("/complete", methods=["GET"])
+@api_response(service=ServiceType.INVENTORY, action="retrieved")
 @jwt_required()
 @cache_user_data('inventory_complete', timeout=600)  # 🚀 Cache: 10 min for complete inventory with AI data
 @swag_from({
@@ -760,6 +764,7 @@ def get_inventory_complete():
         raise e
 
 @inventory_bp.route("/ingredients/<ingredient_name>/<added_at>", methods=["PUT"])
+@api_response(service=ServiceType.INVENTORY, action="updated")
 @jwt_required()
 @smart_rate_limit('inventory_crud')  # 🛡️ Rate limit: 50 requests/min for CRUD operations
 @swag_from({
@@ -976,6 +981,7 @@ def update_ingredient(ingredient_name, added_at):
     return jsonify({"message": "Ingrediente actualizado exitosamente"}), 200
 
 @inventory_bp.route("/ingredients/<ingredient_name>/<added_at>", methods=["DELETE"])
+@api_response(service=ServiceType.INVENTORY, action="deleted")
 @jwt_required()
 @smart_rate_limit('inventory_crud')  # 🛡️ Rate limit: 50 requests/min for CRUD operations
 @swag_from({
@@ -1144,6 +1150,7 @@ def delete_ingredient(ingredient_name, added_at):
         }), 404
 
 @inventory_bp.route("/expiring", methods=["GET"])
+@api_response(service=ServiceType.INVENTORY, action="expiring_retrieved")
 @jwt_required()
 @smart_rate_limit('data_read')  # 🛡️ Rate limit: 100 requests/min for data reads
 @cache_user_data('expiring_items', timeout=900)  # 🚀 Cache: 15 min for expiring items
@@ -1250,6 +1257,7 @@ def get_expiring_items():
     }), 200
 
 @inventory_bp.route("/ingredients/from-recognition", methods=["POST"])
+@api_response(service=ServiceType.INVENTORY, action="ingredients_recognized")
 @jwt_required()
 @smart_rate_limit('inventory_bulk')  # 🛡️ Rate limit: 10 requests/min for recognition operations
 @swag_from({
@@ -1694,6 +1702,7 @@ def _enrich_ingredients_with_enhanced_data(ingredients_data: list[dict], ai_serv
 # ===============================================================================
 
 @inventory_bp.route("/foods/from-recognition", methods=["POST"])
+@api_response(service=ServiceType.INVENTORY, action="foods_identified")
 @jwt_required()
 @smart_rate_limit('inventory_bulk')  # 🛡️ Rate limit: 10 requests/min for recognition operations
 @swag_from({
@@ -2056,6 +2065,7 @@ def _enrich_foods_with_enhanced_data(foods_data: list[dict], ai_service):
 
 
 @inventory_bp.route("/simple", methods=["GET"])
+@api_response(service=ServiceType.INVENTORY, action="retrieved")
 @jwt_required()
 @swag_from({
     'tags': ['Inventory'],
@@ -2205,6 +2215,7 @@ def get_inventory_simple():
 # ===============================================================================
 
 @inventory_bp.route("/ingredients/<ingredient_name>/<added_at>/quantity", methods=["PATCH"])
+@api_response(service=ServiceType.INVENTORY, action="processed")
 @jwt_required()
 @swag_from({
     'tags': ['Inventory'],
@@ -2463,6 +2474,7 @@ def update_ingredient_quantity(ingredient_name, added_at):
         raise e
 
 @inventory_bp.route("/foods/<food_name>/<added_at>/quantity", methods=["PATCH"])
+@api_response(service=ServiceType.INVENTORY, action="processed")
 @jwt_required()
 @swag_from({
     'tags': ['Inventory'],
@@ -2658,6 +2670,7 @@ def update_food_quantity(food_name, added_at):
 # ===============================================================================
 
 @inventory_bp.route("/ingredients/<ingredient_name>", methods=["DELETE"])
+@api_response(service=ServiceType.INVENTORY, action="deleted")
 @jwt_required()
 @smart_rate_limit('inventory_crud')  # 🛡️ Rate limit: 50 requests/min for CRUD operations
 @swag_from({
@@ -2848,6 +2861,7 @@ def delete_ingredient_complete(ingredient_name):
 
 
 @inventory_bp.route("/foods/<food_name>/<added_at>", methods=["DELETE"])
+@api_response(service=ServiceType.INVENTORY, action="deleted")
 @jwt_required()
 @swag_from({
     'tags': ['Inventory'],
@@ -3001,6 +3015,7 @@ def delete_food_item(food_name, added_at):
 # ===============================================================================
 
 @inventory_bp.route("/ingredients/<ingredient_name>/<added_at>/consume", methods=["POST"])
+@api_response(service=ServiceType.INVENTORY, action="item_added")
 @jwt_required()
 @swag_from({
     'tags': ['Inventory'],
@@ -3246,6 +3261,7 @@ def mark_ingredient_stack_consumed(ingredient_name, added_at):
 
 
 @inventory_bp.route("/foods/<food_name>/<added_at>/consume", methods=["POST"])
+@api_response(service=ServiceType.INVENTORY, action="item_added")
 @jwt_required()
 @swag_from({
     'tags': ['Inventory'],
@@ -3486,6 +3502,7 @@ def mark_food_item_consumed(food_name, added_at):
 # ===============================================================================
 
 @inventory_bp.route("/ingredients/<ingredient_name>/detail", methods=["GET"])
+@api_response(service=ServiceType.INVENTORY, action="retrieved")
 @jwt_required()
 @swag_from({
     'tags': ['Inventory'],
@@ -3662,6 +3679,7 @@ def get_ingredient_detail(ingredient_name):
         return jsonify({"error": f"Error fetching ingredient details: {str(e)}"}), 500
 
 @inventory_bp.route("/foods/<food_name>/<added_at>/detail", methods=["GET"])
+@api_response(service=ServiceType.INVENTORY, action="retrieved")
 @jwt_required()
 @swag_from({
     'tags': ['Inventory'],
@@ -3904,6 +3922,7 @@ def get_food_detail(food_name, added_at):
 # ===============================================================================
 
 @inventory_bp.route("/ingredients/list", methods=["GET"])
+@api_response(service=ServiceType.INVENTORY, action="list_retrieved")
 @jwt_required()
 @swag_from({
     'tags': ['Inventory'],
@@ -4098,6 +4117,7 @@ def get_ingredients_list():
         return jsonify({"error": f"Error fetching ingredients list: {str(e)}"}), 500
 
 @inventory_bp.route("/foods/list", methods=["GET"])
+@api_response(service=ServiceType.INVENTORY, action="list_retrieved")
 @jwt_required()
 @swag_from({
     'tags': ['Inventory'],
@@ -4263,6 +4283,7 @@ def get_foods_list():
 # ===============================================================================
 
 @inventory_bp.route("/upload_image", methods=["POST"])
+@api_response(service=ServiceType.INVENTORY, action="uploaded")
 @jwt_required()
 @swag_from({
     'tags': ['Inventory'],
@@ -4482,7 +4503,7 @@ def upload_inventory_image():
     print(f"📤 [UPLOAD INVENTORY IMAGE] ===== STARTING USE CASE EXECUTION =====")
     try:
         print(f"📤 [UPLOAD INVENTORY IMAGE] Creating use case...")
-        use_case = make_upload_inventory_image_use_case()
+        use_case = make_unified_upload_use_case()
         print(f"📤 [UPLOAD INVENTORY IMAGE] Use case created successfully")
         
         print(f"📤 [UPLOAD INVENTORY IMAGE] Calling use_case.execute()...")
@@ -4494,8 +4515,9 @@ def upload_inventory_image():
         
         result = use_case.execute(
             file=image_file,
-            upload_type=upload_type,
+            upload_context='inventory',
             user_uid=user_uid,
+            upload_type=upload_type,
             item_name=item_name
         )
         print(f"📤 [UPLOAD INVENTORY IMAGE] Use case execution completed")
@@ -4558,7 +4580,9 @@ def upload_inventory_image():
 # ===============================================================================
 
 @inventory_bp.route("/add_item", methods=["POST"])
+@api_response(service=ServiceType.INVENTORY, action="item_added")
 @jwt_required()
+@api_response(service=ServiceType.INVENTORY, action="item_added")
 @swag_from({
     'tags': ['Inventory'],
     'summary': 'Agregar item al inventario con generación IA',
@@ -4806,6 +4830,7 @@ def add_item_to_inventory():
 # ===============================
 
 @inventory_bp.route("/expiring_soon", methods=["GET"])
+@api_response(service=ServiceType.INVENTORY, action="expiring_retrieved")
 @jwt_required()
 @smart_rate_limit('data_read')
 @swag_from({
@@ -4883,6 +4908,7 @@ def get_expiring_soon():
         return jsonify({"error": str(e)}), 400
 
 @inventory_bp.route("/batch/<batch_id>/reserve", methods=["POST"])
+@api_response(service=ServiceType.INVENTORY, action="batch_processed")
 @jwt_required()
 @smart_rate_limit('data_write')
 @swag_from({
@@ -4938,6 +4964,7 @@ def reserve_batch(batch_id: str):
         return jsonify({"error": str(e)}), 400
 
 @inventory_bp.route("/batch/<batch_id>/freeze", methods=["POST"])
+@api_response(service=ServiceType.INVENTORY, action="batch_processed")
 @jwt_required()
 @smart_rate_limit('data_write')
 @swag_from({
@@ -4990,6 +5017,7 @@ def freeze_batch(batch_id: str):
         return jsonify({"error": str(e)}), 400
 
 @inventory_bp.route("/batch/<batch_id>/transform", methods=["POST"])
+@api_response(service=ServiceType.INVENTORY, action="batch_processed")
 @jwt_required()
 @smart_rate_limit('data_write')
 @swag_from({
@@ -5026,6 +5054,7 @@ def transform_batch(batch_id: str):
         return jsonify({"error": str(e)}), 400
 
 @inventory_bp.route("/batch/<batch_id>/quarantine", methods=["POST"])
+@api_response(service=ServiceType.INVENTORY, action="batch_processed")
 @jwt_required()
 @smart_rate_limit('data_write')
 @swag_from({
@@ -5050,6 +5079,7 @@ def quarantine_batch(batch_id: str):
         return jsonify({"error": str(e)}), 400
 
 @inventory_bp.route("/batch/<batch_id>/discard", methods=["POST"])
+@api_response(service=ServiceType.INVENTORY, action="batch_processed")
 @jwt_required()
 @smart_rate_limit('data_write')
 @swag_from({
@@ -5110,6 +5140,7 @@ def discard_batch(batch_id: str):
 
 
 @inventory_bp.route("/leftovers", methods=["POST"])
+@api_response(service=ServiceType.INVENTORY, action="created")
 @jwt_required()
 @smart_rate_limit('data_write')
 @swag_from({

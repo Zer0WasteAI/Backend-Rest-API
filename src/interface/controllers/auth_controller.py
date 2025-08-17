@@ -17,6 +17,8 @@ from src.interface.middlewares.firebase_auth_decorator import verify_firebase_to
 from src.infrastructure.optimization.rate_limiter import smart_rate_limit
 from src.infrastructure.security.security_logger import security_logger, SecurityEventType
 from src.shared.exceptions.custom import InvalidTokenException
+from src.shared.decorators.response_handler import api_response, ResponseHelper
+from src.shared.messages.response_messages import ServiceType
 from datetime import datetime, timezone
 import uuid
 import traceback
@@ -24,6 +26,7 @@ import traceback
 auth_bp = Blueprint("auth", __name__)
 
 @auth_bp.route("/firebase-debug", methods=["GET"])
+@api_response(service=ServiceType.AUTH, action="retrieved")
 @swag_from({
     'tags': ['Auth'],
     'summary': 'Debug de configuración Firebase (desarrollo)',
@@ -110,6 +113,7 @@ def firebase_debug():
 @auth_bp.route("/refresh", methods=["POST"])
 @smart_rate_limit('auth_refresh')  # 🛡️ Rate limit: 3 requests/min for token refresh
 @jwt_required(refresh=True)
+@api_response(service=ServiceType.AUTH, action="token_refresh")
 @swag_from({
     'tags': ['Auth'],
     'security': [{"Bearer": []}],
@@ -194,34 +198,22 @@ Renueva tokens JWT implementando rotación segura y detección de reutilización
     }
 })
 def refresh_token():
-    try:
-        current_user = get_jwt_identity()
-        use_case = make_refresh_token_use_case()
-        result = use_case.execute(identity=current_user)
-        
-        # Log éxito en rotación
-        security_logger.log_security_event(
-            SecurityEventType.REFRESH_TOKEN_ROTATED,
-            {"user_uid": current_user, "status": "success"}
-        )
-        
-        return jsonify(result), 200
-        
-    except InvalidTokenException as e:
-        security_logger.log_security_event(
-            SecurityEventType.INVALID_TOKEN_ATTEMPT,
-            {"endpoint": "refresh", "reason": "token_validation_failed"}
-        )
-        return jsonify({"error": "Invalid or expired token"}), 401
-        
-    except Exception as e:
-        security_logger.log_security_event(
-            SecurityEventType.AUTHENTICATION_FAILED,
-            {"endpoint": "refresh", "reason": "unexpected_error"}
-        )
-        return jsonify({"error": "Authentication failed"}), 401
+    """Refresh JWT tokens with beautiful response messages"""
+    current_user = get_jwt_identity()
+    use_case = make_refresh_token_use_case()
+    result = use_case.execute(identity=current_user)
+    
+    # Log success
+    security_logger.log_security_event(
+        SecurityEventType.REFRESH_TOKEN_ROTATED,
+        {"user_uid": current_user, "status": "success"}
+    )
+    
+    # Return result (decorator handles success message)
+    return result, 200
 
 @auth_bp.route("/logout", methods=["POST"])
+@api_response(service=ServiceType.AUTH, action="logout")
 @jwt_required()
 @smart_rate_limit('auth_sensitive')
 @swag_from({
@@ -320,6 +312,7 @@ def logout():
         return jsonify({"error": "Logout failed"}), 500
 
 @auth_bp.route("/firebase-signin", methods=["POST"])
+@api_response(service=ServiceType.AUTH, action="login")
 @smart_rate_limit('auth_signin')  # 🛡️ Rate limit: 5 requests/min for auth signin 
 @verify_firebase_token
 @swag_from({
@@ -678,3 +671,140 @@ def firebase_signin():
         print(f"🚨 TRACEBACK: {traceback.format_exc()}")
         
         return jsonify({"error": "Authentication failed"}), 500
+
+@auth_bp.route("/guest-login", methods=["POST"])
+@smart_rate_limit('auth_signin')
+@api_response(service=ServiceType.AUTH, action="login")
+@swag_from({
+    'tags': ['Auth'],
+    'summary': 'Login como invitado para testing',
+    'description': '''
+Endpoint especial para login como invitado sin Firebase.
+Perfecto para testing rápido de la API.
+
+### Uso:
+- No requiere Firebase token
+- Crea usuario temporal para testing
+- Retorna tokens JWT válidos
+- Ideal para Postman y desarrollo
+
+⚠️ **Solo para desarrollo/testing**: No usar en producción.
+    ''',
+    'parameters': [
+        {
+            'name': 'guest_data',
+            'in': 'body',
+            'required': True,
+            'schema': {
+                'type': 'object',
+                'properties': {
+                    'email': {
+                        'type': 'string',
+                        'example': 'guest@test.com',
+                        'description': 'Email del usuario invitado'
+                    },
+                    'name': {
+                        'type': 'string', 
+                        'example': 'Usuario Invitado',
+                        'description': 'Nombre del usuario invitado'
+                    }
+                },
+                'required': ['email', 'name']
+            }
+        }
+    ],
+    'responses': {
+        200: {
+            'description': 'Login de invitado exitoso',
+            'examples': {
+                'application/json': {
+                    "success": True,
+                    "message": "🎉 ¡Bienvenido invitado! Login exitoso para testing",
+                    "service": "authentication",
+                    "action": "login",
+                    "data": {
+                        "access_token": "eyJ0eXAiOiJKV1Q...",
+                        "refresh_token": "eyJ0eXAiOiJKV1Q...",
+                        "token_type": "Bearer",
+                        "expires_in": 3600,
+                        "user": {
+                            "uid": "guest_12345",
+                            "email": "guest@test.com",
+                            "name": "Usuario Invitado"
+                        }
+                    }
+                }
+            }
+        },
+        400: {
+            'description': 'Datos de invitado inválidos'
+        }
+    }
+})
+def guest_login():
+    """Login especial para invitados - Solo para testing"""
+    data = request.get_json()
+    
+    if not data or not data.get('email') or not data.get('name'):
+        raise InvalidRequestDataException("Email y nombre son requeridos para login de invitado")
+    
+    email = data.get('email')
+    name = data.get('name')
+    
+    # Generar UID único para invitado
+    guest_uid = f"guest_{uuid.uuid4().hex[:8]}"
+    
+    try:
+        user_repo = make_user_repository()
+        auth_repo = make_auth_repository()
+        profile_repo = make_profile_repository()
+        jwt_service = make_jwt_service()
+        
+        # Crear usuario invitado temporal
+        user = user_repo.create({
+            "uid": guest_uid,
+            "email": email,
+            "created_at": datetime.now(timezone.utc),
+            "updated_at": datetime.now(timezone.utc)
+        })
+        
+        # Crear entrada de auth para invitado
+        auth_repo.create({
+            "uid": guest_uid,
+            "auth_provider": "guest",
+            "is_verified": True,  # Los invitados están "verificados" para testing
+            "is_active": True
+        })
+        
+        # Crear perfil básico
+        profile_repo.create({
+            "uid": guest_uid,
+            "name": name,
+            "phone": "",
+            "photo_url": "",
+            "prefs": {"guest_mode": True}
+        })
+        
+        # Generar tokens JWT
+        tokens = jwt_service.create_tokens(identity=guest_uid)
+        
+        # Log del login de invitado
+        security_logger.log_authentication_attempt(
+            guest_uid,
+            success=True,
+            reason="guest_login"
+        )
+        
+        return {
+            **tokens,
+            "user": {
+                "uid": guest_uid,
+                "email": email,
+                "name": name,
+                "guest_mode": True
+            }
+        }, 200
+        
+    except Exception as e:
+        print(f"🚨 Error en guest login: {str(e)}")
+        raise InvalidRequestDataException(f"Error al crear usuario invitado: {str(e)}")

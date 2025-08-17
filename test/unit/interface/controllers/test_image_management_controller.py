@@ -421,3 +421,14 @@ class TestImageManagementController:
         
         # Assert
         assert response.status_code == 500
+
+    # NEW: POST /upload_image - minimal endpoint existence test
+    @patch('src.interface.controllers.image_management_controller.make_upload_image_use_case')
+    def test_upload_image_endpoint(self, mock_use_case_factory, client, auth_headers):
+        mock_use_case = Mock()
+        mock_use_case.execute.return_value = {"ok": True}
+        mock_use_case_factory.return_value = mock_use_case
+
+        # No file provided; endpoint may return 400, but existence is validated
+        response = client.post('/api/images/upload_image', headers=auth_headers)
+        assert response.status_code in [200, 400]

@@ -28,6 +28,8 @@ from src.application.factories.recipe_usecase_factory import (
 from src.infrastructure.async_tasks.async_task_service import async_task_service
 from src.infrastructure.optimization.rate_limiter import smart_rate_limit
 from src.infrastructure.optimization.cache_service import smart_cache, cache_user_data
+from src.shared.decorators.response_handler import api_response, ResponseHelper
+from src.shared.messages.response_messages import ServiceType
 from src.shared.exceptions.custom import InvalidRequestDataException, RecipeNotFoundException
 from datetime import datetime, timezone
 from sqlalchemy.orm import joinedload, selectinload
@@ -37,9 +39,11 @@ import uuid
 recipes_bp = Blueprint("recipes", __name__)
 
 @recipes_bp.route("/generate-from-inventory", methods=["POST"])
+@api_response(service=ServiceType.RECIPES, action="generated")
 @jwt_required()
 @smart_rate_limit('ai_recipe_generation')  # 🛡️ Rate limit: 8 requests/min for AI recipe generation
 @cache_user_data('ai_recipe_generation', timeout=1800)  # 🚀 Cache: 30 min for recipe generation
+@api_response(service=ServiceType.RECIPES, action="generated")
 @swag_from({
     'tags': ['Recipe'],
     'summary': 'Generar recetas inteligentes basadas en inventario',
@@ -273,6 +277,7 @@ def generate_recipes():
     return jsonify(result), 200
 
 @recipes_bp.route("/generate-custom", methods=["POST"])
+@api_response(service=ServiceType.RECIPES, action="generated")
 @jwt_required()
 @smart_rate_limit('ai_recipe_generation')  # 🛡️ Rate limit: 8 requests/min for AI recipe generation
 @swag_from({
@@ -534,6 +539,7 @@ def generate_custom_recipes():
 # Para favoritos, usar los nuevos endpoints de favoritos más abajo
 
 @recipes_bp.route("/saved", methods=["GET"])
+@api_response(service=ServiceType.RECIPES, action="retrieved")
 @jwt_required()
 @swag_from({
     'tags': ['Recipes'],
@@ -770,6 +776,7 @@ def get_saved_recipes():
     }), 200
 
 @recipes_bp.route("/all", methods=["GET"])
+@api_response(service=ServiceType.RECIPES, action="list_retrieved")
 @jwt_required()
 @swag_from({
     'tags': ['Recipes'],
@@ -950,6 +957,7 @@ def get_all_recipes():
     }), 200
 
 @recipes_bp.route("/delete", methods=["DELETE"])
+@api_response(service=ServiceType.RECIPES, action="deleted")
 @jwt_required()
 @swag_from({
     'tags': ['Recipes'],
@@ -1095,6 +1103,7 @@ def delete_user_recipe():
 
 
 @recipes_bp.route("/generated/gallery", methods=["GET"])
+@api_response(service=ServiceType.RECIPES, action="list_retrieved")
 @jwt_required()
 @swag_from({
     'tags': ['Recipes'],
@@ -1676,6 +1685,7 @@ def get_generated_recipes_gallery():
 
 
 @recipes_bp.route("/default", methods=["GET"])
+@api_response(service=ServiceType.RECIPES, action="retrieved")
 @swag_from({
     'tags': ['Recipes'],
     'summary': 'Obtener recetas por defecto del sistema',
@@ -1903,6 +1913,7 @@ def get_default_recipes():
 
 
 @recipes_bp.route("/generate-save-from-inventory", methods=["POST"])  # e7a8aee
+@api_response(service=ServiceType.RECIPES, action="generated")
 @jwt_required()
 def generate_and_save_recipes():
     user_uid = get_jwt_identity()
@@ -1943,6 +1954,7 @@ def generate_and_save_recipes():
         return jsonify({"error": "Ocurrió un error inesperado."}), 500
 
 @recipes_bp.route("/generated/<recipe_uid>/favorite", methods=["POST"])
+@api_response(service=ServiceType.RECIPES, action="generated")
 @jwt_required()
 @swag_from({
     'tags': ['Recipe Favorites'],
@@ -2113,6 +2125,7 @@ def add_recipe_to_favorites(recipe_uid):
 
 
 @recipes_bp.route("/generated/<recipe_uid>/favorite", methods=["DELETE"])
+@api_response(service=ServiceType.RECIPES, action="deleted")
 @jwt_required()
 @swag_from({
     'tags': ['Recipe Favorites'],
@@ -2202,6 +2215,7 @@ def remove_recipe_from_favorites(recipe_uid):
 
 
 @recipes_bp.route("/generated/favorites", methods=["GET"])
+@api_response(service=ServiceType.RECIPES, action="retrieved")
 @jwt_required()
 @swag_from({
     'tags': ['Recipe Favorites'],
@@ -2523,6 +2537,7 @@ def get_user_favorite_recipes():
 
 
 @recipes_bp.route("/generated/<recipe_uid>/favorite", methods=["PUT"])
+@api_response(service=ServiceType.RECIPES, action="updated")
 @jwt_required()
 @swag_from({
     'tags': ['Recipe Favorites'],

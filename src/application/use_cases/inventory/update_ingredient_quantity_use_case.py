@@ -1,9 +1,10 @@
 from datetime import datetime
 from src.domain.models.ingredient import Ingredient, IngredientStack
+from src.application.use_cases.inventory.base_inventory_use_case import BaseInventoryUpdateUseCase
 
-class UpdateIngredientQuantityUseCase:
+class UpdateIngredientQuantityUseCase(BaseInventoryUpdateUseCase):
     def __init__(self, inventory_repository):
-        self.inventory_repository = inventory_repository
+        super().__init__(inventory_repository)
 
     def execute(self, user_uid: str, ingredient_name: str, added_at: str, new_quantity: float):
         """
@@ -16,10 +17,19 @@ class UpdateIngredientQuantityUseCase:
             added_at: Timestamp del stack a actualizar (ISO format)
             new_quantity: Nueva cantidad
         """
-        print(f"📦 [UPDATE QUANTITY] Updating quantity for {ingredient_name}")
-        print(f"   └─ User: {user_uid}")
-        print(f"   └─ Stack added at: {added_at}")
-        print(f"   └─ New quantity: {new_quantity}")
+        # Use base class validation methods
+        self._validate_user_uid(user_uid)
+        self._validate_item_name(ingredient_name)
+        self._validate_quantity(new_quantity)
+        
+        # Use base class logging
+        self._log_update_operation(
+            operation="UPDATE_INGREDIENT_QUANTITY",
+            user_uid=user_uid,
+            item_name=ingredient_name,
+            added_at=added_at,
+            new_quantity=new_quantity
+        )
         
         # Obtener el stack actual para preservar otros datos
         current_stack_data = self.inventory_repository.get_ingredient_stack(

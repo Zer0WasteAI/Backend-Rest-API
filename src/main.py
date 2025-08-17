@@ -84,7 +84,7 @@ def create_app():
     application.register_blueprint(planning_bp, url_prefix='/api/planning')
     application.register_blueprint(generation_bp, url_prefix='/api/generation')
     application.register_blueprint(environmental_savings_bp, url_prefix='/api/environmental_savings')
-    application.register_blueprint(cooking_session_bp, url_prefix='/api/recipes')
+    application.register_blueprint(cooking_session_bp, url_prefix='/api/cooking_session')
 
     @application.errorhandler(AppException)
     def handle_app_exception(error):
@@ -114,6 +114,9 @@ def create_app():
                 "food_recognition": "/api/recognition",
                 "inventory_management": "/api/inventory",
                 "recipe_generation": "/api/recipes",
+                "cooking_sessions": "/api/cooking_session",
+                "meal_planning": "/api/planning",
+                "environmental_savings": "/api/environmental_savings",
                 "image_management": "/api/image_management",
                 "admin_panel": "/api/admin",
                 "api_status": "/status",

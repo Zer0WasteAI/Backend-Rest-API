@@ -1,9 +1,9 @@
-from datetime import datetime
 from src.domain.models.food_item import FoodItem
+from src.application.use_cases.inventory.base_inventory_use_case import BaseInventoryUpdateUseCase
 
-class UpdateFoodQuantityUseCase:
+class UpdateFoodQuantityUseCase(BaseInventoryUpdateUseCase):
     def __init__(self, inventory_repository):
-        self.inventory_repository = inventory_repository
+        super().__init__(inventory_repository)
 
     def execute(self, user_uid: str, food_name: str, added_at: str, new_quantity: int):
         """
@@ -16,10 +16,19 @@ class UpdateFoodQuantityUseCase:
             added_at: Timestamp del food item a actualizar (ISO format)
             new_quantity: Nueva cantidad de porciones
         """
-        print(f"🍽️ [UPDATE FOOD QUANTITY] Updating quantity for {food_name}")
-        print(f"   └─ User: {user_uid}")
-        print(f"   └─ Added at: {added_at}")
-        print(f"   └─ New quantity: {new_quantity}")
+        # Use base class validation methods
+        self._validate_user_uid(user_uid)
+        self._validate_item_name(food_name)
+        self._validate_quantity(new_quantity)
+        
+        # Use base class logging
+        self._log_update_operation(
+            operation="UPDATE_FOOD_QUANTITY",
+            user_uid=user_uid,
+            item_name=food_name,
+            added_at=added_at,
+            new_quantity=new_quantity
+        )
         
         # Obtener el food item actual para preservar otros datos
         current_food_data = self.inventory_repository.get_food_item(
@@ -32,10 +41,7 @@ class UpdateFoodQuantityUseCase:
             raise ValueError(f"Food item not found for '{food_name}' added at '{added_at}'")
         
         # Crear nuevo food item con cantidad actualizada pero manteniendo otros datos
-        try:
-            added_at_datetime = datetime.fromisoformat(added_at.replace('Z', '+00:00'))
-        except ValueError:
-            added_at_datetime = datetime.strptime(added_at, '%Y-%m-%d %H:%M:%S')
+        added_at_datetime = self._validate_date_string(added_at)
         
         updated_food_item = FoodItem(
             name=food_name,

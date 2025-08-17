@@ -67,7 +67,111 @@ class TestAuthController:
                 
                 # Check that response is JSON
                 response_data = response.get_json()
-                assert isinstance(response_data, dict)
+        assert isinstance(response_data, dict)
+
+    # NEW TESTS: refresh, logout, firebase-signin
+
+    @patch('src.interface.controllers.auth_controller.make_refresh_token_use_case')
+    def test_refresh_token_success(self, mock_refresh_use_case):
+        from flask import Flask
+        from flask_jwt_extended import JWTManager, create_refresh_token
+
+        app = Flask(__name__)
+        app.config['JWT_SECRET_KEY'] = 'test-secret'
+        app.config['TESTING'] = True
+        app.register_blueprint(auth_bp, url_prefix='/api/auth')
+        JWTManager(app)
+
+        mock_use_case = Mock()
+        mock_use_case.execute.return_value = {"access_token": "a", "refresh_token": "b"}
+        mock_refresh_use_case.return_value = mock_use_case
+
+        with app.app_context():
+            rt = create_refresh_token(identity='user-1')
+        client = app.test_client()
+        response = client.post('/api/auth/refresh', headers={"Authorization": f"Bearer {rt}"})
+        assert response.status_code in [200]
+        mock_use_case.execute.assert_called_once()
+
+    @patch('src.interface.controllers.auth_controller.make_logout_use_case')
+    def test_logout_success(self, mock_logout_use_case):
+        from flask import Flask
+        from flask_jwt_extended import JWTManager, create_access_token
+
+        app = Flask(__name__)
+        app.config['JWT_SECRET_KEY'] = 'test-secret'
+        app.config['TESTING'] = True
+        app.register_blueprint(auth_bp, url_prefix='/api/auth')
+        JWTManager(app)
+
+        mock_use_case = Mock()
+        mock_use_case.execute.return_value = {"message": "ok"}
+        mock_logout_use_case.return_value = mock_use_case
+
+        with app.app_context():
+            at = create_access_token(identity='user-1')
+        client = app.test_client()
+        response = client.post('/api/auth/logout', headers={"Authorization": f"Bearer {at}"})
+        assert response.status_code in [200]
+        mock_use_case.execute.assert_called_once()
+
+    @patch('src.interface.controllers.auth_controller.make_jwt_service')
+    @patch('src.interface.controllers.auth_controller.make_profile_repository')
+    @patch('src.interface.controllers.auth_controller.make_auth_repository')
+    @patch('src.interface.controllers.auth_controller.make_user_repository')
+    @patch('src.interface.controllers.auth_controller.make_firestore_profile_service')
+    @patch('src.interface.controllers.auth_controller.security_logger')
+    @patch('src.interface.controllers.auth_controller.firebase_admin')
+    def test_firebase_signin_success(self, mock_firebase_admin, mock_security_logger, mock_firestore_service_factory,
+                                     mock_user_repo_factory, mock_auth_repo_factory, mock_profile_repo_factory,
+                                     mock_jwt_factory):
+        from flask import Flask
+        from flask_jwt_extended import JWTManager
+
+        app = Flask(__name__)
+        app.config['JWT_SECRET_KEY'] = 'test-secret'
+        app.config['TESTING'] = True
+        app.register_blueprint(auth_bp, url_prefix='/api/auth')
+        JWTManager(app)
+
+        # Mock firebase decorator internals
+        mock_firebase_admin._apps = {'test': object()}
+        mock_firebase_admin.auth.verify_id_token.return_value = {
+            'uid': 'firebase-uid-1',
+            'email': None,
+            'name': 'Anon User',
+            'firebase': {'sign_in_provider': 'anonymous'},
+            'email_verified': False
+        }
+
+        # Mock repos/services used by the handler
+        mock_user = MagicMock()
+        mock_user.uid = 'firebase-uid-1'
+        mock_user.email = ''
+        user_repo = MagicMock()
+        user_repo.find_by_uid.return_value = mock_user
+        mock_user_repo_factory.return_value = user_repo
+
+        auth_repo = MagicMock()
+        mock_auth_repo_factory.return_value = auth_repo
+
+        profile_repo = MagicMock()
+        mock_profile_repo_factory.return_value = profile_repo
+
+        jwt_service = MagicMock()
+        jwt_service.create_tokens.return_value = {"access_token": "x", "refresh_token": "y"}
+        mock_jwt_factory.return_value = jwt_service
+
+        firestore_service = MagicMock()
+        firestore_service.get_profile.return_value = {
+            'displayName': 'Anon User',
+            'photoURL': '',
+        }
+        mock_firestore_service_factory.return_value = firestore_service
+
+        client = app.test_client()
+        response = client.post('/api/auth/firebase-signin', headers={"Authorization": "Bearer test"})
+        assert response.status_code in [200]
     
     @patch('src.interface.controllers.auth_controller.make_logout_use_case')
     @patch('src.interface.controllers.auth_controller.make_jwt_service')

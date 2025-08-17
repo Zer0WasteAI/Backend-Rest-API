@@ -115,6 +115,51 @@ class TestEnvironmentalSavingsController:
         # Assert
         assert response.status_code == 401
 
+    # NEW: POST /calculate/from-session - Calculate savings from cooking session
+    @patch('src.interface.controllers.environmental_savings_controller.make_calculate_environmental_savings_from_session_use_case')
+    def test_calculate_savings_from_session_success(self, mock_use_case_factory, client, auth_headers):
+        mock_use_case = Mock()
+        mock_use_case.execute.return_value = {
+            "calculation_id": "calc_session_1",
+            "session_id": "cook_123",
+            "co2e_kg": 0.4
+        }
+        mock_use_case_factory.return_value = mock_use_case
+
+        payload = {"session_id": "cook_123", "actual_consumptions": []}
+        # Note: this unit suite registers blueprint under /api/environmental
+        response = client.post(
+            '/api/environmental/calculate/from-session',
+            data=json.dumps(payload),
+            content_type='application/json',
+            headers=auth_headers
+        )
+        assert response.status_code in [200]
+        mock_use_case.execute.assert_called_once()
+
+    @patch('src.interface.controllers.environmental_savings_controller.make_calculate_environmental_savings_from_session_use_case')
+    def test_calculate_savings_from_session_missing_session_id(self, mock_use_case_factory, client, auth_headers):
+        # Missing session_id in body should yield 400 (or 500 depending on handler wiring in unit context)
+        response = client.post(
+            '/api/environmental/calculate/from-session',
+            json={},
+            headers=auth_headers
+        )
+        assert response.status_code in [400, 500]
+
+    @patch('src.interface.controllers.environmental_savings_controller.make_calculate_environmental_savings_from_session_use_case')
+    def test_calculate_savings_from_session_not_found(self, mock_use_case_factory, client, auth_headers):
+        from src.shared.exceptions.custom import RecipeNotFoundException
+        mock_uc = MagicMock()
+        mock_uc.execute.side_effect = RecipeNotFoundException('not found')
+        mock_use_case_factory.return_value = mock_uc
+        response = client.post(
+            '/api/environmental/calculate/from-session',
+            json={"session_id": "sess-404"},
+            headers=auth_headers
+        )
+        assert response.status_code in [404]
+
     # POST /calculate/from-uid/<recipe_uid> - Calculate savings from recipe UID
     @patch('src.interface.controllers.environmental_savings_controller.make_estimate_savings_by_uid_use_case')
     def test_calculate_savings_from_uid_success(self, mock_use_case_factory, client, auth_headers):

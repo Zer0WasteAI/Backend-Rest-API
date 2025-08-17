@@ -1,12 +1,13 @@
 from src.domain.repositories.environmental_savings_repository import EnvironmentalSavingsRepository
+from src.domain.repositories.base_repository import BaseValidatedRepository
 from src.domain.models.environmental_savings import EnvironmentalSavings
 from src.infrastructure.db.models.environmental_savings_orm import EnvironmentalSavingsORM
 
 from sqlalchemy import insert, select, update
-from typing import List, Optional
+from typing import List, Optional, Dict, Any
 
 
-class EnvironmentalSavingsRepositoryImpl(EnvironmentalSavingsRepository):
+class EnvironmentalSavingsRepositoryImpl(EnvironmentalSavingsRepository, BaseValidatedRepository):
     def __init__(self, db):
         self.db = db
 
@@ -112,3 +113,35 @@ class EnvironmentalSavingsRepositoryImpl(EnvironmentalSavingsRepository):
             is_cooked=row.is_cooked,
             saved_at=row.saved_at
         )
+    
+    # Implement abstract methods from BaseRepository and BaseValidatedRepository
+    def create(self, data: Dict[str, Any]) -> EnvironmentalSavings:
+        """Create a new environmental savings record"""
+        prepared_data = self._prepare_create_data(data)
+        savings = EnvironmentalSavings(**prepared_data)
+        return self.save(savings)
+    
+    def update(self, uid: str, data: Dict[str, Any]) -> None:
+        """Update environmental savings record"""
+        prepared_data = self._prepare_update_data(data)
+        stmt = update(EnvironmentalSavingsORM).where(
+            EnvironmentalSavingsORM.id == uid
+        ).values(**prepared_data)
+        self.db.session.execute(stmt)
+        self.db.session.commit()
+    
+    def delete(self, uid: str) -> None:
+        """Delete environmental savings record"""
+        stmt = EnvironmentalSavingsORM.__table__.delete().where(
+            EnvironmentalSavingsORM.id == uid
+        )
+        self.db.session.execute(stmt)
+        self.db.session.commit()
+    
+    def find_by_user_and_status(self, user_uid: str, validated: bool) -> List[EnvironmentalSavings]:
+        """Find environmental savings by user and validation status (is_cooked)"""
+        return self.find_by_user_and_by_is_cooked(user_uid, validated)
+    
+    def update_validation_status(self, uid: str, validated: bool) -> None:
+        """Update validation status (is_cooked) of environmental savings"""
+        self.update_type_status(uid, validated)

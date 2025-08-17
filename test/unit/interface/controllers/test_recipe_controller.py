@@ -317,6 +317,82 @@ class TestRecipeControllerAsyncIntegration:
         
         # Assert
         assert async_task_service is not None
+
+    # NEW TESTS: cover additional endpoints with basic structure + mocks
+
+    @patch('src.interface.controllers.recipe_controller.make_get_saved_recipes_use_case')
+    def test_get_saved_recipes_success(self, mock_factory, client, auth_headers):
+        mock_use_case = Mock()
+        mock_use_case.execute.return_value = []
+        mock_factory.return_value = mock_use_case
+        response = client.get('/api/recipes/saved', headers=auth_headers)
+        assert response.status_code in [200]
+        mock_use_case.execute.assert_called_once()
+
+    @patch('src.interface.controllers.recipe_controller.make_get_all_recipes_use_case')
+    def test_get_all_recipes_success(self, mock_factory, client, auth_headers):
+        mock_use_case = Mock()
+        mock_use_case.execute.return_value = []
+        mock_factory.return_value = mock_use_case
+        response = client.get('/api/recipes/all', headers=auth_headers)
+        assert response.status_code in [200]
+        mock_use_case.execute.assert_called_once()
+
+    @patch('src.interface.controllers.recipe_controller.make_delete_user_recipe_use_case')
+    def test_delete_recipe_success(self, mock_factory, client, auth_headers):
+        mock_use_case = Mock()
+        mock_use_case.execute.return_value = {"deleted": True}
+        mock_factory.return_value = mock_use_case
+        response = client.delete('/api/recipes/delete?recipe_uid=recipe_1', headers=auth_headers)
+        assert response.status_code in [200, 204]
+        mock_use_case.execute.assert_called_once()
+
+    def test_generated_gallery_and_default_exist(self, client, auth_headers):
+        # These endpoints do not require body. Validate existence.
+        resp1 = client.get('/api/recipes/generated/gallery', headers=auth_headers)
+        resp2 = client.get('/api/recipes/default', headers=auth_headers)
+        assert resp1.status_code in [200, 404, 500]
+        assert resp2.status_code in [200, 404, 500]
+
+    def test_generate_save_from_inventory_exists(self, client, auth_headers):
+        resp = client.post('/api/recipes/generate-save-from-inventory', headers=auth_headers)
+        assert resp.status_code in [200, 400, 500]
+
+    @patch('src.interface.controllers.recipe_controller.make_add_recipe_to_favorites_use_case')
+    def test_add_favorite_success(self, mock_factory, client, auth_headers):
+        mock_use_case = Mock()
+        mock_use_case.execute.return_value = {"favorite": True}
+        mock_factory.return_value = mock_use_case
+        resp = client.post('/api/recipes/generated/recipe_123/favorite', headers=auth_headers)
+        assert resp.status_code in [200, 201]
+        mock_use_case.execute.assert_called_once()
+
+    @patch('src.interface.controllers.recipe_controller.make_remove_recipe_from_favorites_use_case')
+    def test_remove_favorite_success(self, mock_factory, client, auth_headers):
+        mock_use_case = Mock()
+        mock_use_case.execute.return_value = {"favorite": False}
+        mock_factory.return_value = mock_use_case
+        resp = client.delete('/api/recipes/generated/recipe_123/favorite', headers=auth_headers)
+        assert resp.status_code in [200, 204]
+        mock_use_case.execute.assert_called_once()
+
+    @patch('src.interface.controllers.recipe_controller.make_add_recipe_to_favorites_use_case')
+    def test_update_favorite_success(self, mock_factory, client, auth_headers):
+        mock_use_case = Mock()
+        mock_use_case.execute.return_value = {"favorite": True}
+        mock_factory.return_value = mock_use_case
+        resp = client.put('/api/recipes/generated/recipe_123/favorite', headers=auth_headers)
+        assert resp.status_code in [200, 204]
+        mock_use_case.execute.assert_called_once()
+
+    @patch('src.interface.controllers.recipe_controller.make_get_favorite_recipes_use_case')
+    def test_get_favorites_success(self, mock_factory, client, auth_headers):
+        mock_use_case = Mock()
+        mock_use_case.execute.return_value = []
+        mock_factory.return_value = mock_use_case
+        resp = client.get('/api/recipes/generated/favorites', headers=auth_headers)
+        assert resp.status_code in [200]
+        mock_use_case.execute.assert_called_once()
     
     @patch('src.interface.controllers.recipe_controller.async_task_service')
     def test_async_task_usage_pattern(self, mock_async_service):

@@ -8,6 +8,7 @@ from flasgger import swag_from
 admin_bp = Blueprint('admin', __name__)
 
 @admin_bp.route('/cleanup-tokens', methods=['POST'])
+@api_response(service=ServiceType.ADMIN, action="tokens_cleaned")
 @internal_only
 @smart_rate_limit('data_write')
 @swag_from({
@@ -48,6 +49,7 @@ def cleanup_expired_tokens():
         return jsonify({"error": "Cleanup operation failed"}), 500
 
 @admin_bp.route('/security-stats', methods=['GET'])
+@api_response(service=ServiceType.ADMIN, action="stats_retrieved")
 @internal_only
 @smart_rate_limit('data_read')
 @swag_from({
@@ -65,6 +67,8 @@ def get_security_stats():
     try:
         from src.infrastructure.db.schemas.token_blacklist_schema import TokenBlacklist, RefreshTokenTracking
         from src.infrastructure.db.base import db
+from src.shared.decorators.response_handler import api_response, ResponseHelper
+from src.shared.messages.response_messages import ServiceType
         
         # Contar tokens en blacklist
         blacklisted_count = db.session.query(TokenBlacklist).count()

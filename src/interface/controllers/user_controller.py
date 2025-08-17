@@ -6,10 +6,13 @@ from src.application.factories.auth_usecase_factory import make_profile_reposito
 from src.infrastructure.security.rate_limiter import api_rate_limit
 from src.infrastructure.security.security_logger import security_logger, SecurityEventType
 from src.infrastructure.optimization.cache_service import cache_user_data
+from src.shared.decorators.response_handler import api_response, ResponseHelper
+from src.shared.messages.response_messages import ServiceType
 
 user_bp = Blueprint('user_bp', __name__)
 
 @user_bp.route('/profile', methods=['GET'])
+@api_response(service=ServiceType.USER, action="profile_retrieved")
 @jwt_required()
 @api_rate_limit
 @cache_user_data('user_profile', timeout=600)  # 🚀 Cache: 10 min for user profile data
@@ -83,6 +86,7 @@ def get_user_profile():
         return jsonify({"error": "Failed to retrieve profile"}), 500
 
 @user_bp.route('/profile', methods=['PUT'])
+@api_response(service=ServiceType.USER, action="updated")
 @jwt_required()
 @api_rate_limit
 @swag_from(

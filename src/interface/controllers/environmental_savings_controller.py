@@ -13,11 +13,14 @@ from src.application.factories.environmental_savings_factory import (
 from src.infrastructure.optimization.rate_limiter import smart_rate_limit
 from src.infrastructure.optimization.cache_service import smart_cache, cache_user_data
 from src.shared.exceptions.custom import InvalidRequestDataException, RecipeNotFoundException
+from src.shared.decorators.response_handler import api_response, ResponseHelper
+from src.shared.messages.response_messages import ServiceType
 
 environmental_savings_bp = Blueprint("environmental_savings", __name__)
 
 
 @environmental_savings_bp.route("/calculate/from-title", methods=["POST"])
+@api_response(service=ServiceType.ENVIRONMENTAL, action="savings_calculated")
 @jwt_required()
 @smart_rate_limit('ai_environmental')  # 🛡️ Rate limit: 10 requests/min for environmental AI
 @smart_cache('ai_environmental_impact', timeout=3600)  # 🚀 Cache: 1 hour for environmental calculations
@@ -175,6 +178,7 @@ def calculate_savings_from_title():
 
 
 @environmental_savings_bp.route("/calculate/from-uid/<recipe_uid>", methods=["POST"])
+@api_response(service=ServiceType.ENVIRONMENTAL, action="savings_calculated")
 @jwt_required()
 @smart_rate_limit('ai_environmental')  # 🛡️ Rate limit: 10 requests/min for environmental AI
 @smart_cache('ai_environmental_impact', timeout=3600)  # 🚀 Cache: 1 hour for environmental calculations
@@ -355,6 +359,7 @@ def calculate_savings_from_uid(recipe_uid):
 
 
 @environmental_savings_bp.route("/calculations", methods=["GET"])
+@api_response(service=ServiceType.ENVIRONMENTAL, action="retrieved")
 @jwt_required()
 @swag_from({
     'tags': ['Environmental Impact'],
@@ -499,6 +504,7 @@ def get_all_calculations():
 
 
 @environmental_savings_bp.route("/calculations/status", methods=["GET"])
+@api_response(service=ServiceType.ENVIRONMENTAL, action="retrieved")
 @jwt_required()
 @swag_from({
     'tags': ['Environmental Impact'],
@@ -680,6 +686,7 @@ def get_calculations_by_status():
     return jsonify({"calculations": result, "count": len(result)}), 200
 
 @environmental_savings_bp.route("/summary", methods=["GET"])
+@api_response(service=ServiceType.ENVIRONMENTAL, action="retrieved")
 @jwt_required()
 @cache_user_data('environmental_summary', timeout=1800)  # 🚀 Cache: 30 min for environmental summary
 @swag_from({
@@ -864,6 +871,7 @@ def get_environmental_summary():
 
 
 @environmental_savings_bp.route("/calculate/from-session", methods=["POST"])
+@api_response(service=ServiceType.ENVIRONMENTAL, action="savings_calculated")
 @jwt_required()
 @smart_rate_limit('ai_environmental')
 @smart_cache('ai_environmental_session', timeout=1800)  # 30 minutes cache for session calculations

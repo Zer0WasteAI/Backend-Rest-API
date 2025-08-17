@@ -438,3 +438,143 @@ class TestInventoryController:
         
         # Assert
         assert response.status_code in [400, 415]  # Bad request or unsupported media type
+
+    # NEW TESTS: foods/* endpoints and batch actions
+
+    # POST /foods/from-recognition - Add foods from recognition
+    @patch('src.interface.controllers.inventory_controller.make_add_food_items_to_inventory_use_case')
+    def test_add_foods_from_recognition_success(self, mock_use_case_factory, client, auth_headers):
+        mock_use_case = Mock()
+        mock_use_case.execute.return_value = {"added_from_recognition": True}
+        mock_use_case_factory.return_value = mock_use_case
+
+        data = {"recognition_id": "rec_foods_1", "foods": []}
+        response = client.post(
+            '/api/inventory/foods/from-recognition',
+            data=json.dumps(data),
+            content_type='application/json',
+            headers=auth_headers
+        )
+        assert response.status_code in [200, 201]
+        mock_use_case.execute.assert_called_once()
+
+    # PATCH /foods/<food_name>/<added_at>/quantity - Update food quantity
+    @patch('src.interface.controllers.inventory_controller.make_update_food_quantity_use_case')
+    def test_update_food_quantity_success(self, mock_use_case_factory, client, auth_headers):
+        mock_use_case = Mock()
+        mock_use_case.execute.return_value = {"quantity_updated": True}
+        mock_use_case_factory.return_value = mock_use_case
+
+        payload = {"new_quantity": 2}
+        response = client.patch(
+            '/api/inventory/foods/pizza/2024-01-01T10:00:00Z/quantity',
+            data=json.dumps(payload),
+            content_type='application/json',
+            headers=auth_headers
+        )
+        assert response.status_code in [200, 204]
+        mock_use_case.execute.assert_called_once()
+
+    # DELETE /ingredients/<ingredient_name> - Delete complete ingredient
+    @patch('src.interface.controllers.inventory_controller.make_delete_ingredient_complete_use_case')
+    def test_delete_ingredient_complete_success(self, mock_use_case_factory, client, auth_headers):
+        mock_use_case = Mock()
+        mock_use_case.execute.return_value = {"deleted": True}
+        mock_use_case_factory.return_value = mock_use_case
+
+        response = client.delete('/api/inventory/ingredients/tomato', headers=auth_headers)
+        assert response.status_code in [200, 204]
+        mock_use_case.execute.assert_called_once()
+
+    # DELETE /foods/<food_name>/<added_at> - Delete food item
+    @patch('src.interface.controllers.inventory_controller.make_delete_food_item_use_case')
+    def test_delete_food_item_success(self, mock_use_case_factory, client, auth_headers):
+        mock_use_case = Mock()
+        mock_use_case.execute.return_value = {"deleted": True}
+        mock_use_case_factory.return_value = mock_use_case
+
+        response = client.delete('/api/inventory/foods/pizza/2024-01-01T10:00:00Z', headers=auth_headers)
+        assert response.status_code in [200, 204]
+        mock_use_case.execute.assert_called_once()
+
+    # POST /foods/<food_name>/<added_at>/consume - Mark food consumed
+    @patch('src.interface.controllers.inventory_controller.make_mark_food_item_consumed_use_case')
+    def test_mark_food_consumed_success(self, mock_use_case_factory, client, auth_headers):
+        mock_use_case = Mock()
+        mock_use_case.execute.return_value = {"consumed": True}
+        mock_use_case_factory.return_value = mock_use_case
+
+        payload = {"consumed_quantity": 1}
+        response = client.post(
+            '/api/inventory/foods/pizza/2024-01-01T10:00:00Z/consume',
+            data=json.dumps(payload),
+            content_type='application/json',
+            headers=auth_headers
+        )
+        assert response.status_code in [200, 201]
+        mock_use_case.execute.assert_called_once()
+
+    # GET /foods/<food_name>/<added_at>/detail - Get food detail
+    @patch('src.interface.controllers.inventory_controller.make_get_food_detail_use_case')
+    def test_get_food_detail_success(self, mock_use_case_factory, client, auth_headers):
+        mock_use_case = Mock()
+        mock_use_case.execute.return_value = {"food_detail": {}}
+        mock_use_case_factory.return_value = mock_use_case
+
+        response = client.get('/api/inventory/foods/pizza/2024-01-01T10:00:00Z/detail', headers=auth_headers)
+        assert response.status_code in [200, 404]
+        mock_use_case.execute.assert_called_once()
+
+    # GET /foods/list - Get foods list
+    @patch('src.interface.controllers.inventory_controller.make_get_foods_list_use_case')
+    def test_get_foods_list_success(self, mock_use_case_factory, client, auth_headers):
+        mock_use_case = Mock()
+        mock_use_case.execute.return_value = {"foods_list": []}
+        mock_use_case_factory.return_value = mock_use_case
+
+        response = client.get('/api/inventory/foods/list', headers=auth_headers)
+        assert response.status_code == 200
+        mock_use_case.execute.assert_called_once()
+
+    # Batch management: transform/quarantine/discard
+    @patch('src.interface.controllers.inventory_controller.make_transform_batch_use_case')
+    def test_transform_batch_success(self, mock_use_case_factory, client, auth_headers):
+        mock_use_case = Mock()
+        mock_use_case.execute.return_value = {"batch_transformed": True}
+        mock_use_case_factory.return_value = mock_use_case
+        response = client.post(
+            '/api/inventory/batch/batch_123/transform',
+            data=json.dumps({"note": "chopped"}),
+            content_type='application/json',
+            headers=auth_headers
+        )
+        assert response.status_code in [200, 201]
+        mock_use_case.execute.assert_called_once()
+
+    @patch('src.interface.controllers.inventory_controller.make_quarantine_batch_use_case')
+    def test_quarantine_batch_success(self, mock_use_case_factory, client, auth_headers):
+        mock_use_case = Mock()
+        mock_use_case.execute.return_value = {"batch_quarantined": True}
+        mock_use_case_factory.return_value = mock_use_case
+        response = client.post(
+            '/api/inventory/batch/batch_123/quarantine',
+            data=json.dumps({"reason": "suspected spoilage"}),
+            content_type='application/json',
+            headers=auth_headers
+        )
+        assert response.status_code in [200, 201]
+        mock_use_case.execute.assert_called_once()
+
+    @patch('src.interface.controllers.inventory_controller.make_discard_batch_use_case')
+    def test_discard_batch_success(self, mock_use_case_factory, client, auth_headers):
+        mock_use_case = Mock()
+        mock_use_case.execute.return_value = {"batch_discarded": True}
+        mock_use_case_factory.return_value = mock_use_case
+        response = client.post(
+            '/api/inventory/batch/batch_123/discard',
+            data=json.dumps({"reason": "expired"}),
+            content_type='application/json',
+            headers=auth_headers
+        )
+        assert response.status_code in [200, 201]
+        mock_use_case.execute.assert_called_once()
