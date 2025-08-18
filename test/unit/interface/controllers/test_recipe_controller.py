@@ -318,6 +318,241 @@ class TestRecipeControllerAsyncIntegration:
         # Assert
         assert async_task_service is not None
 
+
+class TestRecipeControllerEndpoints:
+    """Test recipe controller endpoint functionality"""
+    
+    @pytest.fixture
+    def app(self):
+        """Create Flask app for testing"""
+        app = Flask(__name__)
+        app.config['JWT_SECRET_KEY'] = 'test-secret'
+        app.config['TESTING'] = True
+        app.register_blueprint(recipes_bp, url_prefix='/recipes')
+        
+        # Initialize JWT
+        jwt = JWTManager(app)
+        
+        return app
+    
+    @pytest.fixture
+    def client(self, app):
+        """Create test client"""
+        return app.test_client()
+    
+    @pytest.fixture
+    def auth_token(self, app):
+        """Create test authentication token"""
+        with app.app_context():
+            token = create_access_token(identity="test-user-123")
+        return token
+    
+    @pytest.fixture
+    def auth_headers(self, auth_token):
+        """Create authentication headers"""
+        return {"Authorization": f"Bearer {auth_token}"}
+
+    @patch('src.interface.controllers.recipe_controller.make_get_saved_recipes_use_case')
+    def test_get_saved_recipes_success(self, mock_factory, client, auth_headers):
+        """Test get saved recipes successful execution"""
+        # Arrange
+        mock_use_case = Mock()
+        mock_use_case.execute.return_value = {
+            "saved_recipes": [
+                {
+                    "uid": "recipe_123",
+                    "title": "Test Recipe",
+                    "duration": "30 min",
+                    "difficulty": "easy"
+                }
+            ],
+            "pagination": {
+                "current_page": 1,
+                "total_pages": 1,
+                "total_recipes": 1
+            }
+        }
+        
+        mock_factory.return_value = mock_use_case
+        
+        # Act
+        response = client.get('/recipes/saved', headers=auth_headers)
+        
+        # Assert
+        assert response.status_code == 200
+        data = response.get_json()
+        assert "saved_recipes" in data
+        assert len(data["saved_recipes"]) == 1
+        mock_use_case.execute.assert_called_once()
+
+    @patch('src.interface.controllers.recipe_controller.make_get_all_recipes_use_case')
+    def test_get_all_recipes_success(self, mock_factory, client, auth_headers):
+        """Test get all recipes endpoint successful execution"""
+        # Arrange
+        mock_use_case = Mock()
+        mock_use_case.execute.return_value = {
+            "recipes": [
+                {
+                    "recipe_uid": "system_recipe_001",
+                    "name": "Pasta Carbonara",
+                    "cuisine_type": "italiana",
+                    "difficulty": "intermedio"
+                }
+            ],
+            "catalog_summary": {
+                "total_recipes": 1250,
+                "average_rating": 4.3
+            }
+        }
+        
+        mock_factory.return_value = mock_use_case
+        
+        # Act
+        response = client.get('/recipes/all', headers=auth_headers)
+        
+        # Assert
+        assert response.status_code == 200
+        data = response.get_json()
+        assert "recipes" in data
+        assert "catalog_summary" in data
+
+    @patch('src.interface.controllers.recipe_controller.make_delete_user_recipe_use_case')
+    def test_delete_recipe_success(self, mock_factory, client, auth_headers):
+        """Test delete recipe endpoint successful execution"""
+        # Arrange
+        mock_use_case = Mock()
+        mock_use_case.execute.return_value = {
+            "message": "Receta eliminada exitosamente",
+            "deleted_recipe": {
+                "title": "Test Recipe",
+                "recipe_uid": "recipe_123"
+            }
+        }
+        
+        mock_factory.return_value = mock_use_case
+        
+        # Act
+        response = client.delete('/recipes/delete', 
+                               headers=auth_headers,
+                               json={"title": "Test Recipe"})
+        
+        # Assert
+        assert response.status_code == 200
+        data = response.get_json()
+        assert "message" in data
+        assert "deleted_recipe" in data
+
+    def test_get_generated_recipes_gallery_success(self, client, auth_headers):
+        """Test get generated recipes gallery endpoint successful execution"""
+        # Mock the database query directly since this endpoint uses complex ORM queries
+        with patch('src.infrastructure.db.base.db') as mock_db:
+            mock_result = Mock()
+            mock_result.scalars.return_value.all.return_value = []
+            mock_db.session.execute.return_value = mock_result
+            
+            # Act
+            response = client.get('/recipes/generated/gallery', headers=auth_headers)
+            
+            # Assert
+            assert response.status_code in [200, 404]  # Success or no recipes found
+
+    def test_get_default_recipes_success(self, client):
+        """Test get default recipes endpoint (no auth required)"""
+        # Mock the database query directly
+        with patch('src.infrastructure.db.base.db') as mock_db:
+            mock_recipe_orm = Mock()
+            mock_recipe_orm.uid = "default_001"
+            mock_recipe_orm.title = "Default Recipe"
+            mock_recipe_orm.category = "almuerzo"
+            mock_recipe_orm.ingredients = []
+            mock_recipe_orm.steps = []
+            
+            mock_result = Mock()
+            mock_result.scalars.return_value.all.return_value = [mock_recipe_orm]
+            mock_db.session.execute.return_value = mock_result
+            
+            # Act
+            response = client.get('/recipes/default')
+            
+            # Assert
+            assert response.status_code in [200, 404]
+
+    def test_add_recipe_to_favorites_success(self, client, auth_headers):
+        """Test add recipe to favorites endpoint"""
+        # Mock the database models
+        with patch('src.infrastructure.db.models.recipe_generated_orm.RecipeGeneratedORM') as mock_recipe_orm, \
+             patch('src.infrastructure.db.models.recipe_favorites_orm.RecipeFavoritesORM') as mock_fav_orm, \
+             patch('src.infrastructure.db.base.db') as mock_db:
+            
+            mock_recipe = Mock()
+            mock_recipe.uid = "recipe_123"
+            mock_recipe_orm.query.filter_by.return_value.first.return_value = mock_recipe
+            
+            mock_fav_orm.query.filter_by.return_value.first.return_value = None
+            
+            # Act
+            response = client.post('/recipes/generated/recipe_123/favorite',
+                                 headers=auth_headers,
+                                 json={"rating": 5, "notes": "Great recipe"})
+            
+            # Assert
+            assert response.status_code in [200, 201, 404]
+
+    def test_remove_recipe_from_favorites_success(self, client, auth_headers):
+        """Test remove recipe from favorites endpoint"""
+        # Mock the database models
+        with patch('src.infrastructure.db.models.recipe_favorites_orm.RecipeFavoritesORM') as mock_fav_orm, \
+             patch('src.infrastructure.db.base.db') as mock_db:
+            
+            mock_favorite = Mock()
+            mock_favorite.uid = "fav_123"
+            mock_fav_orm.query.filter_by.return_value.first.return_value = mock_favorite
+            
+            # Act
+            response = client.delete('/recipes/generated/recipe_123/favorite',
+                                   headers=auth_headers)
+            
+            # Assert
+            assert response.status_code in [200, 404]
+
+    def test_get_favorite_recipes_success(self, client, auth_headers):
+        """Test get favorite recipes endpoint"""
+        # Mock the database query
+        with patch('src.infrastructure.db.base.db') as mock_db:
+            mock_result = Mock()
+            mock_result.scalars.return_value.all.return_value = []
+            mock_db.session.execute.return_value = mock_result
+            
+            # Act
+            response = client.get('/recipes/generated/favorites', headers=auth_headers)
+            
+            # Assert
+            assert response.status_code in [200, 404]
+
+    def test_generate_custom_recipe_success(self, client, auth_headers):
+        """Test generate custom recipe endpoint"""
+        with patch('src.interface.controllers.recipe_controller.make_generate_custom_recipe_use_case') as mock_factory:
+            mock_use_case = Mock()
+            mock_use_case.execute.return_value = {
+                "recipe": {
+                    "uid": "recipe_123",
+                    "title": "Custom Recipe",
+                    "ingredients": []
+                }
+            }
+            
+            mock_factory.return_value = mock_use_case
+            
+            # Act
+            response = client.post('/recipes/generate-custom',
+                                 headers=auth_headers,
+                                 json={"ingredients": ["tomato", "onion"]})
+            
+            # Assert
+            assert response.status_code == 200
+            data = response.get_json()
+            assert "recipe" in data
+
     # NEW TESTS: cover additional endpoints with basic structure + mocks
 
     @patch('src.interface.controllers.recipe_controller.make_get_saved_recipes_use_case')

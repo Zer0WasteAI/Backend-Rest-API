@@ -312,6 +312,28 @@
           }
         },
         {
+          "name": "✏️ Update Favorite Recipe",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"rating\": 5,\n  \"notes\": \"Actualicé mi rating, está increíble!\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/recipes/generated/RECIPE_UID_HERE/favorite",
+              "host": ["{{base_url}}"],
+              "path": ["api", "recipes", "generated", "RECIPE_UID_HERE", "favorite"]
+            },
+            "description": "✏️ Actualizar rating y notas de una receta favorita (reemplazar RECIPE_UID_HERE)"
+          }
+        },
+        {
           "name": "🏠 Default Recipes",
           "request": {
             "auth": {
@@ -550,6 +572,263 @@
               "path": ["api", "inventory", "foods", "list"]
             },
             "description": "Listar todas las comidas del usuario"
+          }
+        },
+        {
+          "name": "🔄 Add Ingredients from Recognition",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"recognition_id\": \"rec_123456789\",\n  \"ingredients\": [\n    {\n      \"name\": \"tomate\",\n      \"quantity\": 500,\n      \"unit\": \"gr\",\n      \"expiry_date\": \"2024-02-15\"\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/inventory/ingredients/from-recognition",
+              "host": ["{{base_url}}"],
+              "path": ["api", "inventory", "ingredients", "from-recognition"]
+            },
+            "description": "🔄 Agregar ingredientes detectados por reconocimiento de imagen"
+          }
+        },
+        {
+          "name": "🍎 Add Foods from Recognition",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"recognition_id\": \"rec_987654321\",\n  \"foods\": [\n    {\n      \"name\": \"manzana\",\n      \"quantity\": 6,\n      \"unit\": \"unidades\",\n      \"expiry_date\": \"2024-02-20\"\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/inventory/foods/from-recognition",
+              "host": ["{{base_url}}"],
+              "path": ["api", "inventory", "foods", "from-recognition"]
+            },
+            "description": "🍎 Agregar alimentos detectados por reconocimiento de imagen"
+          }
+        },
+        {
+          "name": "⚠️ Get Expiring Items",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/inventory/expiring?days=3",
+              "host": ["{{base_url}}"],
+              "path": ["api", "inventory", "expiring"],
+              "query": [
+                {
+                  "key": "days",
+                  "value": "3",
+                  "description": "Días hasta vencimiento"
+                }
+              ]
+            },
+            "description": "⚠️ Obtener items que están por vencer"
+          }
+        },
+        {
+          "name": "🥘 Get Leftovers",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/inventory/leftovers",
+              "host": ["{{base_url}}"],
+              "path": ["api", "inventory", "leftovers"]
+            },
+            "description": "🥘 Obtener sobras y alimentos parcialmente consumidos"
+          }
+        },
+        {
+          "name": "🗑️ Delete Food Item",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/inventory/foods/FOOD_NAME/ADDED_AT_TIMESTAMP",
+              "host": ["{{base_url}}"],
+              "path": ["api", "inventory", "foods", "FOOD_NAME", "ADDED_AT_TIMESTAMP"]
+            },
+            "description": "🗑️ Eliminar un alimento del inventario (reemplazar FOOD_NAME y ADDED_AT_TIMESTAMP)"
+          }
+        },
+        {
+          "name": "🍽️ Consume Food",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"quantity_consumed\": 2,\n  \"consumption_reason\": \"meal\",\n  \"notes\": \"Usé para el almuerzo\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/inventory/foods/FOOD_NAME/ADDED_AT_TIMESTAMP/consume",
+              "host": ["{{base_url}}"],
+              "path": ["api", "inventory", "foods", "FOOD_NAME", "ADDED_AT_TIMESTAMP", "consume"]
+            },
+            "description": "🍽️ Consumir parte de un alimento (reemplazar FOOD_NAME y ADDED_AT_TIMESTAMP)"
+          }
+        },
+        {
+          "name": "📊 Update Food Quantity",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"quantity\": 4,\n  \"reason\": \"inventory_adjustment\",\n  \"notes\": \"Conté mal, eran 4 no 6\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/inventory/foods/FOOD_NAME/ADDED_AT_TIMESTAMP/quantity",
+              "host": ["{{base_url}}"],
+              "path": ["api", "inventory", "foods", "FOOD_NAME", "ADDED_AT_TIMESTAMP", "quantity"]
+            },
+            "description": "📊 Actualizar cantidad de un alimento (reemplazar FOOD_NAME y ADDED_AT_TIMESTAMP)"
+          }
+        },
+        {
+          "name": "📋 Get Food Detail",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/inventory/foods/FOOD_NAME/ADDED_AT_TIMESTAMP/detail",
+              "host": ["{{base_url}}"],
+              "path": ["api", "inventory", "foods", "FOOD_NAME", "ADDED_AT_TIMESTAMP", "detail"]
+            },
+            "description": "📋 Obtener detalles específicos de un alimento (reemplazar FOOD_NAME y ADDED_AT_TIMESTAMP)"
+          }
+        },
+        {
+          "name": "🗂️ Batch Discard",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"expired\",\n  \"notes\": \"Lote vencido, descartado por seguridad\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/inventory/batch/BATCH_ID/discard",
+              "host": ["{{base_url}}"],
+              "path": ["api", "inventory", "batch", "BATCH_ID", "discard"]
+            },
+            "description": "🗂️ Descartar lote completo (reemplazar BATCH_ID)"
+          }
+        },
+        {
+          "name": "🧊 Batch Freeze",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"freeze_duration_days\": 30,\n  \"notes\": \"Congelado para conservar más tiempo\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/inventory/batch/BATCH_ID/freeze",
+              "host": ["{{base_url}}"],
+              "path": ["api", "inventory", "batch", "BATCH_ID", "freeze"]
+            },
+            "description": "🧊 Congelar lote para conservación (reemplazar BATCH_ID)"
+          }
+        },
+        {
+          "name": "⚠️ Batch Quarantine",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"quality_check\",\n  \"quarantine_days\": 2,\n  \"notes\": \"Revisión de calidad pendiente\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/inventory/batch/BATCH_ID/quarantine",
+              "host": ["{{base_url}}"],
+              "path": ["api", "inventory", "batch", "BATCH_ID", "quarantine"]
+            },
+            "description": "⚠️ Poner lote en cuarentena (reemplazar BATCH_ID)"
+          }
+        },
+        {
+          "name": "📦 Batch Reserve",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reserved_for\": \"dinner_party\",\n  \"reserved_until\": \"2024-02-25T19:00:00Z\",\n  \"notes\": \"Reservado para cena del sábado\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/inventory/batch/BATCH_ID/reserve",
+              "host": ["{{base_url}}"],
+              "path": ["api", "inventory", "batch", "BATCH_ID", "reserve"]
+            },
+            "description": "📦 Reservar lote para uso futuro (reemplazar BATCH_ID)"
+          }
+        },
+        {
+          "name": "🔄 Batch Transform",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"transform_to\": \"tomato_sauce\",\n  \"process_type\": \"cooking\",\n  \"notes\": \"Convertir tomates en salsa\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/inventory/batch/BATCH_ID/transform",
+              "host": ["{{base_url}}"],
+              "path": ["api", "inventory", "batch", "BATCH_ID", "transform"]
+            },
+            "description": "🔄 Transformar lote en otro producto (reemplazar BATCH_ID)"
           }
         }
       ]
@@ -791,6 +1070,32 @@
             },
             "description": "Verificar estado de tarea asíncrona (reemplazar TASK_ID_HERE)"
           }
+        },
+        {
+          "name": "🖼️ Check Recognition Images Status",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/recognition/images/status/TASK_ID_HERE",
+              "host": ["{{base_url}}"],
+              "path": ["api", "recognition", "images", "status", "TASK_ID_HERE"]
+            },
+            "description": "🖼️ Verificar estado de generación de imágenes de reconocimiento (reemplazar TASK_ID_HERE)"
+          }
+        },
+        {
+          "name": "🎨 Get Recognition Images",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/recognition/recognition/RECOGNITION_ID_HERE/images",
+              "host": ["{{base_url}}"],
+              "path": ["api", "recognition", "recognition", "RECOGNITION_ID_HERE", "images"]
+            },
+            "description": "🎨 Obtener imágenes generadas del reconocimiento (reemplazar RECOGNITION_ID_HERE)"
+          }
         }
       ]
     },
@@ -874,6 +1179,28 @@
               "path": ["api", "image_management", "search_similar_images"]
             },
             "description": "Buscar imágenes similares en base de datos"
+          }
+        },
+        {
+          "name": "🔄 Sync Images",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"sync_type\": \"full\",\n  \"force_update\": false\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/image_management/sync_images",
+              "host": ["{{base_url}}"],
+              "path": ["api", "image_management", "sync_images"]
+            },
+            "description": "🔄 Sincronizar imágenes con servicios externos"
           }
         }
       ]
@@ -991,6 +1318,28 @@
               "path": ["api", "planning", "delete"]
             },
             "description": "Eliminar plan de comidas"
+          }
+        },
+        {
+          "name": "🖼️ Update Planning Images",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"date\": \"2024-02-20\",\n  \"meal_type\": \"almuerzo\",\n  \"image_updates\": [\n    {\n      \"recipe_uid\": \"recipe_123\",\n      \"new_image_url\": \"https://storage.googleapis.com/bucket/new-image.jpg\"\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/planning/images/update",
+              "host": ["{{base_url}}"],
+              "path": ["api", "planning", "images", "update"]
+            },
+            "description": "🖼️ Actualizar imágenes de recetas en planes de comidas"
           }
         }
       ]
