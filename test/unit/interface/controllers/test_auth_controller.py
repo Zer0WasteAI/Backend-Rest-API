@@ -517,3 +517,105 @@ class TestAuthControllerImports:
         from src.interface.controllers.auth_controller import uuid
         
         assert uuid is not None
+
+    @patch('src.interface.controllers.auth_controller.make_user_repository')
+    @patch('src.interface.controllers.auth_controller.make_auth_repository')
+    @patch('src.interface.controllers.auth_controller.make_profile_repository')
+    @patch('src.interface.controllers.auth_controller.make_jwt_service')
+    @patch('src.interface.controllers.auth_controller.security_logger')
+    def test_guest_login_success(self, mock_security_logger, mock_jwt_service_factory, 
+                                 mock_profile_repo_factory, mock_auth_repo_factory, 
+                                 mock_user_repo_factory, client):
+        """Test successful guest login"""
+        # Mock repositories
+        mock_user_repo = Mock()
+        mock_auth_repo = Mock()
+        mock_profile_repo = Mock()
+        mock_jwt_service = Mock()
+        
+        mock_user_repo_factory.return_value = mock_user_repo
+        mock_auth_repo_factory.return_value = mock_auth_repo
+        mock_profile_repo_factory.return_value = mock_profile_repo
+        mock_jwt_service_factory.return_value = mock_jwt_service
+        
+        # Mock return values
+        mock_user_repo.create.return_value = {"uid": "guest_12345678"}
+        mock_auth_repo.create.return_value = {"uid": "guest_12345678"}
+        mock_profile_repo.create.return_value = {"uid": "guest_12345678"}
+        mock_jwt_service.create_tokens.return_value = {
+            "access_token": "test_access_token",
+            "refresh_token": "test_refresh_token"
+        }
+        
+        # Test data
+        test_data = {
+            "email": "guest@test.com",
+            "name": "Guest User"
+        }
+        
+        # Execute
+        response = client.post('/api/auth/guest-login', 
+                             json=test_data,
+                             content_type='application/json')
+        
+        # Assert
+        assert response.status_code == 200
+        response_data = response.get_json()
+        
+        assert "access_token" in response_data
+        assert "refresh_token" in response_data
+        assert "user" in response_data
+        assert response_data["user"]["email"] == "guest@test.com"
+        assert response_data["user"]["name"] == "Guest User"
+        assert response_data["user"]["guest_mode"] is True
+        
+        # Verify repository calls
+        mock_user_repo.create.assert_called_once()
+        mock_auth_repo.create.assert_called_once()
+        mock_profile_repo.create.assert_called_once()
+        mock_jwt_service.create_tokens.assert_called_once()
+        mock_security_logger.log_authentication_attempt.assert_called_once()
+
+    @patch('src.interface.controllers.auth_controller.make_user_repository')
+    def test_guest_login_missing_data(self, mock_user_repo_factory, client):
+        """Test guest login with missing required data"""
+        # Test data without email
+        test_data = {"name": "Guest User"}
+        
+        # Execute
+        response = client.post('/api/auth/guest-login', 
+                             json=test_data,
+                             content_type='application/json')
+        
+        # Assert
+        assert response.status_code in [400, 422]  # Bad request or validation error
+
+    @patch('src.interface.controllers.auth_controller.make_user_repository')
+    def test_guest_login_repository_error(self, mock_user_repo_factory, client):
+        """Test guest login with repository error"""
+        # Mock repository to raise error
+        mock_user_repo = Mock()
+        mock_user_repo_factory.return_value = mock_user_repo
+        mock_user_repo.create.side_effect = Exception("Database error")
+        
+        # Test data
+        test_data = {
+            "email": "guest@test.com",
+            "name": "Guest User"
+        }
+        
+        # Execute
+        response = client.post('/api/auth/guest-login', 
+                             json=test_data,
+                             content_type='application/json')
+        
+        # Assert
+        assert response.status_code in [400, 500]  # Error response
+
+    def test_guest_login_endpoint_exists(self, client):
+        """Test that guest login endpoint exists"""
+        # Execute with empty data to check endpoint exists
+        response = client.post('/api/auth/guest-login')
+        
+        # Assert endpoint exists (may return validation error but endpoint should exist)
+        assert response.status_code in [400, 422, 500]  # Any response indicates endpoint exists

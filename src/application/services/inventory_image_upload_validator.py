@@ -72,3 +72,17 @@ class InventoryImageUploadValidator:
             raise InvalidRequestDataException(
                 f"item_name must be less than {self.MAX_ITEM_NAME_LENGTH} characters"
             ) 
+
+
+# Función standalone para retrocompatibilidad
+def validate_inventory_upload(file, upload_type: str, item_name: str = None) -> None:
+    """
+    Función standalone wrapper para validación de inventory uploads
+    
+    Args:
+        file: Archivo a validar
+        upload_type: Tipo de upload (recognition, ingredient, food)
+        item_name: Nombre del item (opcional)
+    """
+    validator = InventoryImageUploadValidator()
+    return validator.validate_inventory_upload(file, upload_type, item_name)

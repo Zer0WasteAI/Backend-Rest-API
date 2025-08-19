@@ -784,3 +784,268 @@ class TestRecipeControllerImports:
         assert smart_rate_limit is not None
         assert smart_cache is not None
         assert cache_user_data is not None
+
+
+class TestRecipeControllerMissingMethods:
+    """Tests for missing recipe controller methods"""
+    
+    @pytest.fixture
+    def app(self):
+        """Create Flask app for testing"""
+        app = Flask(__name__)
+        app.config['JWT_SECRET_KEY'] = 'test-secret'
+        app.config['TESTING'] = True
+        app.register_blueprint(recipes_bp, url_prefix='/api/recipes')
+        JWTManager(app)
+        return app
+    
+    @pytest.fixture
+    def client(self, app):
+        """Create test client"""
+        return app.test_client()
+    
+    @pytest.fixture
+    def auth_token(self, app):
+        """Create test authentication token"""
+        with app.app_context():
+            token = create_access_token(identity="test-user-123")
+        return token
+    
+    @pytest.fixture
+    def auth_headers(self, auth_token):
+        """Create authentication headers"""
+        return {"Authorization": f"Bearer {auth_token}"}
+
+    @patch('src.interface.controllers.recipe_controller.make_generate_custom_recipes_use_case')
+    @patch('src.interface.controllers.recipe_controller.get_jwt_identity')
+    def test_generate_custom_recipes_success(self, mock_jwt_identity, mock_use_case_factory, client, auth_headers):
+        """Test successful custom recipe generation"""
+        # Arrange
+        mock_jwt_identity.return_value = "test-user-123"
+        mock_use_case = Mock()
+        mock_use_case.execute.return_value = {
+            "success": True,
+            "recipes": [
+                {"uid": "recipe-1", "title": "Custom Recipe 1"},
+                {"uid": "recipe-2", "title": "Custom Recipe 2"}
+            ]
+        }
+        mock_use_case_factory.return_value = mock_use_case
+        
+        # Test data
+        custom_request = {
+            "dietary_preferences": ["vegetarian"],
+            "cooking_time": 30,
+            "difficulty": "easy",
+            "custom_ingredients": ["tofu", "vegetables"]
+        }
+        
+        # Act
+        response = client.post('/api/recipes/custom', 
+                             json=custom_request,
+                             headers=auth_headers)
+        
+        # Assert
+        assert response.status_code == 200
+        data = response.get_json()
+        assert "recipes" in data
+        mock_use_case.execute.assert_called_once()
+
+    @patch('src.interface.controllers.recipe_controller.make_delete_recipe_use_case')
+    @patch('src.interface.controllers.recipe_controller.get_jwt_identity')
+    def test_delete_user_recipe_success(self, mock_jwt_identity, mock_use_case_factory, client, auth_headers):
+        """Test successful recipe deletion"""
+        # Arrange
+        mock_jwt_identity.return_value = "test-user-123"
+        mock_use_case = Mock()
+        mock_use_case.execute.return_value = {"success": True, "deleted": True}
+        mock_use_case_factory.return_value = mock_use_case
+        
+        # Act
+        response = client.delete('/api/recipes/user-recipes', 
+                               headers=auth_headers)
+        
+        # Assert
+        assert response.status_code == 200
+        data = response.get_json()
+        assert data["deleted"] is True
+        mock_use_case.execute.assert_called_once()
+
+    @patch('src.interface.controllers.recipe_controller.make_get_user_favorites_use_case')
+    @patch('src.interface.controllers.recipe_controller.get_jwt_identity')
+    def test_get_user_favorite_recipes_success(self, mock_jwt_identity, mock_use_case_factory, client, auth_headers):
+        """Test successful retrieval of user favorite recipes"""
+        # Arrange
+        mock_jwt_identity.return_value = "test-user-123"
+        mock_use_case = Mock()
+        mock_use_case.execute.return_value = {
+            "success": True,
+            "favorite_recipes": [
+                {"uid": "fav-1", "title": "Favorite Recipe 1", "is_favorite": True},
+                {"uid": "fav-2", "title": "Favorite Recipe 2", "is_favorite": True}
+            ],
+            "total_favorites": 2
+        }
+        mock_use_case_factory.return_value = mock_use_case
+        
+        # Act
+        response = client.get('/api/recipes/favorites', 
+                            headers=auth_headers)
+        
+        # Assert
+        assert response.status_code == 200
+        data = response.get_json()
+        assert "favorite_recipes" in data
+        assert data["total_favorites"] == 2
+        mock_use_case.execute.assert_called_once()
+
+    @patch('src.interface.controllers.recipe_controller.make_update_recipe_favorite_use_case')
+    @patch('src.interface.controllers.recipe_controller.get_jwt_identity')
+    def test_update_recipe_favorite_success(self, mock_jwt_identity, mock_use_case_factory, client, auth_headers):
+        """Test successful recipe favorite status update"""
+        # Arrange
+        mock_jwt_identity.return_value = "test-user-123"
+        mock_use_case = Mock()
+        mock_use_case.execute.return_value = {
+            "success": True, 
+            "is_favorite": True,
+            "recipe_uid": "recipe-123"
+        }
+        mock_use_case_factory.return_value = mock_use_case
+        
+        # Test data
+        update_request = {"is_favorite": True}
+        
+        # Act
+        response = client.patch('/api/recipes/recipe-123/favorite',
+                              json=update_request,
+                              headers=auth_headers)
+        
+        # Assert
+        assert response.status_code == 200
+        data = response.get_json()
+        assert data["is_favorite"] is True
+        assert data["recipe_uid"] == "recipe-123"
+        mock_use_case.execute.assert_called_once()
+
+    @patch('src.interface.controllers.recipe_controller.make_generate_custom_recipes_use_case')
+    def test_generate_custom_recipes_unauthorized(self, mock_use_case_factory, client):
+        """Test custom recipe generation without authentication"""
+        # Act
+        response = client.post('/api/recipes/custom', 
+                             json={"dietary_preferences": ["vegetarian"]})
+        
+        # Assert
+        assert response.status_code == 401
+
+    @patch('src.interface.controllers.recipe_controller.make_delete_recipe_use_case')
+    def test_delete_user_recipe_unauthorized(self, mock_use_case_factory, client):
+        """Test recipe deletion without authentication"""
+        # Act
+        response = client.delete('/api/recipes/user-recipes')
+        
+        # Assert
+        assert response.status_code == 401
+
+    @patch('src.interface.controllers.recipe_controller.make_get_user_favorites_use_case')
+    def test_get_user_favorite_recipes_unauthorized(self, mock_use_case_factory, client):
+        """Test favorite recipes retrieval without authentication"""
+        # Act
+        response = client.get('/api/recipes/favorites')
+        
+        # Assert
+        assert response.status_code == 401
+
+    @patch('src.interface.controllers.recipe_controller.make_update_recipe_favorite_use_case')
+    def test_update_recipe_favorite_unauthorized(self, mock_use_case_factory, client):
+        """Test recipe favorite update without authentication"""
+        # Act
+        response = client.patch('/api/recipes/recipe-123/favorite',
+                              json={"is_favorite": True})
+        
+        # Assert
+        assert response.status_code == 401
+
+    @patch('src.interface.controllers.recipe_controller.make_generate_custom_recipes_use_case')
+    @patch('src.interface.controllers.recipe_controller.get_jwt_identity')
+    def test_generate_custom_recipes_invalid_data(self, mock_jwt_identity, mock_use_case_factory, client, auth_headers):
+        """Test custom recipe generation with invalid data"""
+        # Arrange
+        mock_jwt_identity.return_value = "test-user-123"
+        mock_use_case = Mock()
+        mock_use_case.execute.side_effect = ValueError("Invalid request data")
+        mock_use_case_factory.return_value = mock_use_case
+        
+        # Test data
+        invalid_request = {}  # Empty request
+        
+        # Act
+        response = client.post('/api/recipes/custom',
+                             json=invalid_request,
+                             headers=auth_headers)
+        
+        # Assert
+        assert response.status_code in [400, 422]
+
+    @patch('src.interface.controllers.recipe_controller.make_delete_recipe_use_case')
+    @patch('src.interface.controllers.recipe_controller.get_jwt_identity')
+    def test_delete_user_recipe_not_found(self, mock_jwt_identity, mock_use_case_factory, client, auth_headers):
+        """Test recipe deletion when recipe not found"""
+        # Arrange
+        mock_jwt_identity.return_value = "test-user-123"
+        mock_use_case = Mock()
+        mock_use_case.execute.return_value = {"success": False, "error": "Recipe not found"}
+        mock_use_case_factory.return_value = mock_use_case
+        
+        # Act
+        response = client.delete('/api/recipes/user-recipes',
+                               headers=auth_headers)
+        
+        # Assert
+        assert response.status_code in [404, 400]
+
+    @patch('src.interface.controllers.recipe_controller.make_get_user_favorites_use_case')
+    @patch('src.interface.controllers.recipe_controller.get_jwt_identity')
+    def test_get_user_favorite_recipes_empty(self, mock_jwt_identity, mock_use_case_factory, client, auth_headers):
+        """Test retrieval of favorite recipes when user has no favorites"""
+        # Arrange
+        mock_jwt_identity.return_value = "test-user-123"
+        mock_use_case = Mock()
+        mock_use_case.execute.return_value = {
+            "success": True,
+            "favorite_recipes": [],
+            "total_favorites": 0
+        }
+        mock_use_case_factory.return_value = mock_use_case
+        
+        # Act
+        response = client.get('/api/recipes/favorites',
+                            headers=auth_headers)
+        
+        # Assert
+        assert response.status_code == 200
+        data = response.get_json()
+        assert data["total_favorites"] == 0
+        assert len(data["favorite_recipes"]) == 0
+
+    def test_recipe_endpoints_exist(self, client):
+        """Test that all recipe endpoints exist (even if they return auth errors)"""
+        endpoints = [
+            ('POST', '/api/recipes/custom'),
+            ('DELETE', '/api/recipes/user-recipes'),
+            ('GET', '/api/recipes/favorites'),
+            ('PATCH', '/api/recipes/recipe-123/favorite')
+        ]
+        
+        for method, endpoint in endpoints:
+            if method == 'GET':
+                response = client.get(endpoint)
+            elif method == 'POST':
+                response = client.post(endpoint)
+            elif method == 'DELETE':
+                response = client.delete(endpoint)
+            elif method == 'PATCH':
+                response = client.patch(endpoint)
+                
+            # Endpoints should exist (may return 401/405 but not 404)
+            assert response.status_code != 404

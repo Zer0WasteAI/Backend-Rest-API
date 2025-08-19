@@ -416,3 +416,141 @@ class TestRecognitionController:
             
             # Should not return 404 - endpoint should exist
             assert response.status_code != 404, f"Endpoint {method} {endpoint} should exist"
+
+    @patch('src.interface.controllers.recognition_controller.make_get_recognition_images_status_use_case')
+    @patch('src.interface.controllers.recognition_controller.get_jwt_identity')
+    def test_get_images_status_success(self, mock_jwt_identity, mock_use_case_factory, client, auth_headers):
+        """Test successful recognition images status retrieval"""
+        # Arrange
+        mock_jwt_identity.return_value = "test-user-123"
+        mock_use_case = Mock()
+        mock_use_case.execute.return_value = {
+            "recognition_id": "rec_456",
+            "status": "processing",
+            "images_processed": 2,
+            "total_images": 4,
+            "progress": 50,
+            "recognition_results": [
+                {"image_id": "img_1", "ingredients": ["tomato", "onion"]},
+                {"image_id": "img_2", "ingredients": ["garlic", "basil"]}
+            ]
+        }
+        mock_use_case_factory.return_value = mock_use_case
+        
+        # Act
+        response = client.get(
+            '/api/recognition/images/status/rec_456',
+            headers=auth_headers
+        )
+        
+        # Assert
+        assert response.status_code == 200
+        response_data = json.loads(response.data)
+        assert response_data["recognition_id"] == "rec_456"
+        assert response_data["status"] == "processing"
+        assert response_data["progress"] == 50
+        assert len(response_data["recognition_results"]) == 2
+        mock_use_case.execute.assert_called_once()
+
+    @patch('src.interface.controllers.recognition_controller.make_get_recognition_images_status_use_case')
+    @patch('src.interface.controllers.recognition_controller.get_jwt_identity')
+    def test_get_images_status_completed(self, mock_jwt_identity, mock_use_case_factory, client, auth_headers):
+        """Test recognition images status when completed"""
+        # Arrange
+        mock_jwt_identity.return_value = "test-user-123"
+        mock_use_case = Mock()
+        mock_use_case.execute.return_value = {
+            "recognition_id": "rec_789",
+            "status": "completed",
+            "images_processed": 3,
+            "total_images": 3,
+            "progress": 100,
+            "completion_time": "2025-01-19T11:00:00Z",
+            "recognition_results": [
+                {"image_id": "img_1", "ingredients": ["tomato", "onion"], "confidence": 0.95},
+                {"image_id": "img_2", "ingredients": ["garlic", "basil"], "confidence": 0.89},
+                {"image_id": "img_3", "ingredients": ["pepper", "carrot"], "confidence": 0.92}
+            ],
+            "summary": {
+                "total_ingredients_found": 6,
+                "average_confidence": 0.92
+            }
+        }
+        mock_use_case_factory.return_value = mock_use_case
+        
+        # Act
+        response = client.get(
+            '/api/recognition/images/status/rec_789',
+            headers=auth_headers
+        )
+        
+        # Assert
+        assert response.status_code == 200
+        response_data = json.loads(response.data)
+        assert response_data["recognition_id"] == "rec_789"
+        assert response_data["status"] == "completed"
+        assert response_data["progress"] == 100
+        assert len(response_data["recognition_results"]) == 3
+        assert "summary" in response_data
+
+    @patch('src.interface.controllers.recognition_controller.make_get_recognition_images_status_use_case')
+    @patch('src.interface.controllers.recognition_controller.get_jwt_identity')
+    def test_get_images_status_failed(self, mock_jwt_identity, mock_use_case_factory, client, auth_headers):
+        """Test recognition images status when failed"""
+        # Arrange
+        mock_jwt_identity.return_value = "test-user-123"
+        mock_use_case = Mock()
+        mock_use_case.execute.return_value = {
+            "recognition_id": "rec_failed",
+            "status": "failed",
+            "images_processed": 1,
+            "total_images": 3,
+            "progress": 33,
+            "error_message": "AI recognition service unavailable",
+            "failure_time": "2025-01-19T10:45:00Z",
+            "partial_results": [
+                {"image_id": "img_1", "ingredients": ["tomato"], "confidence": 0.85}
+            ]
+        }
+        mock_use_case_factory.return_value = mock_use_case
+        
+        # Act
+        response = client.get(
+            '/api/recognition/images/status/rec_failed',
+            headers=auth_headers
+        )
+        
+        # Assert
+        assert response.status_code == 200
+        response_data = json.loads(response.data)
+        assert response_data["recognition_id"] == "rec_failed"
+        assert response_data["status"] == "failed"
+        assert "error_message" in response_data
+        assert "partial_results" in response_data
+
+    def test_get_images_status_unauthorized(self, client):
+        """Test recognition images status without authentication"""
+        # Act
+        response = client.get('/api/recognition/images/status/rec_123')
+        
+        # Assert
+        assert response.status_code == 401
+
+    @patch('src.interface.controllers.recognition_controller.make_get_recognition_images_status_use_case')
+    @patch('src.interface.controllers.recognition_controller.get_jwt_identity')
+    def test_get_images_status_not_found(self, mock_jwt_identity, mock_use_case_factory, client, auth_headers):
+        """Test recognition images status for non-existent recognition"""
+        # Arrange
+        mock_jwt_identity.return_value = "test-user-123"
+        mock_use_case = Mock()
+        mock_use_case.execute.side_effect = ValueError("Recognition not found")
+        mock_use_case_factory.return_value = mock_use_case
+        
+        # Act
+        response = client.get(
+            '/api/recognition/images/status/nonexistent_rec',
+            headers=auth_headers
+        )
+        
+        # Assert
+        assert response.status_code in [404, 400]

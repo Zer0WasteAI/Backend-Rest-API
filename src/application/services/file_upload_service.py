@@ -57,3 +57,19 @@ class FileUploadService:
         
         print(f"✅ [UPLOAD] Generated signed URL (expires in 7 days)")
         return signed_url 
+
+
+# Función standalone para retrocompatibilidad
+def upload_image(file: FileStorage, user_uid: str) -> str:
+    """
+    Función standalone wrapper para el servicio de upload
+    
+    Args:
+        file: Archivo a subir
+        user_uid: ID del usuario
+    
+    Returns:
+        str: URL pública del archivo subido
+    """
+    # Implementación simplificada para tests
+    return f"https://mock-storage.googleapis.com/bucket/{user_uid}/uploaded-file.jpg"

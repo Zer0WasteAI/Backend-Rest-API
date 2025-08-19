@@ -273,3 +273,128 @@ class TestGenerationController:
         special_chars_gen_id = "gen_123@#$%"
         response = client.get(f'/api/generation/{special_chars_gen_id}/images', headers=auth_headers)
         assert response.status_code in [400, 404]
+
+    @patch('src.interface.controllers.generation_controller.make_get_generation_status_use_case')
+    @patch('src.interface.controllers.generation_controller.get_jwt_identity')
+    def test_get_generation_images_status_success(self, mock_jwt_identity, mock_use_case_factory, client, auth_headers):
+        """Test successful generation images status retrieval"""
+        # Arrange
+        mock_jwt_identity.return_value = "test-user-123"
+        mock_use_case = Mock()
+        mock_use_case.execute.return_value = {
+            "task_id": "task_456",
+            "status": "processing",
+            "progress": 65,
+            "images_generated": 2,
+            "total_images": 3,
+            "estimated_time_remaining": 30
+        }
+        mock_use_case_factory.return_value = mock_use_case
+        
+        # Act
+        response = client.get(
+            '/api/generation/images/status/task_456',
+            headers=auth_headers
+        )
+        
+        # Assert
+        assert response.status_code == 200
+        response_data = json.loads(response.data)
+        assert response_data["task_id"] == "task_456"
+        assert response_data["status"] == "processing"
+        assert response_data["progress"] == 65
+        assert response_data["images_generated"] == 2
+        mock_use_case.execute.assert_called_once()
+
+    @patch('src.interface.controllers.generation_controller.make_get_generation_status_use_case')
+    @patch('src.interface.controllers.generation_controller.get_jwt_identity')
+    def test_get_generation_images_status_completed(self, mock_jwt_identity, mock_use_case_factory, client, auth_headers):
+        """Test generation images status when completed"""
+        # Arrange
+        mock_jwt_identity.return_value = "test-user-123"
+        mock_use_case = Mock()
+        mock_use_case.execute.return_value = {
+            "task_id": "task_789",
+            "status": "completed", 
+            "progress": 100,
+            "images_generated": 4,
+            "total_images": 4,
+            "completion_time": "2025-01-19T10:30:00Z",
+            "result_urls": [
+                "https://example.com/image1.jpg",
+                "https://example.com/image2.jpg",
+                "https://example.com/image3.jpg",
+                "https://example.com/image4.jpg"
+            ]
+        }
+        mock_use_case_factory.return_value = mock_use_case
+        
+        # Act
+        response = client.get(
+            '/api/generation/images/status/task_789',
+            headers=auth_headers
+        )
+        
+        # Assert
+        assert response.status_code == 200
+        response_data = json.loads(response.data)
+        assert response_data["task_id"] == "task_789"
+        assert response_data["status"] == "completed"
+        assert response_data["progress"] == 100
+        assert len(response_data["result_urls"]) == 4
+
+    @patch('src.interface.controllers.generation_controller.make_get_generation_status_use_case')
+    @patch('src.interface.controllers.generation_controller.get_jwt_identity')
+    def test_get_generation_images_status_failed(self, mock_jwt_identity, mock_use_case_factory, client, auth_headers):
+        """Test generation images status when failed"""
+        # Arrange
+        mock_jwt_identity.return_value = "test-user-123"
+        mock_use_case = Mock()
+        mock_use_case.execute.return_value = {
+            "task_id": "task_failed",
+            "status": "failed",
+            "progress": 0,
+            "error_message": "AI service unavailable",
+            "failure_time": "2025-01-19T10:15:00Z"
+        }
+        mock_use_case_factory.return_value = mock_use_case
+        
+        # Act
+        response = client.get(
+            '/api/generation/images/status/task_failed',
+            headers=auth_headers
+        )
+        
+        # Assert
+        assert response.status_code == 200
+        response_data = json.loads(response.data)
+        assert response_data["task_id"] == "task_failed"
+        assert response_data["status"] == "failed"
+        assert "error_message" in response_data
+
+    def test_get_generation_images_status_unauthorized(self, client):
+        """Test generation images status without authentication"""
+        # Act
+        response = client.get('/api/generation/images/status/task_123')
+        
+        # Assert
+        assert response.status_code == 401
+
+    @patch('src.interface.controllers.generation_controller.make_get_generation_status_use_case')
+    @patch('src.interface.controllers.generation_controller.get_jwt_identity')
+    def test_get_generation_images_status_not_found(self, mock_jwt_identity, mock_use_case_factory, client, auth_headers):
+        """Test generation images status for non-existent task"""
+        # Arrange
+        mock_jwt_identity.return_value = "test-user-123"
+        mock_use_case = Mock()
+        mock_use_case.execute.side_effect = ValueError("Task not found")
+        mock_use_case_factory.return_value = mock_use_case
+        
+        # Act
+        response = client.get(
+            '/api/generation/images/status/nonexistent_task',
+            headers=auth_headers
+        )
+        
+        # Assert
+        assert response.status_code in [404, 400]
