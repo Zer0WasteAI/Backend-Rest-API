@@ -42,8 +42,6 @@ make_mark_food_item_consumed_use_case
 )
 
 from src.application.factories.unified_upload_factory import make_unified_upload_use_case
-from src.shared.decorators.response_handler import api_response, ResponseHelper
-from src.shared.messages.response_messages import ServiceType
 
 # New v1.3 imports for batch management
 from src.application.use_cases.inventory.get_expiring_soon_batches_use_case import GetExpiringSoonBatchesUseCase
@@ -69,7 +67,6 @@ from src.infrastructure.optimization.cache_service import smart_cache, cache_use
 inventory_bp = Blueprint('inventory', __name__)
 
 @inventory_bp.route("/ingredients", methods=["POST"])
-@api_response(service=ServiceType.INVENTORY, action="ingredients_recognized")
 @jwt_required()
 @smart_rate_limit('inventory_bulk')  # 🛡️ Rate limit: 10 requests/min for bulk operations
 @swag_from({
@@ -277,6 +274,34 @@ def add_ingredients():
         return jsonify({"message": "Ingredientes agregados exitosamente"}), 201
         
     except Exception as e:
+
+        
+        error_details = {
+
+        
+            "error_type": type(e).__name__,
+
+        
+            "error_message": str(e),
+
+        
+            "traceback": str(e.__traceback__.tb_frame.f_code.co_filename) + ":" + str(e.__traceback__.tb_lineno) if e.__traceback__ else "No traceback"
+
+        
+        }
+
+        
+        
+
+        
+        # Log the detailed error
+
+        
+        print(f"ERROR: {error_details}")
+
+        
+        
+
         print(f"🚨 [INVENTORY POST] ===== ERROR DETAILS =====")
         print(f"🚨 [INVENTORY POST] Error type: {type(e).__name__}")
         print(f"🚨 [INVENTORY POST] Error message: {str(e)}")
@@ -499,6 +524,34 @@ def get_inventory():
         return jsonify(result), 200
         
     except Exception as e:
+
+        
+        error_details = {
+
+        
+            "error_type": type(e).__name__,
+
+        
+            "error_message": str(e),
+
+        
+            "traceback": str(e.__traceback__.tb_frame.f_code.co_filename) + ":" + str(e.__traceback__.tb_lineno) if e.__traceback__ else "No traceback"
+
+        
+        }
+
+        
+        
+
+        
+        # Log the detailed error
+
+        
+        print(f"ERROR: {error_details}")
+
+        
+        
+
         print(f"🚨 [INVENTORY GET] ===== ERROR DETAILS =====")
         print(f"🚨 [INVENTORY GET] Error type: {type(e).__name__}")
         print(f"🚨 [INVENTORY GET] Error message: {str(e)}")
@@ -512,7 +565,6 @@ def get_inventory():
         raise e
 
 @inventory_bp.route("/complete", methods=["GET"])
-@api_response(service=ServiceType.INVENTORY, action="retrieved")
 @jwt_required()
 @cache_user_data('inventory_complete', timeout=600)  # 🚀 Cache: 10 min for complete inventory with AI data
 @swag_from({
@@ -732,6 +784,34 @@ def get_inventory_complete():
                 print(f"✅ [INVENTORY GET COMPLETE] Enriched {ingredient.name} with complete data")
                 
             except Exception as e:
+
+                
+                error_details = {
+
+                
+                    "error_type": type(e).__name__,
+
+                
+                    "error_message": str(e),
+
+                
+                    "traceback": str(e.__traceback__.tb_frame.f_code.co_filename) + ":" + str(e.__traceback__.tb_lineno) if e.__traceback__ else "No traceback"
+
+                
+                }
+
+                
+                
+
+                
+                # Log the detailed error
+
+                
+                print(f"ERROR: {error_details}")
+
+                
+                
+
                 print(f"⚠️ [INVENTORY GET COMPLETE] Error enriching {ingredient.name}: {str(e)}")
                 # Agregar datos por defecto en caso de error
                 basic_ingredient_data["environmental_impact"] = {
@@ -764,7 +844,6 @@ def get_inventory_complete():
         raise e
 
 @inventory_bp.route("/ingredients/<ingredient_name>/<added_at>", methods=["PUT"])
-@api_response(service=ServiceType.INVENTORY, action="updated")
 @jwt_required()
 @smart_rate_limit('inventory_crud')  # 🛡️ Rate limit: 50 requests/min for CRUD operations
 @swag_from({
@@ -981,7 +1060,6 @@ def update_ingredient(ingredient_name, added_at):
     return jsonify({"message": "Ingrediente actualizado exitosamente"}), 200
 
 @inventory_bp.route("/ingredients/<ingredient_name>/<added_at>", methods=["DELETE"])
-@api_response(service=ServiceType.INVENTORY, action="deleted")
 @jwt_required()
 @smart_rate_limit('inventory_crud')  # 🛡️ Rate limit: 50 requests/min for CRUD operations
 @swag_from({
@@ -1144,13 +1222,40 @@ def delete_ingredient(ingredient_name, added_at):
         }), 200
 
     except Exception as e:
+
+
+        error_details = {
+
+
+            "error_type": type(e).__name__,
+
+
+            "error_message": str(e),
+
+
+            "traceback": str(e.__traceback__.tb_frame.f_code.co_filename) + ":" + str(e.__traceback__.tb_lineno) if e.__traceback__ else "No traceback"
+
+
+        }
+
+
+        
+
+
+        # Log the detailed error
+
+
+        print(f"ERROR: {error_details}")
+
+
+        
+
         print(f"❌ [DELETE INGREDIENT STACK] Error: {str(e)}")
         return jsonify({
             "error": f"Error eliminando stack del ingrediente '{ingredient_name}': {str(e)}"
         }), 404
 
 @inventory_bp.route("/expiring", methods=["GET"])
-@api_response(service=ServiceType.INVENTORY, action="expiring_retrieved")
 @jwt_required()
 @smart_rate_limit('data_read')  # 🛡️ Rate limit: 100 requests/min for data reads
 @cache_user_data('expiring_items', timeout=900)  # 🚀 Cache: 15 min for expiring items
@@ -1257,7 +1362,6 @@ def get_expiring_items():
     }), 200
 
 @inventory_bp.route("/ingredients/from-recognition", methods=["POST"])
-@api_response(service=ServiceType.INVENTORY, action="ingredients_recognized")
 @jwt_required()
 @smart_rate_limit('inventory_bulk')  # 🛡️ Rate limit: 10 requests/min for recognition operations
 @swag_from({
@@ -1595,6 +1699,34 @@ def add_ingredients_from_recognition():
         }), 201
         
     except Exception as e:
+
+        
+        error_details = {
+
+        
+            "error_type": type(e).__name__,
+
+        
+            "error_message": str(e),
+
+        
+            "traceback": str(e.__traceback__.tb_frame.f_code.co_filename) + ":" + str(e.__traceback__.tb_lineno) if e.__traceback__ else "No traceback"
+
+        
+        }
+
+        
+        
+
+        
+        # Log the detailed error
+
+        
+        print(f"ERROR: {error_details}")
+
+        
+        
+
         print(f"🚨 [INVENTORY FROM RECOGNITION ENHANCED] Error adding enhanced ingredients: {str(e)}")
         raise e
 
@@ -1636,6 +1768,34 @@ def _enrich_ingredients_with_enhanced_data(ingredients_data: list[dict], ai_serv
             }
             
         except Exception as e:
+
+            
+            error_details = {
+
+            
+                "error_type": type(e).__name__,
+
+            
+                "error_message": str(e),
+
+            
+                "traceback": str(e.__traceback__.tb_frame.f_code.co_filename) + ":" + str(e.__traceback__.tb_lineno) if e.__traceback__ else "No traceback"
+
+            
+            }
+
+            
+            
+
+            
+            # Log the detailed error
+
+            
+            print(f"ERROR: {error_details}")
+
+            
+            
+
             print(f"   ⚠️ [ENHANCED] Error enriching {ingredient_name}: {str(e)}")
             # Datos por defecto en caso de error
             return {
@@ -1702,7 +1862,6 @@ def _enrich_ingredients_with_enhanced_data(ingredients_data: list[dict], ai_serv
 # ===============================================================================
 
 @inventory_bp.route("/foods/from-recognition", methods=["POST"])
-@api_response(service=ServiceType.INVENTORY, action="foods_identified")
 @jwt_required()
 @smart_rate_limit('inventory_bulk')  # 🛡️ Rate limit: 10 requests/min for recognition operations
 @swag_from({
@@ -1930,6 +2089,34 @@ def add_foods_from_recognition():
         }), 201
         
     except Exception as e:
+
+        
+        error_details = {
+
+        
+            "error_type": type(e).__name__,
+
+        
+            "error_message": str(e),
+
+        
+            "traceback": str(e.__traceback__.tb_frame.f_code.co_filename) + ":" + str(e.__traceback__.tb_lineno) if e.__traceback__ else "No traceback"
+
+        
+        }
+
+        
+        
+
+        
+        # Log the detailed error
+
+        
+        print(f"ERROR: {error_details}")
+
+        
+        
+
         print(f"🚨 [FOODS FROM RECOGNITION ENHANCED] Error adding enhanced foods: {str(e)}")
         raise e
 
@@ -2001,6 +2188,34 @@ def _enrich_foods_with_enhanced_data(foods_data: list[dict], ai_service):
             }
             
         except Exception as e:
+
+            
+            error_details = {
+
+            
+                "error_type": type(e).__name__,
+
+            
+                "error_message": str(e),
+
+            
+                "traceback": str(e.__traceback__.tb_frame.f_code.co_filename) + ":" + str(e.__traceback__.tb_lineno) if e.__traceback__ else "No traceback"
+
+            
+            }
+
+            
+            
+
+            
+            # Log the detailed error
+
+            
+            print(f"ERROR: {error_details}")
+
+            
+            
+
             print(f"   ⚠️ [ENHANCED] Error enriching {food_name}: {str(e)}")
             # Datos por defecto en caso de error
             return {
@@ -2065,7 +2280,6 @@ def _enrich_foods_with_enhanced_data(foods_data: list[dict], ai_service):
 
 
 @inventory_bp.route("/simple", methods=["GET"])
-@api_response(service=ServiceType.INVENTORY, action="retrieved")
 @jwt_required()
 @swag_from({
     'tags': ['Inventory'],
@@ -2207,6 +2421,34 @@ def get_inventory_simple():
         return jsonify(result), 200
         
     except Exception as e:
+
+        
+        error_details = {
+
+        
+            "error_type": type(e).__name__,
+
+        
+            "error_message": str(e),
+
+        
+            "traceback": str(e.__traceback__.tb_frame.f_code.co_filename) + ":" + str(e.__traceback__.tb_lineno) if e.__traceback__ else "No traceback"
+
+        
+        }
+
+        
+        
+
+        
+        # Log the detailed error
+
+        
+        print(f"ERROR: {error_details}")
+
+        
+        
+
         print(f"🚨 [INVENTORY SIMPLE GET] Error fetching simple inventory: {str(e)}")
         raise e
 
@@ -2215,7 +2457,6 @@ def get_inventory_simple():
 # ===============================================================================
 
 @inventory_bp.route("/ingredients/<ingredient_name>/<added_at>/quantity", methods=["PATCH"])
-@api_response(service=ServiceType.INVENTORY, action="processed")
 @jwt_required()
 @swag_from({
     'tags': ['Inventory'],
@@ -2458,6 +2699,25 @@ def update_ingredient_quantity(ingredient_name, added_at):
         print(f"❌ [UPDATE INGREDIENT QUANTITY] Returning 404 response")
         return jsonify({"error": str(e)}), 404
     except Exception as e:
+
+        error_details = {
+
+            "error_type": type(e).__name__,
+
+            "error_message": str(e),
+
+            "traceback": str(e.__traceback__.tb_frame.f_code.co_filename) + ":" + str(e.__traceback__.tb_lineno) if e.__traceback__ else "No traceback"
+
+        }
+
+        
+
+        # Log the detailed error
+
+        print(f"ERROR: {error_details}")
+
+        
+
         print(f"🚨 [UPDATE INGREDIENT QUANTITY] ===== ERROR DETAILS =====")
         print(f"🚨 [UPDATE INGREDIENT QUANTITY] Error type: {type(e).__name__}")
         print(f"🚨 [UPDATE INGREDIENT QUANTITY] Error message: {str(e)}")
@@ -2474,7 +2734,6 @@ def update_ingredient_quantity(ingredient_name, added_at):
         raise e
 
 @inventory_bp.route("/foods/<food_name>/<added_at>/quantity", methods=["PATCH"])
-@api_response(service=ServiceType.INVENTORY, action="processed")
 @jwt_required()
 @swag_from({
     'tags': ['Inventory'],
@@ -2662,6 +2921,25 @@ def update_food_quantity(food_name, added_at):
         print(f"❌ [UPDATE FOOD QUANTITY] Food item not found: {str(e)}")
         return jsonify({"error": str(e)}), 404
     except Exception as e:
+
+        error_details = {
+
+            "error_type": type(e).__name__,
+
+            "error_message": str(e),
+
+            "traceback": str(e.__traceback__.tb_frame.f_code.co_filename) + ":" + str(e.__traceback__.tb_lineno) if e.__traceback__ else "No traceback"
+
+        }
+
+        
+
+        # Log the detailed error
+
+        print(f"ERROR: {error_details}")
+
+        
+
         print(f"🚨 [UPDATE FOOD QUANTITY] Unexpected error: {str(e)}")
         raise e
 
@@ -2670,7 +2948,6 @@ def update_food_quantity(food_name, added_at):
 # ===============================================================================
 
 @inventory_bp.route("/ingredients/<ingredient_name>", methods=["DELETE"])
-@api_response(service=ServiceType.INVENTORY, action="deleted")
 @jwt_required()
 @smart_rate_limit('inventory_crud')  # 🛡️ Rate limit: 50 requests/min for CRUD operations
 @swag_from({
@@ -2845,6 +3122,25 @@ def delete_ingredient_complete(ingredient_name):
         print(f"❌ [DELETE INGREDIENT COMPLETE] Returning 404 response")
         return jsonify({"error": str(e)}), 404
     except Exception as e:
+
+        error_details = {
+
+            "error_type": type(e).__name__,
+
+            "error_message": str(e),
+
+            "traceback": str(e.__traceback__.tb_frame.f_code.co_filename) + ":" + str(e.__traceback__.tb_lineno) if e.__traceback__ else "No traceback"
+
+        }
+
+        
+
+        # Log the detailed error
+
+        print(f"ERROR: {error_details}")
+
+        
+
         print(f"🚨 [DELETE INGREDIENT COMPLETE] ===== ERROR DETAILS =====")
         print(f"🚨 [DELETE INGREDIENT COMPLETE] Error type: {type(e).__name__}")
         print(f"🚨 [DELETE INGREDIENT COMPLETE] Error message: {str(e)}")
@@ -2861,7 +3157,6 @@ def delete_ingredient_complete(ingredient_name):
 
 
 @inventory_bp.route("/foods/<food_name>/<added_at>", methods=["DELETE"])
-@api_response(service=ServiceType.INVENTORY, action="deleted")
 @jwt_required()
 @swag_from({
     'tags': ['Inventory'],
@@ -3006,6 +3301,25 @@ def delete_food_item(food_name, added_at):
         print(f"❌ [DELETE FOOD ITEM] Food item not found: {str(e)}")
         return jsonify({"error": f"Food item not found for '{food_name}' added at '{added_at}'"}), 404
     except Exception as e:
+
+        error_details = {
+
+            "error_type": type(e).__name__,
+
+            "error_message": str(e),
+
+            "traceback": str(e.__traceback__.tb_frame.f_code.co_filename) + ":" + str(e.__traceback__.tb_lineno) if e.__traceback__ else "No traceback"
+
+        }
+
+        
+
+        # Log the detailed error
+
+        print(f"ERROR: {error_details}")
+
+        
+
         print(f"🚨 [DELETE FOOD ITEM] Unexpected error: {str(e)}")
         raise e
 
@@ -3015,7 +3329,6 @@ def delete_food_item(food_name, added_at):
 # ===============================================================================
 
 @inventory_bp.route("/ingredients/<ingredient_name>/<added_at>/consume", methods=["POST"])
-@api_response(service=ServiceType.INVENTORY, action="item_added")
 @jwt_required()
 @swag_from({
     'tags': ['Inventory'],
@@ -3186,6 +3499,25 @@ def mark_ingredient_stack_consumed(ingredient_name, added_at):
         print(f"🍽️ [MARK INGREDIENT CONSUMED] Schema validation passed")
         print(f"🍽️ [MARK INGREDIENT CONSUMED] Validated data: {validated_data}")
     except Exception as e:
+
+        error_details = {
+
+            "error_type": type(e).__name__,
+
+            "error_message": str(e),
+
+            "traceback": str(e.__traceback__.tb_frame.f_code.co_filename) + ":" + str(e.__traceback__.tb_lineno) if e.__traceback__ else "No traceback"
+
+        }
+
+        
+
+        # Log the detailed error
+
+        print(f"ERROR: {error_details}")
+
+        
+
         print(f"❌ [MARK INGREDIENT CONSUMED] Schema validation error: {str(e)}")
         return jsonify({"error": f"Invalid data: {str(e)}"}), 400
 
@@ -3243,7 +3575,7 @@ def mark_ingredient_stack_consumed(ingredient_name, added_at):
         print(f"❌ [MARK INGREDIENT CONSUMED] Ingredient: '{ingredient_name}'")
         print(f"❌ [MARK INGREDIENT CONSUMED] Added at: '{added_at}'")
         print(f"❌ [MARK INGREDIENT CONSUMED] Returning 404 response")
-        return jsonify({"error": str(e)}), 404
+        return jsonify({"error": str(e), "details": error_details}), 404
     except Exception as e:
         print(f"🚨 [MARK INGREDIENT CONSUMED] ===== ERROR DETAILS =====")
         print(f"🚨 [MARK INGREDIENT CONSUMED] Error type: {type(e).__name__}")
@@ -3261,7 +3593,6 @@ def mark_ingredient_stack_consumed(ingredient_name, added_at):
 
 
 @inventory_bp.route("/foods/<food_name>/<added_at>/consume", methods=["POST"])
-@api_response(service=ServiceType.INVENTORY, action="item_added")
 @jwt_required()
 @swag_from({
     'tags': ['Inventory'],
@@ -3467,6 +3798,25 @@ def mark_food_item_consumed(food_name, added_at):
     try:
         validated_data = schema.load(request.get_json() or {})
     except Exception as e:
+
+        error_details = {
+
+            "error_type": type(e).__name__,
+
+            "error_message": str(e),
+
+            "traceback": str(e.__traceback__.tb_frame.f_code.co_filename) + ":" + str(e.__traceback__.tb_lineno) if e.__traceback__ else "No traceback"
+
+        }
+
+        
+
+        # Log the detailed error
+
+        print(f"ERROR: {error_details}")
+
+        
+
         print(f"❌ [MARK FOOD CONSUMED] Validation error: {str(e)}")
         return jsonify({"error": f"Invalid data: {str(e)}"}), 400
 
@@ -3492,7 +3842,7 @@ def mark_food_item_consumed(food_name, added_at):
 
     except ValueError as e:
         print(f"❌ [MARK FOOD CONSUMED] Validation error: {str(e)}")
-        return jsonify({"error": str(e)}), 404
+        return jsonify({"error": str(e), "details": error_details}), 404
     except Exception as e:
         print(f"🚨 [MARK FOOD CONSUMED] Unexpected error: {str(e)}")
         raise e
@@ -3502,7 +3852,6 @@ def mark_food_item_consumed(food_name, added_at):
 # ===============================================================================
 
 @inventory_bp.route("/ingredients/<ingredient_name>/detail", methods=["GET"])
-@api_response(service=ServiceType.INVENTORY, action="retrieved")
 @jwt_required()
 @swag_from({
     'tags': ['Inventory'],
@@ -3675,11 +4024,29 @@ def get_ingredient_detail(ingredient_name):
         print(f"❌ [GET INGREDIENT DETAIL] Ingredient not found: {str(e)}")
         return jsonify({"error": str(e)}), 404
     except Exception as e:
+
+        error_details = {
+
+            "error_type": type(e).__name__,
+
+            "error_message": str(e),
+
+            "traceback": str(e.__traceback__.tb_frame.f_code.co_filename) + ":" + str(e.__traceback__.tb_lineno) if e.__traceback__ else "No traceback"
+
+        }
+
+        
+
+        # Log the detailed error
+
+        print(f"ERROR: {error_details}")
+
+        
+
         print(f"🚨 [GET INGREDIENT DETAIL] Unexpected error: {str(e)}")
         return jsonify({"error": f"Error fetching ingredient details: {str(e)}"}), 500
 
 @inventory_bp.route("/foods/<food_name>/<added_at>/detail", methods=["GET"])
-@api_response(service=ServiceType.INVENTORY, action="retrieved")
 @jwt_required()
 @swag_from({
     'tags': ['Inventory'],
@@ -3914,6 +4281,25 @@ def get_food_detail(food_name, added_at):
         print(f"❌ [GET FOOD DETAIL] Food item not found: {str(e)}")
         return jsonify({"error": str(e)}), 404
     except Exception as e:
+
+        error_details = {
+
+            "error_type": type(e).__name__,
+
+            "error_message": str(e),
+
+            "traceback": str(e.__traceback__.tb_frame.f_code.co_filename) + ":" + str(e.__traceback__.tb_lineno) if e.__traceback__ else "No traceback"
+
+        }
+
+        
+
+        # Log the detailed error
+
+        print(f"ERROR: {error_details}")
+
+        
+
         print(f"🚨 [GET FOOD DETAIL] Unexpected error: {str(e)}")
         return jsonify({"error": f"Error fetching food details: {str(e)}"}), 500
 
@@ -3922,7 +4308,6 @@ def get_food_detail(food_name, added_at):
 # ===============================================================================
 
 @inventory_bp.route("/ingredients/list", methods=["GET"])
-@api_response(service=ServiceType.INVENTORY, action="list_retrieved")
 @jwt_required()
 @swag_from({
     'tags': ['Inventory'],
@@ -4103,6 +4488,34 @@ def get_ingredients_list():
         return jsonify(ingredients_result), 200
 
     except Exception as e:
+
+
+        error_details = {
+
+
+            "error_type": type(e).__name__,
+
+
+            "error_message": str(e),
+
+
+            "traceback": str(e.__traceback__.tb_frame.f_code.co_filename) + ":" + str(e.__traceback__.tb_lineno) if e.__traceback__ else "No traceback"
+
+
+        }
+
+
+        
+
+
+        # Log the detailed error
+
+
+        print(f"ERROR: {error_details}")
+
+
+        
+
         print(f"🚨 [GET INGREDIENTS LIST] ===== ERROR DETAILS =====")
         print(f"🚨 [GET INGREDIENTS LIST] Error type: {type(e).__name__}")
         print(f"🚨 [GET INGREDIENTS LIST] Error message: {str(e)}")
@@ -4117,7 +4530,6 @@ def get_ingredients_list():
         return jsonify({"error": f"Error fetching ingredients list: {str(e)}"}), 500
 
 @inventory_bp.route("/foods/list", methods=["GET"])
-@api_response(service=ServiceType.INVENTORY, action="list_retrieved")
 @jwt_required()
 @swag_from({
     'tags': ['Inventory'],
@@ -4275,6 +4687,34 @@ def get_foods_list():
         return jsonify(foods_result), 200
 
     except Exception as e:
+
+
+        error_details = {
+
+
+            "error_type": type(e).__name__,
+
+
+            "error_message": str(e),
+
+
+            "traceback": str(e.__traceback__.tb_frame.f_code.co_filename) + ":" + str(e.__traceback__.tb_lineno) if e.__traceback__ else "No traceback"
+
+
+        }
+
+
+        
+
+
+        # Log the detailed error
+
+
+        print(f"ERROR: {error_details}")
+
+
+        
+
         print(f"🚨 [GET FOODS LIST] Unexpected error: {str(e)}")
         return jsonify({"error": f"Error fetching foods list: {str(e)}"}), 500
 
@@ -4283,7 +4723,6 @@ def get_foods_list():
 # ===============================================================================
 
 @inventory_bp.route("/upload_image", methods=["POST"])
-@api_response(service=ServiceType.INVENTORY, action="uploaded")
 @jwt_required()
 @swag_from({
     'tags': ['Inventory'],
@@ -4556,6 +4995,34 @@ def upload_inventory_image():
         return jsonify({"error": str(e)}), 400
         
     except Exception as e:
+
+        
+        error_details = {
+
+        
+            "error_type": type(e).__name__,
+
+        
+            "error_message": str(e),
+
+        
+            "traceback": str(e.__traceback__.tb_frame.f_code.co_filename) + ":" + str(e.__traceback__.tb_lineno) if e.__traceback__ else "No traceback"
+
+        
+        }
+
+        
+        
+
+        
+        # Log the detailed error
+
+        
+        print(f"ERROR: {error_details}")
+
+        
+        
+
         print(f"🚨 [UPLOAD INVENTORY IMAGE] ===== ERROR DETAILS =====")
         print(f"🚨 [UPLOAD INVENTORY IMAGE] Error type: {type(e).__name__}")
         print(f"🚨 [UPLOAD INVENTORY IMAGE] Error message: {str(e)}")
@@ -4580,9 +5047,7 @@ def upload_inventory_image():
 # ===============================================================================
 
 @inventory_bp.route("/add_item", methods=["POST"])
-@api_response(service=ServiceType.INVENTORY, action="item_added")
 @jwt_required()
-@api_response(service=ServiceType.INVENTORY, action="item_added")
 @swag_from({
     'tags': ['Inventory'],
     'summary': 'Agregar item al inventario con generación IA',
@@ -4818,6 +5283,34 @@ def add_item_to_inventory():
         return jsonify({"error": str(e)}), 400
         
     except Exception as e:
+
+        
+        error_details = {
+
+        
+            "error_type": type(e).__name__,
+
+        
+            "error_message": str(e),
+
+        
+            "traceback": str(e.__traceback__.tb_frame.f_code.co_filename) + ":" + str(e.__traceback__.tb_lineno) if e.__traceback__ else "No traceback"
+
+        
+        }
+
+        
+        
+
+        
+        # Log the detailed error
+
+        
+        print(f"ERROR: {error_details}")
+
+        
+        
+
         print(f"🚨 [ADD ITEM] Unexpected error: {str(e)}")
         return jsonify({
             "error": "Failed to add item to inventory",
@@ -4830,7 +5323,6 @@ def add_item_to_inventory():
 # ===============================
 
 @inventory_bp.route("/expiring_soon", methods=["GET"])
-@api_response(service=ServiceType.INVENTORY, action="expiring_retrieved")
 @jwt_required()
 @smart_rate_limit('data_read')
 @swag_from({
@@ -4908,7 +5400,6 @@ def get_expiring_soon():
         return jsonify({"error": str(e)}), 400
 
 @inventory_bp.route("/batch/<batch_id>/reserve", methods=["POST"])
-@api_response(service=ServiceType.INVENTORY, action="batch_processed")
 @jwt_required()
 @smart_rate_limit('data_write')
 @swag_from({
@@ -4964,7 +5455,6 @@ def reserve_batch(batch_id: str):
         return jsonify({"error": str(e)}), 400
 
 @inventory_bp.route("/batch/<batch_id>/freeze", methods=["POST"])
-@api_response(service=ServiceType.INVENTORY, action="batch_processed")
 @jwt_required()
 @smart_rate_limit('data_write')
 @swag_from({
@@ -5017,7 +5507,6 @@ def freeze_batch(batch_id: str):
         return jsonify({"error": str(e)}), 400
 
 @inventory_bp.route("/batch/<batch_id>/transform", methods=["POST"])
-@api_response(service=ServiceType.INVENTORY, action="batch_processed")
 @jwt_required()
 @smart_rate_limit('data_write')
 @swag_from({
@@ -5054,7 +5543,6 @@ def transform_batch(batch_id: str):
         return jsonify({"error": str(e)}), 400
 
 @inventory_bp.route("/batch/<batch_id>/quarantine", methods=["POST"])
-@api_response(service=ServiceType.INVENTORY, action="batch_processed")
 @jwt_required()
 @smart_rate_limit('data_write')
 @swag_from({
@@ -5079,7 +5567,6 @@ def quarantine_batch(batch_id: str):
         return jsonify({"error": str(e)}), 400
 
 @inventory_bp.route("/batch/<batch_id>/discard", methods=["POST"])
-@api_response(service=ServiceType.INVENTORY, action="batch_processed")
 @jwt_required()
 @smart_rate_limit('data_write')
 @swag_from({
@@ -5140,7 +5627,6 @@ def discard_batch(batch_id: str):
 
 
 @inventory_bp.route("/leftovers", methods=["POST"])
-@api_response(service=ServiceType.INVENTORY, action="created")
 @jwt_required()
 @smart_rate_limit('data_write')
 @swag_from({

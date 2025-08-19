@@ -16,15 +16,22 @@ class TestImageManagementController:
     
     @pytest.fixture
     def app(self):
-        """Create Flask app for testing"""
-        app = Flask(__name__)
-        app.config['JWT_SECRET_KEY'] = 'test-secret'
-        app.config['TESTING'] = True
-        app.register_blueprint(image_management_bp, url_prefix='/api/images')
+        """Create Flask app for testing using project configuration"""
+        import sys
+        import os
+        sys.path.insert(0, os.path.join(os.path.dirname(__file__), '../../../..'))
         
-        # Initialize JWT
-        jwt = JWTManager(app)
+        # Set testing environment before importing
+        os.environ['FLASK_ENV'] = 'testing'
+        os.environ['TESTING'] = '1'
         
+        from src.main import create_app
+        app = create_app()
+        app.config.update({
+            "TESTING": True,
+            "SQLALCHEMY_DATABASE_URI": "sqlite:///:memory:",
+            "WTF_CSRF_ENABLED": False
+        })
         return app
     
     @pytest.fixture

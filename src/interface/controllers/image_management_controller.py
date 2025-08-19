@@ -15,8 +15,6 @@ from src.application.factories.unified_upload_factory import make_unified_upload
 from src.infrastructure.optimization.rate_limiter import smart_rate_limit
 from src.shared.exceptions.custom import InvalidRequestDataException
 from src.shared.decorators.internal_only import internal_only
-from src.shared.decorators.response_handler import api_response, ResponseHelper
-from src.shared.messages.response_messages import ServiceType
 
 image_management_bp = Blueprint('image_management', __name__)
 public_schema = ImageReferencePublicSchema()
@@ -27,7 +25,6 @@ upload_response_schema = UploadImageResponseSchema()
 @image_management_bp.route("/assign_image", methods=["POST"])
 @jwt_required()
 @smart_rate_limit('data_write')  # 🛡️ Rate limit: 40 requests/min for image processing
-@api_response(service=ServiceType.IMAGES, action="assigned")
 @swag_from({
     'tags': ['Image Management'],
     'summary': 'Asignar imagen de referencia a un ingrediente',
@@ -152,7 +149,6 @@ def assign_image():
     return public_schema.dump(result), 200
 
 @image_management_bp.route("/search_similar_images", methods=["POST"])
-@api_response(service=ServiceType.IMAGES, action="similar_found")
 @jwt_required()
 @smart_rate_limit('data_read')  # 🛡️ Rate limit: 100 requests/min for image search
 @swag_from({
@@ -303,7 +299,6 @@ def search_similar_images():
     return jsonify(serialized_list), 200
 
 @image_management_bp.route("/sync_images", methods=["POST"])
-@api_response(service=ServiceType.IMAGES, action="synced")
 @internal_only
 @swag_from({
     'tags': ['Image Management'],
@@ -420,7 +415,6 @@ def sync_images():
 @image_management_bp.route("/upload_image", methods=["POST"])
 @jwt_required()
 @smart_rate_limit('data_write')  # 🛡️ Rate limit: 40 requests/min for image uploads
-@api_response(service=ServiceType.IMAGES, action="uploaded")
 @swag_from({
     'tags': ['Image Management'],
     'summary': 'Upload image file to Firebase Storage',

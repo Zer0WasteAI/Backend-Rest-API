@@ -17,8 +17,6 @@ from src.application.factories.cooking_session_factory import (
 from src.infrastructure.services.idempotency_service import IdempotencyService
 from src.infrastructure.optimization.rate_limiter import smart_rate_limit
 from src.shared.exceptions.custom import InvalidRequestDataException, RecipeNotFoundException
-from src.shared.decorators.response_handler import api_response, ResponseHelper
-from src.shared.messages.response_messages import ServiceType
 from src.infrastructure.db.base import db
 import json
 
@@ -78,7 +76,6 @@ def check_idempotency(endpoint_name: str):
 
 
 @cooking_session_bp.route("/<recipe_uid>/mise_en_place", methods=["GET"])
-@api_response(service=ServiceType.COOKING, action="retrieved")
 @jwt_required()
 @smart_rate_limit('data_read')
 @swag_from({
@@ -178,7 +175,6 @@ def get_mise_en_place(recipe_uid: str):
 
 
 @cooking_session_bp.route("/start", methods=["POST"])
-@api_response(service=ServiceType.COOKING, action="session_started")
 @jwt_required()
 @smart_rate_limit('data_write')
 @check_idempotency('cooking_session_start')
@@ -277,7 +273,6 @@ def start_cooking_session():
 
 
 @cooking_session_bp.route("/complete_step", methods=["POST"])
-@api_response(service=ServiceType.COOKING, action="step_completed")
 @jwt_required()
 @smart_rate_limit('data_write')
 @check_idempotency('cooking_session_complete_step')
@@ -379,7 +374,6 @@ def complete_cooking_step():
 
 
 @cooking_session_bp.route("/finish", methods=["POST"])
-@api_response(service=ServiceType.COOKING, action="session_finished")
 @jwt_required()
 @smart_rate_limit('data_write')
 @check_idempotency('cooking_session_finish')

@@ -8,7 +8,6 @@ from flasgger import swag_from
 admin_bp = Blueprint('admin', __name__)
 
 @admin_bp.route('/cleanup-tokens', methods=['POST'])
-@api_response(service=ServiceType.ADMIN, action="tokens_cleaned")
 @internal_only
 @smart_rate_limit('data_write')
 @swag_from({
@@ -42,14 +41,25 @@ def cleanup_expired_tokens():
         }), 200
         
     except Exception as e:
+        error_details = {
+            "error_type": type(e).__name__,
+            "error_message": str(e),
+            "endpoint": "cleanup-tokens",
+            "operation": "cleanup_expired_tokens",
+            "traceback": str(e.__traceback__.tb_frame.f_code.co_filename) + ":" + str(e.__traceback__.tb_lineno) if e.__traceback__ else "No traceback"
+        }
+        
         security_logger.log_security_event(
             SecurityEventType.AUTHENTICATION_FAILED,
-            {"endpoint": "cleanup-tokens", "reason": "cleanup_failed", "error": str(type(e).__name__)}
+            {"endpoint": "cleanup-tokens", "reason": "cleanup_failed", "error_details": error_details}
         )
-        return jsonify({"error": "Cleanup operation failed"}), 500
+        
+        return jsonify({
+            "error": "Cleanup operation failed",
+            "details": error_details
+        }), 500
 
 @admin_bp.route('/security-stats', methods=['GET'])
-@api_response(service=ServiceType.ADMIN, action="stats_retrieved")
 @internal_only
 @smart_rate_limit('data_read')
 @swag_from({
@@ -67,8 +77,6 @@ def get_security_stats():
     try:
         from src.infrastructure.db.schemas.token_blacklist_schema import TokenBlacklist, RefreshTokenTracking
         from src.infrastructure.db.base import db
-from src.shared.decorators.response_handler import api_response, ResponseHelper
-from src.shared.messages.response_messages import ServiceType
         
         # Contar tokens en blacklist
         blacklisted_count = db.session.query(TokenBlacklist).count()
@@ -89,4 +97,15 @@ from src.shared.messages.response_messages import ServiceType
         }), 200
         
     except Exception as e:
-        return jsonify({"error": "Failed to get security stats"}), 500 
+        error_details = {
+            "error_type": type(e).__name__,
+            "error_message": str(e),
+            "endpoint": "security-stats",
+            "operation": "get_security_stats",
+            "traceback": str(e.__traceback__.tb_frame.f_code.co_filename) + ":" + str(e.__traceback__.tb_lineno) if e.__traceback__ else "No traceback"
+        }
+        
+        return jsonify({
+            "error": "Failed to get security stats",
+            "details": error_details
+        }), 500 

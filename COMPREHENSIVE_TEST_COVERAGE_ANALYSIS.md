@@ -1,0 +1,630 @@
+# Comprehensive Test Coverage Analysis
+
+Total source files: 213
+Total test files: 134
+Directly referenced by tests (import match): 203
+Heuristic name-only matches: 10
+No obvious match: 0
+
+## No Obvious Match
+
+## Import Matches (strong signal)
+- src/application/factories/auth_usecase_factory.py
+  - test/unit/interface/controllers/test_auth_controller.py
+  - test/unit/interface/controllers/test_user_controller_e2e.py
+- src/application/factories/batch_management_factory.py
+  - test/integration/test_all_endpoints.py
+  - test/integration/test_idempotency_endpoints.py
+- src/application/factories/cooking_session_factory.py
+  - test/integration/test_all_endpoints.py
+  - test/integration/test_idempotency_endpoints.py
+- src/application/factories/environmental_savings_factory.py
+  - test/integration/test_all_endpoints.py
+- src/application/factories/food_image_generator_factory.py
+  - test/unit/application/factories/test_factories_imports.py
+- src/application/factories/generation_usecase_factory.py
+  - test/unit/application/factories/test_factories_imports.py
+- src/application/factories/image_management_usecase_factory.py
+  - test/unit/application/factories/test_factories_imports.py
+- src/application/factories/ingredient_image_generator_factory.py
+  - test/unit/application/factories/test_factories_imports.py
+- src/application/factories/inventory_image_upload_factory.py
+  - test/unit/application/factories/test_factories_imports.py
+- src/application/factories/inventory_usecase_factory.py
+  - test/unit/application/factories/test_factories_imports.py
+  - test/unit/interface/controllers/test_inventory_controller_e2e.py
+- src/application/factories/leftover_factory.py
+  - test/integration/test_all_endpoints.py
+- src/application/factories/planning_usecase_factory.py
+  - test/unit/application/factories/test_factories_imports.py
+- src/application/factories/recipe_usecase_factory.py
+  - test/unit/interface/controllers/test_recipe_controller.py
+  - test/unit/interface/controllers/test_recipe_controller_e2e.py
+- src/application/factories/recognition_usecase_factory.py
+  - test/unit/application/factories/test_factories_imports.py
+- src/application/factories/unified_upload_factory.py
+  - test/unit/application/factories/test_factories_imports.py
+- src/application/services/file_upload_service.py
+  - test/unit/application/services/test_services_imports.py
+- src/application/services/food_image_generator_service.py
+  - test/unit/application/services/test_services_imports.py
+- src/application/services/image_upload_validator.py
+  - test/unit/application/services/test_services_imports.py
+- src/application/services/ingredient_image_generator_service.py
+  - test/unit/application/services/test_services_imports.py
+- src/application/services/inventory_image_upload_service.py
+  - test/unit/application/services/test_services_imports.py
+- src/application/services/inventory_image_upload_validator.py
+  - test/unit/application/services/test_services_imports.py
+- src/application/services/recipe_image_generator_service.py
+  - test/unit/application/services/test_services_imports.py
+- src/application/use_cases/auth/login_oauth_usecase.py
+  - test/unit/application/test_missing_application_use_cases.py
+  - test/unit/application/use_cases/auth/test_login_oauth_usecase.py
+- src/application/use_cases/auth/login_user_usecase.py
+  - test/unit/application/test_missing_application_use_cases.py
+  - test/unit/application/use_cases/auth/test_login_user_usecase.py
+- src/application/use_cases/auth/logout_usecase.py
+  - test/unit/application/use_cases/auth/test_logout_usecase.py
+- src/application/use_cases/auth/refresh_token_usecase.py
+  - test/unit/application/use_cases/auth/test_refresh_token_usecase.py
+- src/application/use_cases/cooking_session/complete_step_use_case.py
+  - test/integration/test_cooking_session.py
+  - test/unit/application/use_cases/cooking_session/test_complete_step_use_case.py
+- src/application/use_cases/cooking_session/finish_cooking_session_use_case.py
+  - test/integration/test_cooking_session.py
+  - test/unit/application/use_cases/cooking_session/test_finish_cooking_session_use_case.py
+- src/application/use_cases/cooking_session/start_cooking_session_use_case.py
+  - test/integration/test_cooking_session.py
+  - test/unit/application/test_missing_application_use_cases.py
+  - test/unit/application/use_cases/cooking_session/test_start_cooking_session_use_case.py
+- src/application/use_cases/image_management/assign_image_reference_use_case.py
+  - test/production_validation/test_admin_user_generation_image_endpoints_production.py
+- src/application/use_cases/image_management/find_image_by_name_use_case.py
+  - test/unit/application/use_cases/test_imports_smoke.py
+- src/application/use_cases/image_management/search_similar_images_use_case.py
+  - test/production_validation/test_admin_user_generation_image_endpoints_production.py
+- src/application/use_cases/image_management/sync_image_loader_use_case.py
+  - test/production_validation/test_admin_user_generation_image_endpoints_production.py
+- src/application/use_cases/image_management/unified_upload_use_case.py
+  - test/unit/application/use_cases/test_imports_smoke.py
+- src/application/use_cases/image_management/upload_image_use_case.py
+  - test/production_validation/test_admin_user_generation_image_endpoints_production.py
+- src/application/use_cases/inventory/add_ingredients_and_foods_to_inventory_use_case.py
+  - test/production_validation/test_inventory_endpoints_production.py
+  - test/unit/application/use_cases/inventory/test_upload_and_bulk_use_cases.py
+- src/application/use_cases/inventory/add_ingredients_to_inventory_use_case.py
+  - test/production_validation/test_inventory_endpoints_production.py
+  - test/unit/application/use_cases/inventory/test_add_ingredients_to_inventory_use_case.py
+- src/application/use_cases/inventory/add_item_to_inventory_use_case.py
+  - test/production_validation/test_inventory_endpoints_production.py
+  - test/unit/application/test_missing_application_use_cases.py
+  - test/unit/application/use_cases/inventory/test_add_item_to_inventory_use_case.py
+- src/application/use_cases/inventory/base_inventory_use_case.py
+  - test/unit/application/use_cases/test_imports_smoke.py
+- src/application/use_cases/inventory/batch_management_use_cases.py
+  - test/integration/test_batch_management.py
+  - test/unit/application/test_missing_application_use_cases.py
+  - test/unit/application/use_cases/inventory/test_batch_management_use_cases.py
+- src/application/use_cases/inventory/create_leftover_use_case.py
+  - test/unit/application/use_cases/test_imports_smoke.py
+- src/application/use_cases/inventory/delete_food_item_use_case.py
+  - test/production_validation/test_inventory_endpoints_production.py
+  - test/unit/application/use_cases/inventory/test_lists_and_delete_use_cases.py
+- src/application/use_cases/inventory/delete_ingredient_complete_use_case.py
+  - test/production_validation/test_inventory_endpoints_production.py
+  - test/unit/application/use_cases/inventory/test_lists_and_delete_use_cases.py
+- src/application/use_cases/inventory/delete_ingredient_status_use_case.py
+  - test/production_validation/test_inventory_endpoints_production.py
+  - test/unit/application/use_cases/inventory/test_delete_ingredient_stack_use_case.py
+- src/application/use_cases/inventory/get_expiring_soon_batches_use_case.py
+  - test/integration/test_batch_management.py
+  - test/unit/application/use_cases/inventory/test_upload_and_bulk_use_cases.py
+- src/application/use_cases/inventory/get_expiring_soon_use_case.py
+  - test/production_validation/test_inventory_endpoints_production.py
+  - test/unit/application/test_missing_application_use_cases.py
+  - test/unit/application/use_cases/inventory/test_get_expiring_soon_use_case.py
+- src/application/use_cases/inventory/get_food_detail_use_case.py
+  - test/production_validation/test_inventory_endpoints_production.py
+  - test/unit/application/use_cases/inventory/test_get_food_detail_use_case.py
+- src/application/use_cases/inventory/get_foods_list_use_case.py
+  - test/production_validation/test_inventory_endpoints_production.py
+  - test/unit/application/test_missing_application_use_cases.py
+  - test/unit/application/use_cases/inventory/test_lists_and_delete_use_cases.py
+- src/application/use_cases/inventory/get_ingredient_detail_use_case.py
+  - test/production_validation/test_inventory_endpoints_production.py
+  - test/unit/application/use_cases/inventory/test_get_ingredient_detail_use_case.py
+- src/application/use_cases/inventory/get_ingredients_list_use_case.py
+  - test/production_validation/test_inventory_endpoints_production.py
+  - test/unit/application/use_cases/inventory/test_lists_and_delete_use_cases.py
+- src/application/use_cases/inventory/get_inventory_content_use_case.py
+  - test/performance/test_comprehensive_performance.py
+  - test/performance/test_load_testing_suite.py
+  - test/production_validation/test_inventory_endpoints_production.py
+  - test/unit/application/use_cases/inventory/test_get_inventory_content_use_case.py
+- src/application/use_cases/inventory/mark_food_item_consumed_use_case.py
+  - test/production_validation/test_inventory_endpoints_production.py
+  - test/unit/application/test_missing_application_use_cases.py
+  - test/unit/application/use_cases/inventory/test_mark_consumed_use_cases.py
+- src/application/use_cases/inventory/mark_ingredient_stack_consumed_use_case.py
+  - test/production_validation/test_inventory_endpoints_production.py
+  - test/unit/application/use_cases/inventory/test_mark_consumed_use_cases.py
+- src/application/use_cases/inventory/update_food_item_use_case.py
+  - test/unit/application/use_cases/inventory/test_update_food_item_use_case.py
+- src/application/use_cases/inventory/update_food_quantity_use_case.py
+  - test/production_validation/test_inventory_endpoints_production.py
+  - test/unit/application/use_cases/inventory/test_update_food_quantity_use_case.py
+- src/application/use_cases/inventory/update_ingredient_quantity_use_case.py
+  - test/production_validation/test_inventory_endpoints_production.py
+  - test/unit/application/use_cases/inventory/test_update_ingredient_quantity_use_case.py
+- src/application/use_cases/inventory/update_ingredient_stack_use_case.py
+  - test/production_validation/test_inventory_endpoints_production.py
+  - test/unit/application/use_cases/inventory/test_upload_and_bulk_use_cases.py
+- src/application/use_cases/inventory/upload_inventory_image_use_case.py
+  - test/production_validation/test_inventory_endpoints_production.py
+  - test/unit/application/test_missing_application_use_cases.py
+  - test/unit/application/use_cases/inventory/test_upload_and_bulk_use_cases.py
+- src/application/use_cases/planning/delete_meal_plan_use_case.py
+  - test/production_validation/test_planning_endpoints_production.py
+- src/application/use_cases/planning/get_all_meal_plans_by_user_use_case.py
+  - test/production_validation/test_planning_endpoints_production.py
+- src/application/use_cases/planning/get_meal_plan_by_user_and_date_use_case.py
+  - test/production_validation/test_planning_endpoints_production.py
+  - test/unit/application/test_missing_application_use_cases.py
+- src/application/use_cases/planning/get_meal_plan_dates_usecase.py
+  - test/production_validation/test_planning_endpoints_production.py
+- src/application/use_cases/planning/save_meal_plan_use_case.py
+  - test/production_validation/test_planning_endpoints_production.py
+  - test/unit/application/test_missing_application_use_cases.py
+- src/application/use_cases/planning/update_meal_plan_use_case.py
+  - test/production_validation/test_planning_endpoints_production.py
+- src/application/use_cases/recipes/add_recipe_to_favorites_use_case.py
+  - test/unit/application/test_missing_application_use_cases.py
+  - test/unit/application/use_cases/recipes/test_favorites_and_mise_en_place_use_cases.py
+- src/application/use_cases/recipes/calculate_enviromental_savings_from_recipe_name.py
+  - test/production_validation/test_environmental_savings_endpoints_production.py
+  - test/unit/application/use_cases/recipes/test_environmental_savings_use_cases.py
+- src/application/use_cases/recipes/calculate_enviromental_savings_from_recipe_uid.py
+  - test/production_validation/test_environmental_savings_endpoints_production.py
+  - test/unit/application/use_cases/recipes/test_environmental_savings_use_cases.py
+- src/application/use_cases/recipes/calculate_environmental_savings_from_session.py
+  - test/integration/test_environmental_session.py
+  - test/unit/application/test_missing_application_use_cases.py
+  - test/unit/application/use_cases/recipes/test_calculate_environmental_savings_from_session_use_case.py
+- src/application/use_cases/recipes/delete_user_recipe_use_case.py
+  - test/production_validation/test_recipe_endpoints_production.py
+  - test/unit/application/use_cases/recipes/test_custom_and_fetch_use_cases.py
+- src/application/use_cases/recipes/generate_custom_recipe_use_case.py
+  - test/production_validation/test_recipe_endpoints_production.py
+  - test/unit/application/test_missing_application_use_cases.py
+  - test/unit/application/use_cases/recipes/test_custom_and_fetch_use_cases.py
+- src/application/use_cases/recipes/generate_recipes_use_case.py
+  - test/performance/test_comprehensive_performance.py
+  - test/performance/test_load_testing_suite.py
+  - test/production_validation/test_recipe_endpoints_production.py
+  - test/unit/application/use_cases/recipes/test_generate_and_prepare_use_cases.py
+- src/application/use_cases/recipes/get_all_environmental_calculations_by_user.py
+  - test/production_validation/test_environmental_savings_endpoints_production.py
+  - test/unit/application/use_cases/recipes/test_environmental_savings_use_cases.py
+- src/application/use_cases/recipes/get_all_recipes_use_case.py
+  - test/performance/test_load_testing_suite.py
+  - test/production_validation/test_recipe_endpoints_production.py
+  - test/unit/application/use_cases/recipes/test_custom_and_fetch_use_cases.py
+- src/application/use_cases/recipes/get_environmental_calculations_by_user_and_status.py
+  - test/production_validation/test_environmental_savings_endpoints_production.py
+  - test/unit/application/use_cases/recipes/test_environmental_savings_use_cases.py
+- src/application/use_cases/recipes/get_favorite_recipes_use_case.py
+  - test/unit/application/test_missing_application_use_cases.py
+  - test/unit/application/use_cases/recipes/test_favorites_and_mise_en_place_use_cases.py
+- src/application/use_cases/recipes/get_mise_en_place_use_case.py
+  - test/integration/test_cooking_session.py
+  - test/unit/application/use_cases/recipes/test_favorites_and_mise_en_place_use_cases.py
+- src/application/use_cases/recipes/get_saved_recipes_use_case.py
+  - test/production_validation/test_recipe_endpoints_production.py
+  - test/unit/application/use_cases/recipes/test_custom_and_fetch_use_cases.py
+- src/application/use_cases/recipes/prepare_recipe_generation_data_use_case.py
+  - test/unit/application/use_cases/recipes/test_generate_and_prepare_use_cases.py
+- src/application/use_cases/recipes/remove_recipe_from_favorites_use_case.py
+  - test/unit/application/use_cases/recipes/test_favorites_and_mise_en_place_use_cases.py
+- src/application/use_cases/recipes/save_recipe_use_case.py
+  - test/production_validation/test_recipe_endpoints_production.py
+  - test/unit/application/test_missing_application_use_cases.py
+  - test/unit/application/use_cases/recipes/test_save_recipe_use_case.py
+- src/application/use_cases/recipes/sum_environmental_calculations_by_user.py
+  - test/production_validation/test_environmental_savings_endpoints_production.py
+  - test/unit/application/use_cases/recipes/test_environmental_savings_use_cases.py
+- src/application/use_cases/recognition/recognize_batch_use_case.py
+  - test/performance/test_comprehensive_performance.py
+  - test/production_validation/test_recognition_endpoints_production.py
+  - test/unit/application/test_missing_application_use_cases.py
+  - test/unit/application/use_cases/recognition/test_recognition_use_cases.py
+- src/application/use_cases/recognition/recognize_foods_use_case.py
+  - test/production_validation/test_recognition_endpoints_production.py
+  - test/unit/application/use_cases/recognition/test_recognition_use_cases.py
+- src/application/use_cases/recognition/recognize_ingredients_complete_use_case.py
+  - test/production_validation/test_recognition_endpoints_production.py
+  - test/unit/application/use_cases/recognition/test_recognition_use_cases.py
+- src/application/use_cases/recognition/recognize_ingredients_use_case.py
+  - test/production_validation/test_recognition_endpoints_production.py
+  - test/unit/application/use_cases/recognition/test_recognition_use_cases.py
+- src/config/config.py
+  - test/unit/infrastructure/auth/test_jwt_service.py
+- src/config/optimization_config.py
+  - test/unit/config/test_optimization_config.py
+- src/config/swagger_config.py
+  - test/unit/config/test_swagger_config.py
+- src/domain/models/auth_user.py
+  - test/unit/domain/test_domain_models_imports.py
+- src/domain/models/cooking_session.py
+  - test/integration/test_cooking_session.py
+  - test/integration/test_environmental_session.py
+  - test/unit/application/use_cases/cooking_session/test_start_cooking_session_use_case.py
+  - test/unit/infrastructure/db/test_repositories.py
+- src/domain/models/daily_meal_plan.py
+  - test/unit/infrastructure/db/test_meal_plan_repository_impl.py
+- src/domain/models/environmental_savings.py
+  - test/integration/test_environmental_session.py
+  - test/unit/infrastructure/db/test_environmental_savings_repository_impl.py
+- src/domain/models/food_item.py
+  - test/unit/domain/models/test_inventory_model.py
+  - test/unit/domain/services/test_inventory_calculator.py
+- src/domain/models/generation.py
+  - test/unit/infrastructure/db/test_generation_repository_impl.py
+- src/domain/models/image_reference.py
+  - test/unit/infrastructure/db/test_image_repository_impl.py
+- src/domain/models/ingredient.py
+  - test/integration/test_batch_management.py
+  - test/integration/test_cooking_session.py
+  - test/unit/application/use_cases/inventory/test_batch_management_use_cases.py
+  - test/unit/application/use_cases/inventory/test_get_ingredient_detail_use_case.py
+  - test/unit/application/use_cases/inventory/test_lists_and_delete_use_cases.py
+  - test/unit/application/use_cases/recipes/test_generate_and_prepare_use_cases.py
+  - test/unit/domain/models/test_inventory_model.py
+  - test/unit/domain/services/test_inventory_calculator.py
+  - test/unit/infrastructure/db/models/test_orm_smoke.py
+  - test/unit/infrastructure/db/test_inventory_repository_impl_more.py
+  - test/unit/infrastructure/db/test_repositories.py
+- src/domain/models/ingredient_batch.py
+  - test/integration/test_batch_management.py
+  - test/integration/test_cooking_session.py
+  - test/unit/application/use_cases/inventory/test_batch_management_use_cases.py
+  - test/unit/infrastructure/db/models/test_orm_smoke.py
+  - test/unit/infrastructure/db/test_repositories.py
+- src/domain/models/inventory.py
+  - test/unit/application/use_cases/inventory/test_get_ingredient_detail_use_case.py
+  - test/unit/application/use_cases/inventory/test_lists_and_delete_use_cases.py
+  - test/unit/application/use_cases/recipes/test_generate_and_prepare_use_cases.py
+  - test/unit/domain/models/test_inventory_model.py
+- src/domain/models/leftover_item.py
+  - test/unit/infrastructure/db/test_repositories.py
+- src/domain/models/profile_user.py
+  - test/unit/domain/test_domain_models_imports.py
+- src/domain/models/recipe.py
+  - test/unit/application/use_cases/recipes/test_save_recipe_use_case.py
+  - test/unit/domain/models/test_recipe_model.py
+  - test/unit/infrastructure/db/test_recipe_repository_impl_basic.py
+- src/domain/models/recognition.py
+  - test/unit/infrastructure/db/test_recognition_repository_impl.py
+- src/domain/models/user.py
+  - test/unit/domain/models/test_user_model.py
+- src/domain/models/waste_log.py
+  - test/integration/test_batch_management.py
+  - test/unit/application/use_cases/inventory/test_batch_management_use_cases.py
+  - test/unit/infrastructure/db/test_repositories.py
+- src/domain/repositories/base_repository.py
+  - test/unit/domain/test_domain_models_imports.py
+- src/domain/services/auth_service.py
+  - test/unit/domain/services/test_auth_service.py
+  - test/unit/domain/test_domain_services.py
+- src/domain/services/email_service.py
+  - test/unit/domain/services/test_email_service.py
+  - test/unit/domain/test_domain_services.py
+- src/domain/services/ia_food_analyzer_service.py
+  - test/production_validation/test_services_isolated.py
+  - test/unit/domain/services/test_ia_food_analyzer_service.py
+  - test/unit/domain/test_domain_services.py
+- src/domain/services/ia_recipe_generator_service.py
+  - test/production_validation/test_services_isolated.py
+  - test/unit/domain/services/test_ia_recipe_generator_service.py
+  - test/unit/domain/test_domain_services.py
+- src/domain/services/inventory_calculator.py
+  - test/unit/domain/services/test_inventory_calculator.py
+  - test/unit/domain/test_domain_services.py
+- src/domain/services/oauth_service.py
+  - test/unit/domain/services/test_oauth_service.py
+  - test/unit/domain/test_domain_services.py
+- src/domain/services/sms_service.py
+  - test/unit/domain/services/test_sms_service.py
+  - test/unit/domain/test_domain_services.py
+- src/domain/value_objects/upload_request.py
+  - test/unit/domain/test_domain_models_imports.py
+- src/infrastructure/ai/cache_service.py
+  - test/production_validation/test_core_services_production.py
+  - test/production_validation/test_services_isolated.py
+  - test/unit/infrastructure/test_infrastructure_services.py
+- src/infrastructure/ai/gemini_adapter_service.py
+  - test/integration/test_endpoint_enhanced_inventory.py
+  - test/production_validation/test_core_services_production.py
+  - test/production_validation/test_services_isolated.py
+  - test/unit/application/use_cases/inventory/test_get_ingredient_detail_use_case.py
+  - test/unit/infrastructure/ai/test_gemini_adapter_service.py
+  - test/unit/infrastructure/test_infrastructure_services.py
+- src/infrastructure/ai/gemini_recipe_generator_service.py
+  - test/unit/infrastructure/ai/test_gemini_recipe_generator_cache.py
+  - test/unit/infrastructure/ai/test_gemini_recipe_generator_errors_fast.py
+  - test/unit/infrastructure/ai/test_gemini_recipe_generator_service_unit.py
+  - test/unit/infrastructure/ai/test_gemini_recipe_parser.py
+- src/infrastructure/ai/performance_monitor.py
+  - test/unit/infrastructure/ai/test_performance_monitor_and_token_optimizer.py
+  - test/unit/infrastructure/test_infrastructure_services.py
+- src/infrastructure/async_tasks/async_task_service.py
+  - test/unit/infrastructure/test_misc_imports.py
+- src/infrastructure/auth/jwt_callbacks.py
+  - test/unit/infrastructure/auth/test_jwt_callbacks_config.py
+- src/infrastructure/auth/jwt_service.py
+  - test/unit/infrastructure/auth/test_jwt_service.py
+  - test/unit/infrastructure/test_infrastructure_services.py
+- src/infrastructure/db/auth_repository.py
+  - test/unit/infrastructure/db/test_repository_imports.py
+- src/infrastructure/db/base.py
+  - test/integration/test_cooking_session.py
+  - test/unit/infrastructure/db/models/test_import_all_models.py
+  - test/unit/infrastructure/db/models/test_orm_smoke.py
+  - test/unit/interface/controllers/test_recipe_controller.py
+- src/infrastructure/db/cooking_session_repository_impl.py
+  - test/unit/infrastructure/db/test_repositories.py
+- src/infrastructure/db/environmental_savings_repository_impl.py
+  - test/unit/infrastructure/db/test_environmental_savings_repository_impl.py
+- src/infrastructure/db/generation_repository_impl.py
+  - test/unit/infrastructure/db/test_generation_repository_impl.py
+- src/infrastructure/db/image_repository_impl.py
+  - test/unit/infrastructure/db/test_image_repository_impl.py
+- src/infrastructure/db/ingredient_batch_repository_impl.py
+  - test/unit/infrastructure/db/test_repositories.py
+- src/infrastructure/db/inventory_repository_impl.py
+  - test/unit/infrastructure/db/test_inventory_repository_impl_basic.py
+  - test/unit/infrastructure/db/test_inventory_repository_impl_more.py
+- src/infrastructure/db/leftover_repository_impl.py
+  - test/unit/infrastructure/db/test_repositories.py
+- src/infrastructure/db/meal_plan_repository_impl.py
+  - test/unit/infrastructure/db/test_meal_plan_repository_impl.py
+- src/infrastructure/db/models/async_task_orm.py
+  - test/unit/infrastructure/db/models/test_import_specific_models.py
+- src/infrastructure/db/models/consumption_log_orm.py
+  - test/unit/infrastructure/db/models/test_import_specific_models.py
+- src/infrastructure/db/models/cooking_session_orm.py
+  - test/unit/infrastructure/db/models/test_import_specific_models.py
+- src/infrastructure/db/models/daily_meal_plan_orm.py
+  - test/unit/infrastructure/db/models/test_import_specific_models.py
+- src/infrastructure/db/models/environmental_savings_orm.py
+  - test/unit/infrastructure/db/models/test_import_specific_models.py
+- src/infrastructure/db/models/food_item_orm.py
+  - test/unit/infrastructure/db/models/test_import_specific_models.py
+- src/infrastructure/db/models/generation_orm.py
+  - test/unit/infrastructure/db/models/test_import_specific_models.py
+- src/infrastructure/db/models/idempotency_key_orm.py
+  - test/unit/infrastructure/services/test_idempotency.py
+- src/infrastructure/db/models/image_reference_orm.py
+  - test/unit/infrastructure/db/models/test_orm_smoke.py
+- src/infrastructure/db/models/ingredient_batch_orm.py
+  - test/unit/infrastructure/db/models/test_orm_smoke.py
+- src/infrastructure/db/models/ingredient_orm.py
+  - test/unit/infrastructure/db/models/test_import_specific_models.py
+- src/infrastructure/db/models/ingredient_stack_orm.py
+  - test/unit/infrastructure/db/models/test_import_specific_models.py
+- src/infrastructure/db/models/inventory_orm.py
+  - test/unit/infrastructure/db/models/test_import_specific_models.py
+- src/infrastructure/db/models/leftover_orm.py
+  - test/unit/infrastructure/db/models/test_import_specific_models.py
+- src/infrastructure/db/models/recipe_favorites_orm.py
+  - test/unit/interface/controllers/test_recipe_controller.py
+- src/infrastructure/db/models/recipe_generated_orm.py
+  - test/unit/interface/controllers/test_recipe_controller.py
+- src/infrastructure/db/models/recipe_ingredient_orm.py
+  - test/unit/infrastructure/db/models/test_import_specific_models.py
+- src/infrastructure/db/models/recipe_orm.py
+  - test/unit/infrastructure/db/models/test_import_specific_models.py
+- src/infrastructure/db/models/recipe_step_orm.py
+  - test/unit/infrastructure/db/models/test_import_specific_models.py
+- src/infrastructure/db/models/recognition_orm.py
+  - test/unit/infrastructure/db/models/test_import_specific_models.py
+- src/infrastructure/db/models/user_favorite_recipes.py
+  - test/unit/infrastructure/db/models/test_import_specific_models.py
+- src/infrastructure/db/models/waste_log_orm.py
+  - test/unit/infrastructure/db/models/test_import_specific_models.py
+- src/infrastructure/db/profile_repository.py
+  - test/unit/infrastructure/db/test_repository_imports.py
+- src/infrastructure/db/recipe_generated_repository_impl.py
+  - test/unit/infrastructure/db/test_repository_imports.py
+- src/infrastructure/db/recipe_repository_impl.py
+  - test/unit/infrastructure/db/test_recipe_repository_impl_basic.py
+  - test/unit/infrastructure/db/test_recipe_repository_impl_more.py
+- src/infrastructure/db/recognition_repository_impl.py
+  - test/unit/infrastructure/db/test_recognition_repository_impl.py
+- src/infrastructure/db/schemas/auth_user_schema.py
+  - test/unit/infrastructure/db/schemas/test_schemas_imports.py
+- src/infrastructure/db/schemas/profile_user_schema.py
+  - test/unit/infrastructure/db/schemas/test_schemas_imports.py
+- src/infrastructure/db/schemas/token_blacklist_schema.py
+  - test/unit/infrastructure/db/schemas/test_schemas_imports.py
+- src/infrastructure/db/schemas/user_schema.py
+  - test/unit/infrastructure/db/schemas/test_schemas_imports.py
+- src/infrastructure/db/token_security_repository.py
+  - test/unit/infrastructure/db/test_repository_imports.py
+- src/infrastructure/db/user_repository.py
+  - test/unit/infrastructure/db/test_repository_imports.py
+- src/infrastructure/db/waste_log_repository_impl.py
+  - test/unit/infrastructure/db/test_repositories.py
+  - test/unit/infrastructure/db/test_waste_log_repository_impl_extra.py
+- src/infrastructure/firebase/firebase_storage_adapter.py
+  - test/unit/infrastructure/firebase/test_storage_and_loader.py
+  - test/unit/infrastructure/test_infrastructure_services.py
+- src/infrastructure/firebase/firestore_profile_service.py
+  - test/unit/infrastructure/firebase/test_firestore_profile_service.py
+- src/infrastructure/firebase/image_loader_service.py
+  - test/unit/infrastructure/firebase/test_storage_and_loader.py
+- src/infrastructure/inventory/inventory_calcularor_impl.py
+  - test/unit/infrastructure/test_misc_imports.py
+- src/infrastructure/optimization/cache_service.py
+  - test/unit/infrastructure/optimization/test_rate_limiter_and_cache.py
+- src/infrastructure/optimization/rate_limiter.py
+  - test/unit/infrastructure/optimization/test_rate_limiter_and_cache.py
+- src/infrastructure/security/rate_limiter.py
+  - test/unit/infrastructure/test_infrastructure_services.py
+- src/infrastructure/security/security_headers.py
+  - test/unit/infrastructure/security/test_security_headers.py
+- src/infrastructure/security/security_logger.py
+  - test/unit/infrastructure/test_misc_imports.py
+- src/infrastructure/services/idempotency_service.py
+  - test/integration/test_all_endpoints.py
+  - test/integration/test_idempotency_endpoints.py
+  - test/unit/infrastructure/services/test_idempotency.py
+  - test/unit/infrastructure/test_infrastructure_services.py
+- src/infrastructure/services/mise_en_place_service.py
+  - test/unit/infrastructure/test_infrastructure_services.py
+- src/interface/controllers/admin_controller.py
+  - test/unit/interface/controllers/test_admin_controller.py
+  - test/unit/interface/test_controller_error_handling.py
+- src/interface/controllers/auth_controller.py
+  - test/unit/interface/controllers/test_auth_controller.py
+  - test/unit/interface/test_controller_error_handling.py
+- src/interface/controllers/cooking_session_controller.py
+  - test/integration/test_all_endpoints.py
+  - test/integration/test_api_integration_workflows.py
+  - test/integration/test_idempotency_endpoints.py
+  - test/unit/interface/controllers/test_cooking_session_controller.py
+  - test/unit/interface/test_controller_error_handling.py
+- src/interface/controllers/environmental_savings_controller.py
+  - test/integration/test_all_endpoints.py
+  - test/integration/test_api_integration_workflows.py
+  - test/unit/interface/controllers/test_environmental_savings_controller.py
+  - test/unit/interface/test_controller_error_handling.py
+- src/interface/controllers/generation_controller.py
+  - test/unit/interface/controllers/test_generation_controller.py
+- src/interface/controllers/image_management_controller.py
+  - test/unit/interface/controllers/test_image_management_controller.py
+  - test/unit/interface/test_controller_error_handling.py
+- src/interface/controllers/inventory_controller.py
+  - test/integration/test_all_endpoints.py
+  - test/integration/test_api_integration_workflows.py
+  - test/integration/test_idempotency_endpoints.py
+  - test/unit/interface/controllers/test_inventory_controller.py
+  - test/unit/interface/test_controller_error_handling.py
+- src/interface/controllers/planning_controller.py
+  - test/unit/interface/controllers/test_planning_controller.py
+  - test/unit/interface/test_controller_error_handling.py
+- src/interface/controllers/recipe_controller.py
+  - test/integration/test_api_integration_workflows.py
+  - test/unit/application/use_cases/recipes/test_generate_custom_endpoint_controller.py
+  - test/unit/interface/controllers/test_recipe_controller.py
+  - test/unit/interface/test_controller_error_handling.py
+- src/interface/controllers/recognition_controller.py
+  - test/integration/test_api_integration_workflows.py
+  - test/unit/interface/controllers/test_recognition_controller.py
+  - test/unit/interface/test_controller_error_handling.py
+- src/interface/controllers/user_controller.py
+  - test/unit/interface/controllers/test_user_controller.py
+  - test/unit/interface/test_controller_error_handling.py
+- src/interface/middlewares/firebase_auth_decorator.py
+  - test/unit/infrastructure/test_misc_imports.py
+- src/interface/serializers/add_item_serializer.py
+  - test/unit/interface/serializers/test_serializers_validation.py
+- src/interface/serializers/image_reference_serializer.py
+  - test/unit/interface/serializers/test_more_serializers.py
+- src/interface/serializers/inventory_serializers.py
+  - test/unit/interface/serializers/test_serializers_validation.py
+- src/interface/serializers/item_name_serializer.py
+  - test/unit/interface/serializers/test_more_serializers.py
+- src/interface/serializers/mark_consumed_serializer.py
+  - test/unit/interface/serializers/test_serializers_validation.py
+- src/interface/serializers/planning_serializers.py
+  - test/unit/interface/serializers/test_more_serializers.py
+- src/interface/serializers/recipe_serializers.py
+  - test/functional/test_recipe_generate_save.py
+  - test/unit/interface/controllers/test_recipe_controller.py
+  - test/unit/interface/serializers/test_serializers_validation.py
+- src/interface/serializers/reset_password_serializer.py
+  - test/unit/interface/serializers/test_more_serializers.py
+  - test/unit/interface/serializers/test_reset_password_serializer.py
+- src/interface/serializers/upload_image_serializer.py
+  - test/unit/interface/serializers/test_more_serializers.py
+- src/main.py
+  - test/conftest.py
+  - test/integration/test_all_endpoints.py
+  - test/integration/test_idempotency_endpoints.py
+  - test/performance/test_comprehensive_performance.py
+  - test/performance/test_database_performance.py
+  - test/performance/test_load_testing_suite.py
+  - test/production_validation/test_admin_user_generation_image_endpoints_production.py
+  - test/production_validation/test_auth_endpoints_production.py
+  - test/production_validation/test_environmental_savings_endpoints_production.py
+  - test/production_validation/test_inventory_endpoints_production.py
+  - test/production_validation/test_planning_endpoints_production.py
+  - test/production_validation/test_recipe_endpoints_production.py
+  - test/production_validation/test_recognition_endpoints_production.py
+  - test/unit/interface/controllers/test_admin_controller.py
+  - test/unit/interface/controllers/test_auth_controller.py
+  - test/unit/interface/controllers/test_cooking_session_controller.py
+  - test/unit/interface/controllers/test_environmental_savings_controller.py
+  - test/unit/interface/controllers/test_generation_controller.py
+  - test/unit/interface/controllers/test_image_management_controller.py
+  - test/unit/interface/controllers/test_planning_controller.py
+  - test/unit/interface/controllers/test_recipe_controller.py
+  - test/unit/interface/controllers/test_recognition_controller.py
+  - test/unit/interface/controllers/test_user_controller.py
+- src/shared/decorators/internal_only.py
+  - test/unit/shared/decorators/test_internal_only.py
+- src/shared/decorators/response_handler.py
+  - test/unit/shared/decorators/test_response_handler.py
+- src/shared/dtos/user/auth_dto.py
+  - test/unit/shared/dtos/user/test_auth_dto.py
+- src/shared/dtos/user/profile_dto.py
+  - test/unit/shared/dtos/user/test_profile_and_user_dto.py
+- src/shared/dtos/user/user_dto.py
+  - test/unit/shared/dtos/user/test_profile_and_user_dto.py
+- src/shared/exceptions/custom.py
+  - test/integration/test_all_endpoints.py
+  - test/integration/test_batch_management.py
+  - test/integration/test_cooking_session.py
+  - test/integration/test_environmental_session.py
+  - test/unit/application/use_cases/cooking_session/test_complete_step_use_case.py
+  - test/unit/application/use_cases/cooking_session/test_finish_cooking_session_use_case.py
+  - test/unit/application/use_cases/cooking_session/test_start_cooking_session_use_case.py
+  - test/unit/application/use_cases/recipes/test_calculate_environmental_savings_from_session_use_case.py
+  - test/unit/application/use_cases/recipes/test_environmental_savings_use_cases.py
+  - test/unit/application/use_cases/recipes/test_favorites_and_mise_en_place_use_cases.py
+  - test/unit/application/use_cases/recipes/test_save_recipe_use_case.py
+  - test/unit/infrastructure/ai/test_gemini_adapter_service.py
+  - test/unit/infrastructure/auth/test_jwt_service.py
+  - test/unit/infrastructure/db/test_meal_plan_repository_impl.py
+  - test/unit/interface/controllers/test_environmental_savings_controller.py
+  - test/unit/shared/decorators/test_response_handler.py
+- src/shared/messages/response_messages.py
+  - test/unit/shared/decorators/test_response_handler.py
+  - test/unit/shared/messages/test_response_messages.py
+
+## Name-only Matches (weak signal)
+- src/domain/models/mise_en_place.py
+  - test/unit/application/use_cases/recipes/test_favorites_and_mise_en_place_use_cases.py
+- src/domain/repositories/environmental_savings_repository.py
+  - test/unit/infrastructure/db/test_environmental_savings_repository_impl.py
+- src/domain/repositories/generation_repository.py
+  - test/unit/infrastructure/db/test_generation_repository_impl.py
+- src/domain/repositories/image_repository.py
+  - test/unit/infrastructure/db/test_image_repository_impl.py
+- src/domain/repositories/inventory_repository.py
+  - test/unit/infrastructure/db/test_inventory_repository_impl_basic.py
+  - test/unit/infrastructure/db/test_inventory_repository_impl_more.py
+- src/domain/repositories/meal_plan_repository.py
+  - test/unit/infrastructure/db/test_meal_plan_repository_impl.py
+- src/domain/repositories/recipe_repository.py
+  - test/unit/infrastructure/db/test_recipe_repository_impl_basic.py
+  - test/unit/infrastructure/db/test_recipe_repository_impl_more.py
+- src/domain/repositories/recognition_repository.py
+  - test/unit/infrastructure/db/test_recognition_repository_impl.py
+- src/infrastructure/ai/token_optimizer.py
+  - test/unit/infrastructure/ai/test_performance_monitor_and_token_optimizer.py
+- src/shared/exceptions/base.py
+  - test/integration/test_firebase_auth_flow.py
+  - test/performance/test_database_performance.py
+

@@ -1,3 +1,4 @@
+import os
 import time
 from sqlalchemy.exc import OperationalError
 from sqlalchemy.sql import text
@@ -52,6 +53,18 @@ def create_app():
     application = Flask(__name__)
     CORS(application)
     application.config.from_object(Config)
+    # Ensure testing flags are set as early as possible so downstream
+    # extensions (cache, limiter, db) see correct state.
+    if os.getenv("FLASK_ENV") == "testing" or os.getenv("TESTING") in {"1", "true", "True"}:
+        application.config["TESTING"] = True
+        # Provide a default secret for JWT in tests if missing
+        application.config.setdefault("JWT_SECRET_KEY", "test-secret-key")
+    # Use in-memory SQLite when testing to avoid external DB connections
+    import os as _os
+    if application.config.get("TESTING") or _os.getenv("TESTING") == "1" or _os.getenv("FLASK_ENV") == "testing":
+        application.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///:memory:"
+        # Remove engine options incompatible with SQLite in-memory
+        application.config["SQLALCHEMY_ENGINE_OPTIONS"] = {}
     
     # Compresión HTTP para respuestas grandes
     Compress(application)
@@ -202,28 +215,30 @@ def create_app():
 
 app = create_app()
 
-with app.app_context():
-    success = False
-    for attempt in range(10):
-        try:
-            print(f"🔁 Intentando conectar a la base de datos... intento {attempt + 1}")
-            db.create_all()
-            print("✅ Tablas creadas:")
-            print(db.metadata.tables.keys())
-            success = True
-            break
-        except OperationalError as e:
-            print(f"❌ Fallo en la conexión a la base de datos: {e}")
-            time.sleep(3)
+# Only create tables if not in testing mode
+if not os.getenv("TESTING", "").lower() == "1" and __name__ == "__main__":
+    with app.app_context():
+        success = False
+        for attempt in range(10):
+            try:
+                print(f"🔁 Intentando conectar a la base de datos... intento {attempt + 1}")
+                db.create_all()
+                print("✅ Tablas creadas:")
+                print(db.metadata.tables.keys())
+                success = True
+                break
+            except OperationalError as e:
+                print(f"❌ Fallo en la conexión a la base de datos: {e}")
+                time.sleep(3)
 
-    if not success:
-        print("🚨 No se pudo conectar a la base de datos después de varios intentos")
-        exit(1)
-    else:
-        print("🎉 Inicialización exitosa: La base de datos está lista.")
-        print("🔥 Firebase Authentication + JWT Security: Activado")
-        print("🛡️ Security Headers: Configurados")
-        print("🌱 ZeroWasteAI API: Lista para reducir desperdicio alimentario!")
+        if not success:
+            print("🚨 No se pudo conectar a la base de datos después de varios intentos")
+            exit(1)
+        else:
+            print("🎉 Inicialización exitosa: La base de datos está lista.")
+            print("🔥 Firebase Authentication + JWT Security: Activado")
+            print("🛡️ Security Headers: Configurados")
+            print("🌱 ZeroWasteAI API: Lista para reducir desperdicio alimentario!")
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=3000)

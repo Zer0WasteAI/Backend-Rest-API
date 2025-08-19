@@ -9,7 +9,7 @@ class OptimizationConfig:
     """Configuración centralizada para optimizaciones de performance"""
     
     # =================== REDIS CACHE CONFIG ===================
-    REDIS_URL = os.getenv('REDIS_URL', 'redis://localhost:6379/0')
+    REDIS_URL = os.getenv('REDIS_URL', 'redis://redis_cache:6379/0')
     CACHE_TYPE = 'redis'
     CACHE_DEFAULT_TIMEOUT = 300  # 5 minutos por defecto
     
@@ -22,7 +22,7 @@ class OptimizationConfig:
     
     # =================== RATE LIMITING CONFIG ===================
     # Usar un Redis DB separado para rate limiting (evita mezclar con caché)
-    RATELIMIT_STORAGE_URL = os.getenv('RATELIMIT_STORAGE_URL', 'redis://localhost:6379/1')
+    RATELIMIT_STORAGE_URL = os.getenv('RATELIMIT_STORAGE_URL', 'redis://redis_cache:6379/1')
     RATELIMIT_STRATEGY = "fixed-window"
     RATELIMIT_DEFAULT = "1000 per hour"  # Límite general
     

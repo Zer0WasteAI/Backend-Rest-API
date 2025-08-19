@@ -6,13 +6,10 @@ from src.application.factories.generation_usecase_factory import make_generation
 from src.infrastructure.async_tasks.async_task_service import async_task_service
 from src.infrastructure.db.models.async_task_orm import AsyncTaskORM
 from src.infrastructure.optimization.rate_limiter import smart_rate_limit
-from src.shared.decorators.response_handler import api_response, ResponseHelper
-from src.shared.messages.response_messages import ServiceType
 
 generation_bp = Blueprint("generation", __name__)
 
 @generation_bp.route("/images/status/<task_id>", methods=["GET"])
-@api_response(service=ServiceType.IMAGES, action="retrieved")
 @jwt_required()
 @smart_rate_limit('data_read')  # 🛡️ Rate limit: 100 requests/min for status checks
 @swag_from({
@@ -168,6 +165,34 @@ def get_generation_images_status(task_id):
         return jsonify(response), 200
 
     except Exception as e:
+
+
+        error_details = {
+
+
+            "error_type": type(e).__name__,
+
+
+            "error_message": str(e),
+
+
+            "traceback": str(e.__traceback__.tb_frame.f_code.co_filename) + ":" + str(e.__traceback__.tb_lineno) if e.__traceback__ else "No traceback"
+
+
+        }
+
+
+        
+
+
+        # Log the detailed error
+
+
+        print(f"ERROR: {error_details}")
+
+
+        
+
         print(f"🚨 ERROR EN GENERATION IMAGES STATUS: {str(e)}")
         return jsonify({
             "error": str(e),
@@ -176,7 +201,6 @@ def get_generation_images_status(task_id):
 
 
 @generation_bp.route("/<generation_id>/images", methods=["GET"])
-@api_response(service=ServiceType.IMAGES, action="retrieved")
 @jwt_required()
 @smart_rate_limit('data_read')  # 🛡️ Rate limit: 100 requests/min for status checks
 @swag_from({
@@ -397,6 +421,34 @@ def get_generation_images(generation_id):
         return jsonify(response), 200
 
     except Exception as e:
+
+
+        error_details = {
+
+
+            "error_type": type(e).__name__,
+
+
+            "error_message": str(e),
+
+
+            "traceback": str(e.__traceback__.tb_frame.f_code.co_filename) + ":" + str(e.__traceback__.tb_lineno) if e.__traceback__ else "No traceback"
+
+
+        }
+
+
+        
+
+
+        # Log the detailed error
+
+
+        print(f"ERROR: {error_details}")
+
+
+        
+
         print(f"🚨 ERROR EN GET GENERATION IMAGES: {str(e)}")
         return jsonify({
             "error": str(e),

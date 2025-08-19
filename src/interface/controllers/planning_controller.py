@@ -18,8 +18,6 @@ from src.infrastructure.async_tasks.async_task_service import async_task_service
 from src.infrastructure.optimization.rate_limiter import smart_rate_limit
 from src.infrastructure.optimization.cache_service import cache_user_data
 from src.shared.exceptions.custom import InvalidRequestDataException
-from src.shared.decorators.response_handler import api_response, ResponseHelper
-from src.shared.messages.response_messages import ServiceType
 import logging
 
 logger = logging.getLogger(__name__)
@@ -27,7 +25,6 @@ logger = logging.getLogger(__name__)
 planning_bp = Blueprint("planning", __name__)
 
 @planning_bp.route("/save", methods=["POST"])
-@api_response(service=ServiceType.PLANNING, action="plan_saved")
 @jwt_required()
 @smart_rate_limit('planning_crud')  # 🛡️ Rate limit: 30 requests/min for meal plan CRUD
 @swag_from({
@@ -166,7 +163,6 @@ def save_meal_plan():
     }), 201
 
 @planning_bp.route("/update", methods=["PUT"])
-@api_response(service=ServiceType.PLANNING, action="updated")
 @jwt_required()
 @smart_rate_limit('planning_crud')  # 🛡️ Rate limit: 30 requests/min for meal plan CRUD
 @swag_from({
@@ -397,7 +393,6 @@ def update_meal_plan():
     })
 
 @planning_bp.route("/delete", methods=["DELETE"])
-@api_response(service=ServiceType.PLANNING, action="deleted")
 @jwt_required()
 @smart_rate_limit('planning_crud')  # 🛡️ Rate limit: 30 requests/min for meal plan CRUD
 @swag_from({
@@ -523,7 +518,6 @@ def delete_meal_plan():
     return jsonify({"message": f"Plan de comidas del {plan_date} eliminado exitosamente."})
 
 @planning_bp.route("/get", methods=["GET"])
-@api_response(service=ServiceType.PLANNING, action="retrieved")
 @jwt_required()
 @cache_user_data('meal_plans', timeout=300)  # 🚀 Cache: 5 min for meal plan data
 @swag_from({
@@ -690,7 +684,6 @@ def get_meal_plan_by_date():
     return jsonify({"meal_plan": result})
 
 @planning_bp.route("/all", methods=["GET"])
-@api_response(service=ServiceType.PLANNING, action="list_retrieved")
 @jwt_required()
 @cache_user_data('meal_plans', timeout=300)  # 🚀 Cache: 5 min for all meal plans
 @swag_from({
@@ -871,7 +864,6 @@ def get_all_meal_plans():
     return jsonify({"meal_plans": result})
 
 @planning_bp.route("/dates", methods=["GET"])
-@api_response(service=ServiceType.PLANNING, action="retrieved")
 @jwt_required()
 @cache_user_data('meal_plan_dates', timeout=600)  # 🚀 Cache: 10 min for meal plan dates
 @swag_from({
@@ -1007,7 +999,6 @@ def get_meal_plan_dates():
     return jsonify({"dates": [d.isoformat() for d in dates]})
 
 @planning_bp.route("/images/update", methods=["POST"])
-@api_response(service=ServiceType.PLANNING, action="plan_updated")
 @jwt_required()
 @swag_from({
     'tags': ['Planning'],

@@ -6,13 +6,10 @@ from src.application.factories.auth_usecase_factory import make_profile_reposito
 from src.infrastructure.security.rate_limiter import api_rate_limit
 from src.infrastructure.security.security_logger import security_logger, SecurityEventType
 from src.infrastructure.optimization.cache_service import cache_user_data
-from src.shared.decorators.response_handler import api_response, ResponseHelper
-from src.shared.messages.response_messages import ServiceType
 
 user_bp = Blueprint('user_bp', __name__)
 
 @user_bp.route('/profile', methods=['GET'])
-@api_response(service=ServiceType.USER, action="profile_retrieved")
 @jwt_required()
 @api_rate_limit
 @cache_user_data('user_profile', timeout=600)  # 🚀 Cache: 10 min for user profile data
@@ -79,14 +76,41 @@ def get_user_profile():
         return jsonify(profile), 200
         
     except Exception as e:
+
+        
+        error_details = {
+
+        
+            "error_type": type(e).__name__,
+
+        
+            "error_message": str(e),
+
+        
+            "traceback": str(e.__traceback__.tb_frame.f_code.co_filename) + ":" + str(e.__traceback__.tb_lineno) if e.__traceback__ else "No traceback"
+
+        
+        }
+
+        
+        
+
+        
+        # Log the detailed error
+
+        
+        print(f"ERROR: {error_details}")
+
+        
+        
+
         security_logger.log_security_event(
             SecurityEventType.AUTHENTICATION_FAILED,
             {"endpoint": "get_user_profile", "reason": "firestore_access_failed", "error": str(e)}
         )
-        return jsonify({"error": "Failed to retrieve profile"}), 500
+        return jsonify({"error": "Failed to retrieve profile", "details": error_details}), 500
 
 @user_bp.route('/profile', methods=['PUT'])
-@api_response(service=ServiceType.USER, action="updated")
 @jwt_required()
 @api_rate_limit
 @swag_from(
@@ -165,8 +189,36 @@ def update_user_profile():
         }), 200
 
     except Exception as e:
+
+
+        error_details = {
+
+
+            "error_type": type(e).__name__,
+
+
+            "error_message": str(e),
+
+
+            "traceback": str(e.__traceback__.tb_frame.f_code.co_filename) + ":" + str(e.__traceback__.tb_lineno) if e.__traceback__ else "No traceback"
+
+
+        }
+
+
+        
+
+
+        # Log the detailed error
+
+
+        print(f"ERROR: {error_details}")
+
+
+        
+
         security_logger.log_security_event(
             SecurityEventType.AUTHENTICATION_FAILED,
             {"endpoint": "update_user_profile", "reason": "firestore_update_failed", "error": str(e)}
         )
-        return jsonify({"error": "Failed to update profile"}), 500
+        return jsonify({"error": "Failed to update profile", "details": error_details}), 500

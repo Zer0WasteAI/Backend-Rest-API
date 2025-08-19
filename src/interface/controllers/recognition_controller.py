@@ -20,7 +20,6 @@ import uuid
 recognition_bp = Blueprint("recognition", __name__)
 
 @recognition_bp.route("/ingredients", methods=["POST"])
-@api_response(service=ServiceType.RECOGNITION, action="ingredients_recognized")
 @jwt_required()
 @smart_rate_limit('ai_recognition')  # 🛡️ Rate limit: 5 requests/min for AI recognition
 @swag_from({
@@ -231,6 +230,34 @@ def recognize_ingredients():
                     ingredient["time_unit"] = "Días"
                     
             except Exception as e:
+
+                    
+                error_details = {
+
+                    
+                    "error_type": type(e).__name__,
+
+                    
+                    "error_message": str(e),
+
+                    
+                    "traceback": str(e.__traceback__.tb_frame.f_code.co_filename) + ":" + str(e.__traceback__.tb_lineno) if e.__traceback__ else "No traceback"
+
+                    
+                }
+
+                    
+                
+
+                    
+                # Log the detailed error
+
+                    
+                print(f"ERROR: {error_details}")
+
+                    
+                
+
                 print(f"🚨 [SIMPLE RECOGNITION] ERROR calculating expiration for {ingredient.get('name', 'unknown')}: {str(e)}")
                 # Fallback seguro: usar 7 días por defecto
                 fallback_date = current_time + timedelta(days=7)
@@ -300,7 +327,6 @@ def recognize_ingredients():
         }), 500
 
 @recognition_bp.route("/ingredients/complete", methods=["POST"])
-@api_response(service=ServiceType.RECOGNITION, action="step_completed")
 @jwt_required()
 @smart_rate_limit('ai_inventory_complete')  # 🛡️ Rate limit: 3 requests/min for expensive AI operations
 @cache_user_data('ai_inventory_complete', timeout=3600)  # 🚀 Cache: 1 hour for expensive AI results
@@ -538,6 +564,34 @@ def recognize_ingredients_complete():
         return jsonify(result), 200
 
     except Exception as e:
+
+
+        error_details = {
+
+
+            "error_type": type(e).__name__,
+
+
+            "error_message": str(e),
+
+
+            "traceback": str(e.__traceback__.tb_frame.f_code.co_filename) + ":" + str(e.__traceback__.tb_lineno) if e.__traceback__ else "No traceback"
+
+
+        }
+
+
+        
+
+
+        # Log the detailed error
+
+
+        print(f"ERROR: {error_details}")
+
+
+        
+
         # Log detallado del error
         error_msg = f"🚨 ERROR EN RECOGNIZE INGREDIENTS COMPLETE: {str(e)}"
         error_traceback = f"🚨 TRACEBACK: {traceback.format_exc()}"
@@ -552,7 +606,6 @@ def recognize_ingredients_complete():
         }), 500
 
 @recognition_bp.route("/foods", methods=["POST"])
-@api_response(service=ServiceType.RECOGNITION, action="foods_identified")
 @jwt_required()
 @swag_from({
     'tags': ['Recognition'],
@@ -758,6 +811,25 @@ def recognize_foods():
                 )
                 food["expiration_date"] = expiration_date.isoformat()
             except Exception as e:
+
+                error_details = {
+
+                    "error_type": type(e).__name__,
+
+                    "error_message": str(e),
+
+                    "traceback": str(e.__traceback__.tb_frame.f_code.co_filename) + ":" + str(e.__traceback__.tb_lineno) if e.__traceback__ else "No traceback"
+
+                }
+
+                
+
+                # Log the detailed error
+
+                print(f"ERROR: {error_details}")
+
+                
+
                 from datetime import timedelta
                 fallback_date = current_time + timedelta(days=food.get("expiration_time", 3))
                 food["expiration_date"] = fallback_date.isoformat()
@@ -798,11 +870,10 @@ def recognize_foods():
         print(f"🚨 [SIMPLE FOOD RECOGNITION] ERROR: {str(e)}")
         import traceback
         print(f"🚨 [SIMPLE FOOD RECOGNITION] TRACEBACK: {traceback.format_exc()}")
-        return jsonify({"error": str(e)}), 500
+        return jsonify({"error": str(e), "details": error_details}), 500
 
 
 @recognition_bp.route("/batch", methods=["POST"])
-@api_response(service=ServiceType.RECOGNITION, action="batch_processed")
 @jwt_required()
 @swag_from({
     'tags': ['Recognition'],
@@ -969,7 +1040,35 @@ def recognize_batch():
         return jsonify(result), 200
 
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+
+
+        error_details = {
+
+
+            "error_type": type(e).__name__,
+
+
+            "error_message": str(e),
+
+
+            "traceback": str(e.__traceback__.tb_frame.f_code.co_filename) + ":" + str(e.__traceback__.tb_lineno) if e.__traceback__ else "No traceback"
+
+
+        }
+
+
+        
+
+
+        # Log the detailed error
+
+
+        print(f"ERROR: {error_details}")
+
+
+        
+
+        return jsonify({"error": str(e), "details": error_details}), 500
 
 def _check_allergies_in_recognition(result: dict, user_profile: dict, items_key: str) -> dict:
     """
@@ -1084,7 +1183,6 @@ def _get_allergy_alert_message(allergens: list, language: str) -> str:
             return f"⚠️ ALERTA DE ALERGIA: Este elemento contiene {allergens_str}, a los cuales eres alérgico."
 
 @recognition_bp.route("/ingredients/async", methods=["POST"])
-@api_response(service=ServiceType.RECOGNITION, action="ingredients_recognized")
 @jwt_required()
 @swag_from({
     'tags': ['Recognition'],
@@ -1400,7 +1498,6 @@ def recognize_ingredients_async():
         }), 500
 
 @recognition_bp.route("/status/<task_id>", methods=["GET"])
-@api_response(service=ServiceType.RECOGNITION, action="retrieved")
 @jwt_required()
 @swag_from({
     'tags': ['Recognition'],
@@ -1627,6 +1724,34 @@ def get_recognition_status(task_id):
                     print(f"🔍 [STATUS CHECK] After allergy check - ingredients count: {len(task_status['result_data'].get('ingredients', []))}")
                     
             except Exception as e:
+
+                    
+                error_details = {
+
+                    
+                    "error_type": type(e).__name__,
+
+                    
+                    "error_message": str(e),
+
+                    
+                    "traceback": str(e.__traceback__.tb_frame.f_code.co_filename) + ":" + str(e.__traceback__.tb_lineno) if e.__traceback__ else "No traceback"
+
+                    
+                }
+
+                    
+                
+
+                    
+                # Log the detailed error
+
+                    
+                print(f"ERROR: {error_details}")
+
+                    
+                
+
                 print(f"⚠️ [STATUS CHECK] Error checking allergies: {str(e)}")
                 import traceback
                 print(f"⚠️ [STATUS CHECK] Error traceback: {traceback.format_exc()}")
@@ -1651,7 +1776,6 @@ def get_recognition_status(task_id):
         }), 500
 
 @recognition_bp.route("/images/status/<task_id>", methods=["GET"])
-@api_response(service=ServiceType.RECOGNITION, action="retrieved")
 @jwt_required()
 @swag_from({
     'tags': ['Recognition'],
@@ -1820,6 +1944,34 @@ def get_images_status(task_id):
         return jsonify(response), 200
 
     except Exception as e:
+
+
+        error_details = {
+
+
+            "error_type": type(e).__name__,
+
+
+            "error_message": str(e),
+
+
+            "traceback": str(e.__traceback__.tb_frame.f_code.co_filename) + ":" + str(e.__traceback__.tb_lineno) if e.__traceback__ else "No traceback"
+
+
+        }
+
+
+        
+
+
+        # Log the detailed error
+
+
+        print(f"ERROR: {error_details}")
+
+
+        
+
         error_msg = f"🚨 ERROR EN IMAGES STATUS: {str(e)}"
         print(error_msg)
         
@@ -1829,7 +1981,6 @@ def get_images_status(task_id):
         }), 500
 
 @recognition_bp.route("/recognition/<recognition_id>/images", methods=["GET"])
-@api_response(service=ServiceType.RECOGNITION, action="retrieved")
 @jwt_required()
 @swag_from({
     'tags': ['Recognition'],
@@ -2018,8 +2169,6 @@ def get_recognition_images(recognition_id):
     try:
         # Obtener el reconocimiento de la base de datos
         from src.application.factories.recognition_usecase_factory import make_recognition_repository
-from src.shared.decorators.response_handler import api_response, ResponseHelper
-from src.shared.messages.response_messages import ServiceType
         recognition_repository = make_recognition_repository(db)
         recognition = recognition_repository.find_by_uid(recognition_id)
         

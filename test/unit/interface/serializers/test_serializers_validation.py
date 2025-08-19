@@ -48,7 +48,7 @@ def test_mark_consumed_serializers():
     ing_schema = MarkIngredientConsumedSchema()
     food_schema = MarkFoodConsumedSchema()
     assert ing_schema.load({"consumed_quantity": 0.5})["consumed_quantity"] == 0.5
-    assert food_schema.load({}) == {}
+    assert food_schema.load({}) == {"consumed_portions": None}
     with pytest.raises(Exception):
         ing_schema.load({"consumed_quantity": 0})
 

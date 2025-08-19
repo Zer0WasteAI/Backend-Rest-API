@@ -16,9 +16,7 @@ from src.application.factories.auth_usecase_factory import (
 from src.interface.middlewares.firebase_auth_decorator import verify_firebase_token
 from src.infrastructure.optimization.rate_limiter import smart_rate_limit
 from src.infrastructure.security.security_logger import security_logger, SecurityEventType
-from src.shared.exceptions.custom import InvalidTokenException
-from src.shared.decorators.response_handler import api_response, ResponseHelper
-from src.shared.messages.response_messages import ServiceType
+from src.shared.exceptions.custom import InvalidTokenException, InvalidRequestDataException
 from datetime import datetime, timezone
 import uuid
 import traceback
@@ -26,7 +24,6 @@ import traceback
 auth_bp = Blueprint("auth", __name__)
 
 @auth_bp.route("/firebase-debug", methods=["GET"])
-@api_response(service=ServiceType.AUTH, action="retrieved")
 @swag_from({
     'tags': ['Auth'],
     'summary': 'Debug de configuración Firebase (desarrollo)',
@@ -106,6 +103,34 @@ def firebase_debug():
                 debug_info["client_email"] = creds_data.get("client_email")
         
     except Exception as e:
+
+        
+        error_details = {
+
+        
+            "error_type": type(e).__name__,
+
+        
+            "error_message": str(e),
+
+        
+            "traceback": str(e.__traceback__.tb_frame.f_code.co_filename) + ":" + str(e.__traceback__.tb_lineno) if e.__traceback__ else "No traceback"
+
+        
+        }
+
+        
+        
+
+        
+        # Log the detailed error
+
+        
+        print(f"ERROR: {error_details}")
+
+        
+        
+
         debug_info["error"] = str(e)
     
     return jsonify(debug_info), 200
@@ -113,7 +138,6 @@ def firebase_debug():
 @auth_bp.route("/refresh", methods=["POST"])
 @smart_rate_limit('auth_refresh')  # 🛡️ Rate limit: 3 requests/min for token refresh
 @jwt_required(refresh=True)
-@api_response(service=ServiceType.AUTH, action="token_refresh")
 @swag_from({
     'tags': ['Auth'],
     'security': [{"Bearer": []}],
@@ -213,7 +237,6 @@ def refresh_token():
     return result, 200
 
 @auth_bp.route("/logout", methods=["POST"])
-@api_response(service=ServiceType.AUTH, action="logout")
 @jwt_required()
 @smart_rate_limit('auth_sensitive')
 @swag_from({
@@ -305,14 +328,41 @@ def logout():
         return jsonify(result), 200
         
     except Exception as e:
+
+        
+        error_details = {
+
+        
+            "error_type": type(e).__name__,
+
+        
+            "error_message": str(e),
+
+        
+            "traceback": str(e.__traceback__.tb_frame.f_code.co_filename) + ":" + str(e.__traceback__.tb_lineno) if e.__traceback__ else "No traceback"
+
+        
+        }
+
+        
+        
+
+        
+        # Log the detailed error
+
+        
+        print(f"ERROR: {error_details}")
+
+        
+        
+
         security_logger.log_security_event(
             SecurityEventType.AUTHENTICATION_FAILED,
             {"endpoint": "logout", "reason": "logout_failed"}
         )
-        return jsonify({"error": "Logout failed"}), 500
+        return jsonify({"error": "Logout failed", "details": error_details}), 500
 
 @auth_bp.route("/firebase-signin", methods=["POST"])
-@api_response(service=ServiceType.AUTH, action="login")
 @smart_rate_limit('auth_signin')  # 🛡️ Rate limit: 5 requests/min for auth signin 
 @verify_firebase_token
 @swag_from({
@@ -674,7 +724,6 @@ def firebase_signin():
 
 @auth_bp.route("/guest-login", methods=["POST"])
 @smart_rate_limit('auth_signin')
-@api_response(service=ServiceType.AUTH, action="login")
 @swag_from({
     'tags': ['Auth'],
     'summary': 'Login como invitado para testing',
@@ -806,5 +855,33 @@ def guest_login():
         }, 200
         
     except Exception as e:
+
+        
+        error_details = {
+
+        
+            "error_type": type(e).__name__,
+
+        
+            "error_message": str(e),
+
+        
+            "traceback": str(e.__traceback__.tb_frame.f_code.co_filename) + ":" + str(e.__traceback__.tb_lineno) if e.__traceback__ else "No traceback"
+
+        
+        }
+
+        
+        
+
+        
+        # Log the detailed error
+
+        
+        print(f"ERROR: {error_details}")
+
+        
+        
+
         print(f"🚨 Error en guest login: {str(e)}")
         raise InvalidRequestDataException(f"Error al crear usuario invitado: {str(e)}")

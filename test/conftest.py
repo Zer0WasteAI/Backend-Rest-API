@@ -7,6 +7,7 @@ os.environ.setdefault("FLASK_ENV", "testing")
 os.environ.setdefault("TESTING", "1")
 
 from src.main import create_app
+from src.infrastructure.db.base import db
 from flask_jwt_extended import create_access_token
 
 
@@ -17,7 +18,17 @@ def app() -> Flask:
         "TESTING": True,
         # Use in-memory SQLite for unit tests that may touch the DB layer
         "SQLALCHEMY_DATABASE_URI": "sqlite:///:memory:",
+        # JWT Configuration for testing
+        "JWT_SECRET_KEY": "test-secret-key-global",
+        "JWT_TOKEN_LOCATION": ["headers"],
+        "JWT_HEADER_NAME": "Authorization", 
+        "JWT_HEADER_TYPE": "Bearer",
+        "JWT_ACCESS_TOKEN_EXPIRES": False,
+        "WTF_CSRF_ENABLED": False
     })
+    # Ensure all tables exist for unit tests that touch DB
+    with app.app_context():
+        db.create_all()
     return app
 
 

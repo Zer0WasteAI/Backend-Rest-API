@@ -117,7 +117,8 @@ class TestRecipeModel:
             steps=sample_steps,
             footer=footer,
             category=category,
-            description=description
+            description=description,
+            image_path=None
         )
         
         # Assert
@@ -186,7 +187,8 @@ class TestRecipeModel:
             steps=sample_steps,
             footer="footer",
             category="category",
-            description="description"
+            description="description",
+            image_path=None
         )
         
         # Act
@@ -211,7 +213,8 @@ class TestRecipeModel:
             steps=[],  # Start with empty steps
             footer="footer",
             category="category",
-            description="description"
+            description="description",
+            image_path=None
         )
         
         new_steps = [
@@ -245,7 +248,8 @@ class TestRecipeModel:
             steps=sample_steps,
             footer="footer",
             category="category",
-            description="description"
+            description="description",
+            image_path=None
         )
         
         # Act
@@ -268,7 +272,8 @@ class TestRecipeModel:
             steps=sample_steps,
             footer="footer",
             category="category",
-            description="description"
+            description="description",
+            image_path=None
         )
         
         new_ingredients = [
@@ -296,7 +301,8 @@ class TestRecipeModel:
             steps=[],
             footer="No instructions",
             category="Incomplete",
-            description="Recipe without content"
+            description="Recipe without content",
+            image_path=None
         )
         
         # Assert
@@ -323,7 +329,8 @@ class TestRecipeModel:
             steps=sample_steps,
             footer="footer",
             category="category",
-            description="description"
+            description="description",
+            image_path=None
         )
         
         # Assert
@@ -345,7 +352,8 @@ class TestRecipeModel:
             steps=sample_steps,
             footer="footer",
             category="category",
-            description="description"
+            description="description",
+            image_path=None
         )
         
         after_creation = datetime.now()

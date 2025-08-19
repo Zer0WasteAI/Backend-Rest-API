@@ -29,6 +29,7 @@ __pycache__/
 
 # VSCode settings
 .vscode/
+.idea/
 
 # Archivos de entorno y configuración personal
 *.env
