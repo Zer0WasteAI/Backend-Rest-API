@@ -800,7 +800,7 @@ def guest_login():
     email = data.get('email')
     name = data.get('name')
     
-    # Generar UID único para invitado
+    # Generar UID único para invitado (se usará sólo si no existe por email)
     guest_uid = f"guest_{uuid.uuid4().hex[:8]}"
     
     try:
@@ -809,30 +809,46 @@ def guest_login():
         profile_repo = make_profile_repository()
         jwt_service = make_jwt_service()
         
-        # Crear usuario invitado temporal
-        user = user_repo.create({
-            "uid": guest_uid,
-            "email": email,
-            "created_at": datetime.now(timezone.utc),
-            "updated_at": datetime.now(timezone.utc)
-        })
+        # Si ya existe un usuario con ese email, reutilizarlo para evitar duplicados
+        existing_user = user_repo.find_by_email(email)
+        if existing_user:
+            user = existing_user
+            guest_uid = existing_user.uid
+        else:
+            # Crear usuario invitado temporal
+            user = user_repo.create({
+                "uid": guest_uid,
+                "email": email,
+                "created_at": datetime.now(timezone.utc),
+                "updated_at": datetime.now(timezone.utc)
+            })
         
-        # Crear entrada de auth para invitado
-        auth_repo.create({
-            "uid": guest_uid,
-            "auth_provider": "guest",
-            "is_verified": True,  # Los invitados están "verificados" para testing
-            "is_active": True
-        })
+        # Crear entrada de auth para invitado si no existe
+        existing_auth = auth_repo.find_by_uid_and_provider(guest_uid, "guest")
+        if not existing_auth:
+            auth_repo.create({
+                "uid": guest_uid,
+                "auth_provider": "guest",
+                "is_verified": True,  # Los invitados están "verificados" para testing
+                "is_active": True
+            })
         
-        # Crear perfil básico
-        profile_repo.create({
-            "uid": guest_uid,
-            "name": name,
-            "phone": "",
-            "photo_url": "",
-            "prefs": {"guest_mode": True}
-        })
+        # Crear perfil básico si no existe; si existe, actualizar nombre si cambia
+        existing_profile = profile_repo.find_by_uid(guest_uid)
+        if not existing_profile:
+            profile_repo.create({
+                "uid": guest_uid,
+                "name": name,
+                "phone": "",
+                "photo_url": "",
+                "prefs": {"guest_mode": True}
+            })
+        else:
+            try:
+                # Actualización mínima no crítica
+                profile_repo.update(guest_uid, {"name": name})
+            except Exception:
+                pass
         
         # Generar tokens JWT
         tokens = jwt_service.create_tokens(identity=guest_uid)

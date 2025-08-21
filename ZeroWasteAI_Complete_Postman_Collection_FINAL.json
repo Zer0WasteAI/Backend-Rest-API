@@ -1,0 +1,4900 @@
+{
+  "info": {
+    "name": "ZeroWasteAI \u2014 Complete",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Flows",
+      "item": [
+        {
+          "name": "Quickstart: Guest Auth \u2192 Basic Ops",
+          "item": [
+            {
+              "name": "Auth: Guest Login (save JWT)",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/auth/guest-login",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "auth",
+                    "guest-login"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"email\": \"guest@test.com\",\n  \"name\": \"Usuario Invitado\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "const json = pm.response.json ? pm.response.json() : {};",
+                      "const token = json.access_token || (json.tokens && json.tokens.access_token) || (json.data && json.data.access_token);",
+                      "if (token) { pm.environment.set('jwt', token); pm.test('JWT saved to environment', () => true); } else { pm.test('JWT not found in response', () => false); }"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Upload Image 1 (general)",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{jwt}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/image_management/upload_image",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "image_management",
+                    "upload_image"
+                  ]
+                },
+                "body": {
+                  "mode": "formdata",
+                  "formdata": [
+                    {
+                      "key": "image",
+                      "type": "file",
+                      "src": "/path/to/image1.jpg"
+                    },
+                    {
+                      "key": "item_name",
+                      "type": "text",
+                      "value": "tomates"
+                    },
+                    {
+                      "key": "image_type",
+                      "type": "text",
+                      "value": "ingredient"
+                    }
+                  ]
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "let json = {}; try { json = pm.response.json(); } catch(e) {}",
+                      "let sp = json?.image?.storage_path || json?.upload_info?.storage_path;",
+                      "let pu = json?.image?.image_path || json?.upload_info?.public_url;",
+                      "if (!pm.environment.get('uploaded_storage_path_1')) { pm.environment.set('uploaded_storage_path_1', sp || ''); pm.environment.set('uploaded_public_url_1', pu || ''); }",
+                      "else if (!pm.environment.get('uploaded_storage_path_2')) { pm.environment.set('uploaded_storage_path_2', sp || ''); pm.environment.set('uploaded_public_url_2', pu || ''); }",
+                      "pm.test('Captured upload paths', () => Boolean(sp || pu));"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Upload Image 2 (general)",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{jwt}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/image_management/upload_image",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "image_management",
+                    "upload_image"
+                  ]
+                },
+                "body": {
+                  "mode": "formdata",
+                  "formdata": [
+                    {
+                      "key": "image",
+                      "type": "file",
+                      "src": "/path/to/image2.jpg"
+                    },
+                    {
+                      "key": "item_name",
+                      "type": "text",
+                      "value": "arroz"
+                    },
+                    {
+                      "key": "image_type",
+                      "type": "text",
+                      "value": "ingredient"
+                    }
+                  ]
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "let json = {}; try { json = pm.response.json(); } catch(e) {}",
+                      "let sp = json?.image?.storage_path || json?.upload_info?.storage_path;",
+                      "let pu = json?.image?.image_path || json?.upload_info?.public_url;",
+                      "if (!pm.environment.get('uploaded_storage_path_1')) { pm.environment.set('uploaded_storage_path_1', sp || ''); pm.environment.set('uploaded_public_url_1', pu || ''); }",
+                      "else if (!pm.environment.get('uploaded_storage_path_2')) { pm.environment.set('uploaded_storage_path_2', sp || ''); pm.environment.set('uploaded_public_url_2', pu || ''); }",
+                      "pm.test('Captured upload paths', () => Boolean(sp || pu));"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "User: Get Profile",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{jwt}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/user/profile",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "user",
+                    "profile"
+                  ]
+                }
+              }
+            },
+            {
+              "name": "User: Update Profile",
+              "request": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{jwt}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/user/profile",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "user",
+                    "profile"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"displayName\": \"Usuario Invitado\",\n  \"language\": \"es\",\n  \"cookingLevel\": \"beginner\",\n  \"measurementUnit\": \"metric\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              }
+            },
+            {
+              "name": "Inventory: Add Ingredients (batch)",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{jwt}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/inventory/ingredients",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "inventory",
+                    "ingredients"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"ingredients\": [\n    {\n      \"name\": \"Tomates cherry\",\n      \"quantity\": 500,\n      \"type_unit\": \"gr\",\n      \"storage_type\": \"refrigerador\",\n      \"expiration_time\": 5,\n      \"time_unit\": \"D\u00edas\",\n      \"tips\": \"Mantener refrigerados para mayor duraci\u00f3n\",\n      \"image_path\": \"{{uploaded_public_url_1}}\"\n    },\n    {\n      \"name\": \"Arroz integral\",\n      \"quantity\": 1,\n      \"type_unit\": \"kg\",\n      \"storage_type\": \"despensa\",\n      \"expiration_time\": 6,\n      \"time_unit\": \"Meses\",\n      \"tips\": \"Almacenar en recipiente herm\u00e9tico\",\n      \"image_path\": \"{{uploaded_public_url_2}}\"\n    }\n  ]\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              }
+            },
+            {
+              "name": "Inventory: Get Simple",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{jwt}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/inventory/simple",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "inventory",
+                    "simple"
+                  ]
+                }
+              }
+            },
+            {
+              "name": "Recipes: Generate Custom",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{jwt}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/recipes/generate-custom",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "recipes",
+                    "generate-custom"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"ingredients\": [\n    {\n      \"name\": \"Pollo\",\n      \"quantity\": 500,\n      \"unit\": \"gr\"\n    },\n    {\n      \"name\": \"Pasta\",\n      \"quantity\": 300,\n      \"unit\": \"gr\"\n    },\n    {\n      \"name\": \"Tomates\",\n      \"quantity\": 400,\n      \"unit\": \"gr\"\n    }\n  ],\n  \"cuisine_type\": \"italiana\",\n  \"difficulty\": \"intermedio\",\n  \"prep_time\": \"medio\",\n  \"dietary_restrictions\": [],\n  \"meal_type\": \"almuerzo\",\n  \"servings\": 4\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              }
+            },
+            {
+              "name": "Environmental: Calculate from Title",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{jwt}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/environmental_savings/calculate/from-title",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "environmental_savings",
+                    "calculate",
+                    "from-title"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"title\": \"Ensalada de Tomates Cherry con Queso Manchego\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              }
+            }
+          ]
+        },
+        {
+          "name": "Flow: Recognition \u2192 Inventory",
+          "item": [
+            {
+              "name": "Upload Image A for Recognition",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{jwt}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/image_management/upload_image",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "image_management",
+                    "upload_image"
+                  ]
+                },
+                "body": {
+                  "mode": "formdata",
+                  "formdata": [
+                    {
+                      "key": "image",
+                      "type": "file",
+                      "src": "/path/to/rec1.jpg"
+                    },
+                    {
+                      "key": "item_name",
+                      "type": "text",
+                      "value": "ingrediente A"
+                    },
+                    {
+                      "key": "image_type",
+                      "type": "text",
+                      "value": "ingredient"
+                    }
+                  ]
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "let json = {}; try { json = pm.response.json(); } catch(e) {}",
+                      "let sp = json?.image?.storage_path || json?.upload_info?.storage_path;",
+                      "let pu = json?.image?.image_path || json?.upload_info?.public_url;",
+                      "if (!pm.environment.get('uploaded_storage_path_1')) { pm.environment.set('uploaded_storage_path_1', sp || ''); pm.environment.set('uploaded_public_url_1', pu || ''); }",
+                      "else if (!pm.environment.get('uploaded_storage_path_2')) { pm.environment.set('uploaded_storage_path_2', sp || ''); pm.environment.set('uploaded_public_url_2', pu || ''); }",
+                      "pm.test('Captured upload paths', () => Boolean(sp || pu));"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Upload Image B for Recognition",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{jwt}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/image_management/upload_image",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "image_management",
+                    "upload_image"
+                  ]
+                },
+                "body": {
+                  "mode": "formdata",
+                  "formdata": [
+                    {
+                      "key": "image",
+                      "type": "file",
+                      "src": "/path/to/rec2.jpg"
+                    },
+                    {
+                      "key": "item_name",
+                      "type": "text",
+                      "value": "ingrediente B"
+                    },
+                    {
+                      "key": "image_type",
+                      "type": "text",
+                      "value": "ingredient"
+                    }
+                  ]
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "let json = {}; try { json = pm.response.json(); } catch(e) {}",
+                      "let sp = json?.image?.storage_path || json?.upload_info?.storage_path;",
+                      "let pu = json?.image?.image_path || json?.upload_info?.public_url;",
+                      "if (!pm.environment.get('uploaded_storage_path_1')) { pm.environment.set('uploaded_storage_path_1', sp || ''); pm.environment.set('uploaded_public_url_1', pu || ''); }",
+                      "else if (!pm.environment.get('uploaded_storage_path_2')) { pm.environment.set('uploaded_storage_path_2', sp || ''); pm.environment.set('uploaded_public_url_2', pu || ''); }",
+                      "pm.test('Captured upload paths', () => Boolean(sp || pu));"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Recognition: Ingredients (save vars)",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{jwt}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/recognition/ingredients",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "recognition",
+                    "ingredients"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"images_paths\": [\n    \"{{uploaded_storage_path_1}}\",\n    \"{{uploaded_storage_path_2}}\"\n  ]\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "const json = pm.response.json ? pm.response.json() : {};",
+                      "if (json.ingredients) { pm.environment.set('recognized_ingredients', JSON.stringify(json.ingredients)); }",
+                      "if (json.recognition_id) { pm.environment.set('recognition_id', json.recognition_id); }",
+                      "pm.test('Recognition vars stored', () => true);"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Recognition: Ingredients Async (save task)",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{jwt}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/recognition/ingredients/async",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "recognition",
+                    "ingredients",
+                    "async"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"images_paths\": [\n    \"{{uploaded_storage_path_1}}\"\n  ]\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "const json = pm.response.json ? pm.response.json() : {};",
+                      "const tid = json.task_id || (json.images && json.images.task_id);",
+                      "if (tid) { pm.environment.set('recognition_task_id', tid); }",
+                      "pm.test('recognition_task_id stored', () => Boolean(tid));"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Recognition: Status by Task",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{jwt}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/recognition/status/{{recognition_task_id}}",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "recognition",
+                    "status",
+                    "{{recognition_task_id}}"
+                  ]
+                }
+              }
+            },
+            {
+              "name": "Recognition: Images Status by Task",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{jwt}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/recognition/images/status/{{recognition_task_id}}",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "recognition",
+                    "images",
+                    "status",
+                    "{{recognition_task_id}}"
+                  ]
+                }
+              }
+            },
+            {
+              "name": "Recognition: Images by Recognition ID",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{jwt}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/recognition/recognition/{{recognition_id}}/images",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "recognition",
+                    "recognition",
+                    "{{recognition_id}}",
+                    "images"
+                  ]
+                }
+              }
+            },
+            {
+              "name": "Inventory: Add from Recognition (uses {{recognized_ingredients}})",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{jwt}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/inventory/ingredients/from-recognition",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "inventory",
+                    "ingredients",
+                    "from-recognition"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"ingredients\": {{recognized_ingredients}}\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              }
+            }
+          ]
+        },
+        {
+          "name": "Flow: Recipes Generation & Images",
+          "item": [
+            {
+              "name": "Recipes: Generate from Inventory (capture generation vars)",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{jwt}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/recipes/generate-from-inventory",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "recipes",
+                    "generate-from-inventory"
+                  ]
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "const json = pm.response.json ? pm.response.json() : {};",
+                      "const imgTask = (json.images && json.images.task_id) || (json.images && json.images.check_images_url && json.images.check_images_url.split('/').pop());",
+                      "if (imgTask) pm.environment.set('generation_task_id', imgTask);",
+                      "if (json.generation_id) pm.environment.set('generation_id', json.generation_id);",
+                      "pm.test('Generation vars captured', () => true);"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Generation: Images Status (by task)",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{jwt}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/generation/images/status/{{generation_task_id}}",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "generation",
+                    "images",
+                    "status",
+                    "{{generation_task_id}}"
+                  ]
+                }
+              }
+            },
+            {
+              "name": "Generation: Recipes with Images (by generation id)",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{jwt}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/generation/{{generation_id}}/images",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "generation",
+                    "{{generation_id}}",
+                    "images"
+                  ]
+                }
+              }
+            },
+            {
+              "name": "Recipes: Gallery (generated)",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{jwt}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/recipes/generated/gallery",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "recipes",
+                    "generated",
+                    "gallery"
+                  ]
+                }
+              }
+            },
+            {
+              "name": "Recipes: All (favorites_only=false)",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{jwt}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/recipes/all?favorites_only=false",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "recipes",
+                    "all"
+                  ],
+                  "query": [
+                    {
+                      "key": "favorites_only",
+                      "value": "false"
+                    }
+                  ]
+                }
+              }
+            }
+          ]
+        },
+        {
+          "name": "Flow: Favorites & Cooking",
+          "item": [
+            {
+              "name": "Recipes: Add Favorite (recipe_uid={{recipe_uid}})",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{jwt}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/recipes/generated/{{recipe_uid}}/favorite",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "recipes",
+                    "generated",
+                    "{{recipe_uid}}",
+                    "favorite"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"rating\": 4,\n  \"notes\": \"Muy buena, a\u00f1adir m\u00e1s especias\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              }
+            },
+            {
+              "name": "Recipes: Update Favorite",
+              "request": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{jwt}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/recipes/generated/{{recipe_uid}}/favorite",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "recipes",
+                    "generated",
+                    "{{recipe_uid}}",
+                    "favorite"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"rating\": 5,\n  \"notes\": \"Excelente! Un poco m\u00e1s de ajo\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              }
+            },
+            {
+              "name": "Cooking: Start Session (Idempotency-Key)",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{jwt}}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Idempotency-Key",
+                    "value": "{{idempotency_key}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/cooking_session/start",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "cooking_session",
+                    "start"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"recipe_uid\": \"{{recipe_uid}}\",\n  \"servings\": 2,\n  \"level\": \"beginner\",\n  \"started_at\": \"2024-01-20T10:00:00Z\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "const json = pm.response.json ? pm.response.json() : {};",
+                      "if (json.session_id) pm.environment.set('session_id', json.session_id);",
+                      "pm.test('session_id stored', () => Boolean(pm.environment.get('session_id')));"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Cooking: Complete Step",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{jwt}}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Idempotency-Key",
+                    "value": "{{idempotency_key}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/cooking_session/complete_step",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "cooking_session",
+                    "complete_step"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"session_id\": \"{{session_id}}\",\n  \"step_id\": \"step-1\",\n  \"timer_ms\": 300000,\n  \"consumptions\": []\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              }
+            },
+            {
+              "name": "Cooking: Finish Session",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{jwt}}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Idempotency-Key",
+                    "value": "{{idempotency_key}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/cooking_session/finish",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "cooking_session",
+                    "finish"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"session_id\": \"{{session_id}}\",\n  \"notes\": \"Sesi\u00f3n de cocina de prueba\",\n  \"photo_url\": \"\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              }
+            }
+          ]
+        },
+        {
+          "name": "Flow: Image Uploads",
+          "item": [
+            {
+              "name": "Image Management: Upload (multipart)",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{jwt}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/image_management/upload_image",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "image_management",
+                    "upload_image"
+                  ]
+                },
+                "body": {
+                  "mode": "formdata",
+                  "formdata": [
+                    {
+                      "key": "image",
+                      "type": "file",
+                      "src": "/path/to/image.jpg"
+                    },
+                    {
+                      "key": "item_name",
+                      "type": "text",
+                      "value": "banana"
+                    },
+                    {
+                      "key": "image_type",
+                      "type": "text",
+                      "value": "default"
+                    }
+                  ]
+                }
+              }
+            },
+            {
+              "name": "Inventory: Upload Image (multipart)",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{jwt}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/inventory/upload_image",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "inventory",
+                    "upload_image"
+                  ]
+                },
+                "body": {
+                  "mode": "formdata",
+                  "formdata": [
+                    {
+                      "key": "image",
+                      "type": "file",
+                      "src": "/path/to/inventory.jpg"
+                    },
+                    {
+                      "key": "upload_type",
+                      "type": "text",
+                      "value": "ingredient"
+                    },
+                    {
+                      "key": "item_name",
+                      "type": "text",
+                      "value": "Tomates cherry"
+                    }
+                  ]
+                }
+              }
+            }
+          ]
+        },
+        {
+          "name": "Flow: Inventory Upload \u2192 Add Item",
+          "item": [
+            {
+              "name": "Inventory: Upload Image (ingredient)",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{jwt}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/inventory/upload_image",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "inventory",
+                    "upload_image"
+                  ]
+                },
+                "body": {
+                  "mode": "formdata",
+                  "formdata": [
+                    {
+                      "key": "image",
+                      "type": "file",
+                      "src": "/path/to/ingredient.jpg"
+                    },
+                    {
+                      "key": "upload_type",
+                      "type": "text",
+                      "value": "ingredient"
+                    },
+                    {
+                      "key": "item_name",
+                      "type": "text",
+                      "value": "Tomates cherry"
+                    }
+                  ]
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "let json = {}; try { json = pm.response.json(); } catch(e) {}",
+                      "let sp = json?.image?.storage_path || json?.upload_info?.storage_path;",
+                      "let pu = json?.image?.image_path || json?.upload_info?.public_url;",
+                      "if (!pm.environment.get('uploaded_storage_path_1')) { pm.environment.set('uploaded_storage_path_1', sp || ''); pm.environment.set('uploaded_public_url_1', pu || ''); }",
+                      "else if (!pm.environment.get('uploaded_storage_path_2')) { pm.environment.set('uploaded_storage_path_2', sp || ''); pm.environment.set('uploaded_public_url_2', pu || ''); }",
+                      "pm.test('Captured upload paths', () => Boolean(sp || pu));"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Inventory: Add Item (uses uploaded image)",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{jwt}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/inventory/add_item",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "inventory",
+                    "add_item"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"Tomates cherry\",\n  \"quantity\": 1,\n  \"unit\": \"unidades\",\n  \"storage_type\": \"refrigerador\",\n  \"category\": \"ingredient\",\n  \"image_url\": \"{{uploaded_public_url_1}}\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              }
+            }
+          ]
+        },
+        {
+          "name": "Flow: Inventory Upload \u2192 Recognition",
+          "item": [
+            {
+              "name": "Inventory: Upload Image (recognition)",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{jwt}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/inventory/upload_image",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "inventory",
+                    "upload_image"
+                  ]
+                },
+                "body": {
+                  "mode": "formdata",
+                  "formdata": [
+                    {
+                      "key": "image",
+                      "type": "file",
+                      "src": "/path/to/recognition.jpg"
+                    },
+                    {
+                      "key": "upload_type",
+                      "type": "text",
+                      "value": "recognition"
+                    },
+                    {
+                      "key": "item_name",
+                      "type": "text",
+                      "value": "foto reconocimiento"
+                    }
+                  ]
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "let json = {}; try { json = pm.response.json(); } catch(e) {}",
+                      "let sp = json?.image?.storage_path || json?.upload_info?.storage_path;",
+                      "let pu = json?.image?.image_path || json?.upload_info?.public_url;",
+                      "if (!pm.environment.get('uploaded_storage_path_1')) { pm.environment.set('uploaded_storage_path_1', sp || ''); pm.environment.set('uploaded_public_url_1', pu || ''); }",
+                      "else if (!pm.environment.get('uploaded_storage_path_2')) { pm.environment.set('uploaded_storage_path_2', sp || ''); pm.environment.set('uploaded_public_url_2', pu || ''); }",
+                      "pm.test('Captured upload paths', () => Boolean(sp || pu));"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Recognition: Ingredients (from inventory upload)",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{jwt}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/recognition/ingredients",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "recognition",
+                    "ingredients"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"images_paths\": [\n    \"{{uploaded_storage_path_1}}\"\n  ]\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "const json = pm.response.json ? pm.response.json() : {};",
+                      "if (json.ingredients) { pm.environment.set('recognized_ingredients', JSON.stringify(json.ingredients)); }",
+                      "if (json.recognition_id) { pm.environment.set('recognition_id', json.recognition_id); }",
+                      "pm.test('Recognition vars stored', () => true);"
+                    ]
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "Flow: Inventory Advanced",
+          "item": [
+            {
+              "name": "Inventory: Ingredients List (capture vars)",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{jwt}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/inventory/ingredients/list",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "inventory",
+                    "ingredients",
+                    "list"
+                  ]
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "try {",
+                      "  const json = pm.response.json();",
+                      "  // Try common shapes: ingredients list",
+                      "  const ing = (json.ingredients && (json.ingredients[0] || (json.ingredients.items && json.ingredients.items[0]))) || json.items && json.items[0];",
+                      "  if (ing && (ing.name || ing.ingredient_name)) {",
+                      "    const name = ing.name || ing.ingredient_name; pm.environment.set('ingredient_name', name);",
+                      "    let addedAt = ing.added_at || (ing.stacks && ing.stacks[0] && (ing.stacks[0].added_at || ing.stacks[0].addedAt));",
+                      "    if (addedAt) pm.environment.set('added_at', addedAt);",
+                      "  }",
+                      "  pm.test('Inventory vars attempted', () => true);",
+                      "} catch(e) { pm.test('Inventory vars parse failed', () => false); }"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Inventory: Ingredient Detail",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{jwt}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/inventory/ingredients/{{ingredient_name}}/detail",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "inventory",
+                    "ingredients",
+                    "{{ingredient_name}}",
+                    "detail"
+                  ]
+                }
+              }
+            },
+            {
+              "name": "Inventory: Update Ingredient Quantity",
+              "request": {
+                "method": "PATCH",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{jwt}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/inventory/ingredients/{{ingredient_name}}/{{added_at}}/quantity",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "inventory",
+                    "ingredients",
+                    "{{ingredient_name}}",
+                    "{{added_at}}",
+                    "quantity"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"quantity\": 750\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              }
+            },
+            {
+              "name": "Inventory: Consume Ingredient",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{jwt}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/inventory/ingredients/{{ingredient_name}}/{{added_at}}/consume",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "inventory",
+                    "ingredients",
+                    "{{ingredient_name}}",
+                    "{{added_at}}",
+                    "consume"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"consumed_quantity\": 100\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              }
+            },
+            {
+              "name": "Inventory: Expiring Soon (days=7)",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{jwt}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/inventory/expiring_soon?days=7",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "inventory",
+                    "expiring_soon"
+                  ],
+                  "query": [
+                    {
+                      "key": "days",
+                      "value": "7"
+                    }
+                  ]
+                }
+              }
+            }
+          ]
+        },
+        {
+          "name": "Flow: Planning CRUD",
+          "item": [
+            {
+              "name": "Planning: Save",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{jwt}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/planning/save",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "planning",
+                    "save"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"date\": \"2024-01-20\",\n  \"meals\": {\n    \"breakfast\": {\n      \"name\": \"Avena con frutas\",\n      \"ingredients\": [\n        \"Avena\",\n        \"Pl\u00e1tano\"\n      ]\n    }\n  }\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              }
+            },
+            {
+              "name": "Planning: Get by date",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{jwt}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/planning/get?date=2024-01-20",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "planning",
+                    "get"
+                  ],
+                  "query": [
+                    {
+                      "key": "date",
+                      "value": "2024-01-20"
+                    }
+                  ]
+                }
+              }
+            },
+            {
+              "name": "Planning: Update",
+              "request": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{jwt}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/planning/update",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "planning",
+                    "update"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"date\": \"2024-01-20\",\n  \"meals\": {\n    \"breakfast\": {\n      \"name\": \"Avena + yogurt\"\n    }\n  }\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              }
+            },
+            {
+              "name": "Planning: All",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{jwt}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/planning/all",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "planning",
+                    "all"
+                  ]
+                }
+              }
+            },
+            {
+              "name": "Planning: Dates",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{jwt}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/planning/dates",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "planning",
+                    "dates"
+                  ]
+                }
+              }
+            },
+            {
+              "name": "Planning: Delete",
+              "request": {
+                "method": "DELETE",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{jwt}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/planning/delete",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "planning",
+                    "delete"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"date\": \"2024-01-20\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              }
+            }
+          ]
+        },
+        {
+          "name": "Flow: Environmental Extensive",
+          "item": [
+            {
+              "name": "Environmental: From Title",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{jwt}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/environmental_savings/calculate/from-title",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "environmental_savings",
+                    "calculate",
+                    "from-title"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"title\": \"Ensalada de Tomates Cherry con Queso Manchego\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              }
+            },
+            {
+              "name": "Environmental: From UID",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{jwt}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/environmental_savings/calculate/from-uid/{{recipe_uid}}",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "environmental_savings",
+                    "calculate",
+                    "from-uid",
+                    "{{recipe_uid}}"
+                  ]
+                }
+              }
+            },
+            {
+              "name": "Environmental: Calculations",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{jwt}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/environmental_savings/calculations",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "environmental_savings",
+                    "calculations"
+                  ]
+                }
+              }
+            },
+            {
+              "name": "Environmental: Status",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{jwt}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/environmental_savings/calculations/status",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "environmental_savings",
+                    "calculations",
+                    "status"
+                  ]
+                }
+              }
+            },
+            {
+              "name": "Environmental: Summary",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{jwt}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/environmental_savings/summary",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "environmental_savings",
+                    "summary"
+                  ]
+                }
+              }
+            }
+          ]
+        },
+        {
+          "name": "Flow: Admin (Internal Secret)",
+          "item": [
+            {
+              "name": "Admin: Cleanup Tokens",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{jwt}}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "X-Internal-Secret",
+                    "value": "{{internal_secret}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/admin/cleanup-tokens",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "admin",
+                    "cleanup-tokens"
+                  ]
+                }
+              }
+            },
+            {
+              "name": "Admin: Security Stats",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{jwt}}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "X-Internal-Secret",
+                    "value": "{{internal_secret}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/admin/security-stats",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "admin",
+                    "security-stats"
+                  ]
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "GET /firebase-debug",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/auth/firebase-debug",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "firebase-debug"
+              ]
+            }
+          }
+        },
+        {
+          "name": "POST /refresh",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/auth/refresh",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "refresh"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "POST /logout",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/auth/logout",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "logout"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "POST /firebase-signin",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{firebase_id_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/auth/firebase-signin",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "firebase-signin"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "POST /guest-login",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/auth/guest-login",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "guest-login"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "User",
+      "item": [
+        {
+          "name": "GET /profile",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/user/profile",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "user",
+                "profile"
+              ]
+            }
+          }
+        },
+        {
+          "name": "PUT /profile",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/user/profile",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "user",
+                "profile"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"displayName\": \"Carlos Primo\",\n  \"language\": \"es\",\n  \"cookingLevel\": \"intermediate\",\n  \"measurementUnit\": \"metric\",\n  \"allergies\": [],\n  \"preferredFoodTypes\": [\n    \"mediterr\u00e1nea\"\n  ],\n  \"specialDietItems\": []\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Recognition",
+      "item": [
+        {
+          "name": "POST /ingredients",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/recognition/ingredients",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "recognition",
+                "ingredients"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"images_paths\": [\n    \"uploads/recognition/example1.jpg\"\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "POST /ingredients/complete",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/recognition/ingredients/complete",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "recognition",
+                "ingredients",
+                "complete"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"images_paths\": [\n    \"uploads/recognition/example1.jpg\",\n    \"uploads/recognition/example2.jpg\"\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "POST /foods",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/recognition/foods",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "recognition",
+                "foods"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"images_paths\": [\n    \"uploads/recognition/food1.jpg\"\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "POST /batch",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/recognition/batch",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "recognition",
+                "batch"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"images_paths\": [\n    \"uploads/recognition/batch1.jpg\",\n    \"uploads/recognition/batch2.jpg\",\n    \"uploads/recognition/batch3.jpg\"\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "POST /ingredients/async",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/recognition/ingredients/async",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "recognition",
+                "ingredients",
+                "async"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"images_paths\": [\n    \"uploads/recognition/example1.jpg\"\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "GET /status/<task_id>",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/recognition/status/task_12345",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "recognition",
+                "status",
+                "task_12345"
+              ]
+            }
+          }
+        },
+        {
+          "name": "GET /images/status/<task_id>",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/recognition/images/status/task_12345",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "recognition",
+                "images",
+                "status",
+                "task_12345"
+              ]
+            }
+          }
+        },
+        {
+          "name": "GET /recognition/<recognition_id>/images",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/recognition/recognition/rec_abc123/images",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "recognition",
+                "recognition",
+                "rec_abc123",
+                "images"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Image Management",
+      "item": [
+        {
+          "name": "POST /assign_image",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/image_management/assign_image",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "image_management",
+                "assign_image"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"item_name\": \"tomate cherry\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "POST /search_similar_images",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/image_management/search_similar_images",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "image_management",
+                "search_similar_images"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"item_name\": \"manzana\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "POST /sync_images",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/image_management/sync_images",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "image_management",
+                "sync_images"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "POST /upload_image",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/image_management/upload_image",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "image_management",
+                "upload_image"
+              ]
+            },
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "image",
+                  "type": "file",
+                  "src": "/path/to/image.jpg"
+                },
+                {
+                  "key": "item_name",
+                  "type": "text",
+                  "value": "banana"
+                },
+                {
+                  "key": "image_type",
+                  "type": "text",
+                  "value": "default"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Recipes",
+      "item": [
+        {
+          "name": "POST /generate-from-inventory",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/recipes/generate-from-inventory",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "recipes",
+                "generate-from-inventory"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "POST /generate-custom",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/recipes/generate-custom",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "recipes",
+                "generate-custom"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"ingredients\": [\n    {\n      \"name\": \"Pollo\",\n      \"quantity\": 500,\n      \"unit\": \"gr\"\n    },\n    {\n      \"name\": \"Pasta\",\n      \"quantity\": 300,\n      \"unit\": \"gr\"\n    },\n    {\n      \"name\": \"Tomates\",\n      \"quantity\": 400,\n      \"unit\": \"gr\"\n    }\n  ],\n  \"cuisine_type\": \"italiana\",\n  \"difficulty\": \"intermedio\",\n  \"prep_time\": \"medio\",\n  \"dietary_restrictions\": [],\n  \"meal_type\": \"almuerzo\",\n  \"servings\": 4\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "GET /saved",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/recipes/saved",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "recipes",
+                "saved"
+              ]
+            }
+          }
+        },
+        {
+          "name": "GET /all",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/recipes/all",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "recipes",
+                "all"
+              ],
+              "query": [
+                {
+                  "key": "favorites_only",
+                  "value": "false"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "DELETE /delete",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/recipes/delete",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "recipes",
+                "delete"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Pasta carbonara casera\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "GET /generated/gallery",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/recipes/generated/gallery",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "recipes",
+                "generated",
+                "gallery"
+              ]
+            }
+          }
+        },
+        {
+          "name": "GET /default",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/recipes/default",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "recipes",
+                "default"
+              ]
+            }
+          }
+        },
+        {
+          "name": "POST /generated/<recipe_uid>/favorite",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/recipes/generated/rec_abc123/favorite",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "recipes",
+                "generated",
+                "rec_abc123",
+                "favorite"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"rating\": 4,\n  \"notes\": \"Muy buena, a\u00f1adir m\u00e1s especias\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "DELETE /generated/<recipe_uid>/favorite",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/recipes/generated/rec_abc123/favorite",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "recipes",
+                "generated",
+                "rec_abc123",
+                "favorite"
+              ]
+            }
+          }
+        },
+        {
+          "name": "GET /generated/favorites",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/recipes/generated/favorites",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "recipes",
+                "generated",
+                "favorites"
+              ],
+              "query": [
+                {
+                  "key": "sort_by",
+                  "value": "favorited_at"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "PUT /generated/<recipe_uid>/favorite",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/recipes/generated/rec_abc123/favorite",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "recipes",
+                "generated",
+                "rec_abc123",
+                "favorite"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"rating\": 5,\n  \"notes\": \"Excelente! Un poco m\u00e1s de ajo\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Planning",
+      "item": [
+        {
+          "name": "POST /save",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/planning/save",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "planning",
+                "save"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"date\": \"2024-01-20\",\n  \"meals\": {\n    \"breakfast\": {\n      \"name\": \"Avena con frutas\",\n      \"description\": \"Desayuno nutritivo\",\n      \"ingredients\": [\n        \"Avena\",\n        \"Pl\u00e1tano\",\n        \"Miel\",\n        \"Leche\"\n      ],\n      \"prep_time_minutes\": 10\n    }\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "PUT /update",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/planning/update",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "planning",
+                "update"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "DELETE /delete",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/planning/delete",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "planning",
+                "delete"
+              ]
+            }
+          }
+        },
+        {
+          "name": "GET /get",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/planning/get",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "planning",
+                "get"
+              ],
+              "query": [
+                {
+                  "key": "date",
+                  "value": "2024-01-20"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "GET /all",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/planning/all",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "planning",
+                "all"
+              ]
+            }
+          }
+        },
+        {
+          "name": "GET /dates",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/planning/dates",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "planning",
+                "dates"
+              ]
+            }
+          }
+        },
+        {
+          "name": "POST /images/update",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/planning/images/update",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "planning",
+                "images",
+                "update"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Generation",
+      "item": [
+        {
+          "name": "GET /images/status/<task_id>",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/generation/images/status/task_12345",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "generation",
+                "images",
+                "status",
+                "task_12345"
+              ]
+            }
+          }
+        },
+        {
+          "name": "GET /<generation_id>/images",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/generation/gen_abc123/images",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "generation",
+                "gen_abc123",
+                "images"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Environmental Savings",
+      "item": [
+        {
+          "name": "POST /calculate/from-title",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/environmental_savings/calculate/from-title",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "environmental_savings",
+                "calculate",
+                "from-title"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Ensalada de Tomates Cherry con Queso Manchego\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "POST /calculate/from-uid/<recipe_uid>",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/environmental_savings/calculate/from-uid/rec_abc123",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "environmental_savings",
+                "calculate",
+                "from-uid",
+                "rec_abc123"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "GET /calculations",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/environmental_savings/calculations",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "environmental_savings",
+                "calculations"
+              ]
+            }
+          }
+        },
+        {
+          "name": "GET /calculations/status",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/environmental_savings/calculations/status",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "environmental_savings",
+                "calculations",
+                "status"
+              ]
+            }
+          }
+        },
+        {
+          "name": "GET /summary",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/environmental_savings/summary",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "environmental_savings",
+                "summary"
+              ]
+            }
+          }
+        },
+        {
+          "name": "POST /calculate/from-session",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/environmental_savings/calculate/from-session",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "environmental_savings",
+                "calculate",
+                "from-session"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Cooking Session",
+      "item": [
+        {
+          "name": "GET /<recipe_uid>/mise_en_place",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/cooking_session/rec_abc123/mise_en_place",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "cooking_session",
+                "rec_abc123",
+                "mise_en_place"
+              ],
+              "query": [
+                {
+                  "key": "servings",
+                  "value": "2"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "POST /start",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt}}",
+                "type": "text"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{idempotency_key}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/cooking_session/start",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "cooking_session",
+                "start"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"recipe_uid\": \"rec_abc123\",\n  \"servings\": 2,\n  \"level\": \"beginner\",\n  \"started_at\": \"2024-01-20T10:00:00Z\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "POST /complete_step",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/cooking_session/complete_step",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "cooking_session",
+                "complete_step"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "POST /finish",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/cooking_session/finish",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "cooking_session",
+                "finish"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Admin",
+      "item": [
+        {
+          "name": "POST /cleanup-tokens",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt}}",
+                "type": "text"
+              },
+              {
+                "key": "X-Internal-Secret",
+                "value": "{{internal_secret}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/admin/cleanup-tokens",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "cleanup-tokens"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "GET /security-stats",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt}}",
+                "type": "text"
+              },
+              {
+                "key": "X-Internal-Secret",
+                "value": "{{internal_secret}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/admin/security-stats",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "security-stats"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Inventory",
+      "item": [
+        {
+          "name": "POST /ingredients",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/inventory/ingredients",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "inventory",
+                "ingredients"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"ingredients\": [\n    {\n      \"name\": \"Tomates cherry\",\n      \"quantity\": 500,\n      \"type_unit\": \"gr\",\n      \"storage_type\": \"refrigerador\",\n      \"expiration_time\": 5,\n      \"time_unit\": \"D\u00edas\",\n      \"tips\": \"Mantener refrigerados para mayor duraci\u00f3n\",\n      \"image_path\": \"https://storage.googleapis.com/bucket/tomates.jpg\"\n    },\n    {\n      \"name\": \"Arroz integral\",\n      \"quantity\": 1,\n      \"type_unit\": \"kg\",\n      \"storage_type\": \"despensa\",\n      \"expiration_time\": 6,\n      \"time_unit\": \"Meses\",\n      \"tips\": \"Almacenar en recipiente herm\u00e9tico\",\n      \"image_path\": \"https://storage.googleapis.com/bucket/arroz.jpg\"\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "GET ",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/inventory",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "inventory"
+              ]
+            }
+          }
+        },
+        {
+          "name": "GET /complete",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/inventory/complete",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "inventory",
+                "complete"
+              ]
+            }
+          }
+        },
+        {
+          "name": "PUT /ingredients/<ingredient_name>/<added_at>",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/inventory/ingredients/Tomates cherry/2024-01-15T10:00:00Z",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "inventory",
+                "ingredients",
+                "Tomates cherry",
+                "2024-01-15T10:00:00Z"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "DELETE /ingredients/<ingredient_name>/<added_at>",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/inventory/ingredients/Tomates cherry/2024-01-15T10:00:00Z",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "inventory",
+                "ingredients",
+                "Tomates cherry",
+                "2024-01-15T10:00:00Z"
+              ]
+            }
+          }
+        },
+        {
+          "name": "GET /expiring",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/inventory/expiring",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "inventory",
+                "expiring"
+              ],
+              "query": [
+                {
+                  "key": "days",
+                  "value": "7"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "POST /ingredients/from-recognition",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/inventory/ingredients/from-recognition",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "inventory",
+                "ingredients",
+                "from-recognition"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "POST /foods/from-recognition",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/inventory/foods/from-recognition",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "inventory",
+                "foods",
+                "from-recognition"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "GET /simple",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/inventory/simple",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "inventory",
+                "simple"
+              ]
+            }
+          }
+        },
+        {
+          "name": "PATCH /ingredients/<ingredient_name>/<added_at>/quantity",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/inventory/ingredients/Tomates cherry/2024-01-15T10:00:00Z/quantity",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "inventory",
+                "ingredients",
+                "Tomates cherry",
+                "2024-01-15T10:00:00Z",
+                "quantity"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"quantity\": 750\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "PATCH /foods/<food_name>/<added_at>/quantity",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/inventory/foods/Pizza casera/2024-01-15T10:00:00Z/quantity",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "inventory",
+                "foods",
+                "Pizza casera",
+                "2024-01-15T10:00:00Z",
+                "quantity"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"quantity\": 2\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "DELETE /ingredients/<ingredient_name>",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/inventory/ingredients/Tomates cherry",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "inventory",
+                "ingredients",
+                "Tomates cherry"
+              ]
+            }
+          }
+        },
+        {
+          "name": "DELETE /foods/<food_name>/<added_at>",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/inventory/foods/Pizza casera/2024-01-15T10:00:00Z",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "inventory",
+                "foods",
+                "Pizza casera",
+                "2024-01-15T10:00:00Z"
+              ]
+            }
+          }
+        },
+        {
+          "name": "POST /ingredients/<ingredient_name>/<added_at>/consume",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/inventory/ingredients/Tomates cherry/2024-01-15T10:00:00Z/consume",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "inventory",
+                "ingredients",
+                "Tomates cherry",
+                "2024-01-15T10:00:00Z",
+                "consume"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"consumed_quantity\": 100\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "POST /foods/<food_name>/<added_at>/consume",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/inventory/foods/Pizza casera/2024-01-15T10:00:00Z/consume",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "inventory",
+                "foods",
+                "Pizza casera",
+                "2024-01-15T10:00:00Z",
+                "consume"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"consumed_portions\": 1\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "GET /ingredients/<ingredient_name>/detail",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/inventory/ingredients/Tomates cherry/detail",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "inventory",
+                "ingredients",
+                "Tomates cherry",
+                "detail"
+              ]
+            }
+          }
+        },
+        {
+          "name": "GET /foods/<food_name>/<added_at>/detail",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/inventory/foods/Pizza casera/2024-01-15T10:00:00Z/detail",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "inventory",
+                "foods",
+                "Pizza casera",
+                "2024-01-15T10:00:00Z",
+                "detail"
+              ]
+            }
+          }
+        },
+        {
+          "name": "GET /ingredients/list",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/inventory/ingredients/list",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "inventory",
+                "ingredients",
+                "list"
+              ]
+            }
+          }
+        },
+        {
+          "name": "GET /foods/list",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/inventory/foods/list",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "inventory",
+                "foods",
+                "list"
+              ]
+            }
+          }
+        },
+        {
+          "name": "POST /upload_image",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/inventory/upload_image",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "inventory",
+                "upload_image"
+              ]
+            },
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "image",
+                  "type": "file",
+                  "src": "/path/to/inventory.jpg"
+                },
+                {
+                  "key": "upload_type",
+                  "type": "text",
+                  "value": "ingredient"
+                },
+                {
+                  "key": "item_name",
+                  "type": "text",
+                  "value": "Tomates cherry"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "POST /add_item",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/inventory/add_item",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "inventory",
+                "add_item"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Leche\",\n  \"quantity\": 1,\n  \"unit\": \"litros\",\n  \"storage_type\": \"refrigerador\",\n  \"category\": \"ingredient\",\n  \"image_url\": \"https://example.com/leche.jpg\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "GET /expiring_soon",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/inventory/expiring_soon",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "inventory",
+                "expiring_soon"
+              ],
+              "query": [
+                {
+                  "key": "days",
+                  "value": "7"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "POST /batch/<batch_id>/reserve",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/inventory/batch/<batch_id>/reserve",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "inventory",
+                "batch",
+                "<batch_id>",
+                "reserve"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "POST /batch/<batch_id>/freeze",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/inventory/batch/<batch_id>/freeze",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "inventory",
+                "batch",
+                "<batch_id>",
+                "freeze"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "POST /batch/<batch_id>/transform",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/inventory/batch/<batch_id>/transform",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "inventory",
+                "batch",
+                "<batch_id>",
+                "transform"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "POST /batch/<batch_id>/quarantine",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/inventory/batch/<batch_id>/quarantine",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "inventory",
+                "batch",
+                "<batch_id>",
+                "quarantine"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "POST /batch/<batch_id>/discard",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/inventory/batch/<batch_id>/discard",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "inventory",
+                "batch",
+                "<batch_id>",
+                "discard"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "POST /leftovers",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/inventory/leftovers",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "inventory",
+                "leftovers"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:3000"
+    },
+    {
+      "key": "jwt",
+      "value": ""
+    },
+    {
+      "key": "internal_secret",
+      "value": "fandom-de-ahora-lmk"
+    },
+    {
+      "key": "idempotency_key",
+      "value": "00000000-0000-4000-8000-000000000001"
+    },
+    {
+      "key": "firebase_id_token",
+      "value": ""
+    },
+    {
+      "key": "recipe_uid",
+      "value": "rec_abc123"
+    }
+  ]
+}

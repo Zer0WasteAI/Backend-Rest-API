@@ -52,7 +52,7 @@ class Config:
     ]
 
     # =================== REDIS CONFIG ===================
-    REDIS_HOST = os.getenv('REDIS_HOST', 'redis_cache')
+    REDIS_HOST = os.getenv('REDIS_HOST', 'redis')
     REDIS_PORT = int(os.getenv('REDIS_PORT', 6379))
     REDIS_DB = int(os.getenv('REDIS_DB', 0))
 
