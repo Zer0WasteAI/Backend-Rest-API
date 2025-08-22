@@ -112,16 +112,13 @@ def build_postman_items(group_name, base_prefix, routes):
         "/api/recipes/generate-custom": {
             "POST": {
                 "ingredients": [
-                    {"name": "Pollo", "quantity": 500, "unit": "gr"},
-                    {"name": "Pasta", "quantity": 300, "unit": "gr"},
-                    {"name": "Tomates", "quantity": 400, "unit": "gr"}
+                    "Pollo 500 gr",
+                    "Pasta 300 gr",
+                    "Tomates 400 gr"
                 ],
-                "cuisine_type": "italiana",
-                "difficulty": "intermedio",
-                "prep_time": "medio",
-                "dietary_restrictions": [],
-                "meal_type": "almuerzo",
-                "servings": 4
+                "preferences": ["italiana", "intermedio", "medio"],
+                "num_recipes": 2,
+                "recipe_categories": ["almuerzo"]
             }
         },
 
@@ -589,16 +586,13 @@ def build_flows_group():
                             "url": url("api/recipes/generate-custom"),
                             "body": raw_body({
                                 "ingredients": [
-                                    {"name": "Pollo", "quantity": 500, "unit": "gr"},
-                                    {"name": "Pasta", "quantity": 300, "unit": "gr"},
-                                    {"name": "Tomates", "quantity": 400, "unit": "gr"}
+                                    "Pollo 500 gr",
+                                    "Pasta 300 gr",
+                                    "Tomates 400 gr"
                                 ],
-                                "cuisine_type": "italiana",
-                                "difficulty": "intermedio",
-                                "prep_time": "medio",
-                                "dietary_restrictions": [],
-                                "meal_type": "almuerzo",
-                                "servings": 4
+                                "preferences": ["italiana", "intermedio", "medio"],
+                                "num_recipes": 2,
+                                "recipe_categories": ["almuerzo"]
                             }),
                         },
                     },

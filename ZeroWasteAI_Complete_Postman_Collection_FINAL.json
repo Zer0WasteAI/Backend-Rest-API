@@ -333,7 +333,7 @@
                 },
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"ingredients\": [\n    {\n      \"name\": \"Pollo\",\n      \"quantity\": 500,\n      \"unit\": \"gr\"\n    },\n    {\n      \"name\": \"Pasta\",\n      \"quantity\": 300,\n      \"unit\": \"gr\"\n    },\n    {\n      \"name\": \"Tomates\",\n      \"quantity\": 400,\n      \"unit\": \"gr\"\n    }\n  ],\n  \"cuisine_type\": \"italiana\",\n  \"difficulty\": \"intermedio\",\n  \"prep_time\": \"medio\",\n  \"dietary_restrictions\": [],\n  \"meal_type\": \"almuerzo\",\n  \"servings\": 4\n}",
+                  "raw": "{\n  \"ingredients\": [\n    \"Pollo 500 gr\",\n    \"Pasta 300 gr\",\n    \"Tomates 400 gr\"\n  ],\n  \"preferences\": [\n    \"italiana\",\n    \"intermedio\",\n    \"medio\"\n  ],\n  \"num_recipes\": 2,\n  \"recipe_categories\": [\n    \"almuerzo\"\n  ]\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -2831,7 +2831,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"ingredients\": [\n    {\n      \"name\": \"Pollo\",\n      \"quantity\": 500,\n      \"unit\": \"gr\"\n    },\n    {\n      \"name\": \"Pasta\",\n      \"quantity\": 300,\n      \"unit\": \"gr\"\n    },\n    {\n      \"name\": \"Tomates\",\n      \"quantity\": 400,\n      \"unit\": \"gr\"\n    }\n  ],\n  \"cuisine_type\": \"italiana\",\n  \"difficulty\": \"intermedio\",\n  \"prep_time\": \"medio\",\n  \"dietary_restrictions\": [],\n  \"meal_type\": \"almuerzo\",\n  \"servings\": 4\n}",
+              "raw": "{\n  \"ingredients\": [\n    \"Pollo 500 gr\",\n    \"Pasta 300 gr\",\n    \"Tomates 400 gr\"\n  ],\n  \"preferences\": [\n    \"italiana\",\n    \"intermedio\",\n    \"medio\"\n  ],\n  \"num_recipes\": 2,\n  \"recipe_categories\": [\n    \"almuerzo\"\n  ]\n}",
               "options": {
                 "raw": {
                   "language": "json"

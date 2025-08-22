@@ -15,7 +15,6 @@ from src.application.services.recipe_image_generator_service import RecipeImageG
 from src.infrastructure.firebase.firebase_storage_adapter import FirebaseStorageAdapter
 from src.infrastructure.ai.gemini_recipe_generator_service import GeminiRecipeGeneratorService
 from src.infrastructure.ai.gemini_adapter_service import GeminiAdapterService
-from src.application.factories.auth_usecase_factory import make_firestore_profile_service
 from src.infrastructure.db.base import db
 
 def make_prepare_recipe_generation_data_use_case():
@@ -26,11 +25,7 @@ def make_generate_recipes_use_case():
 
 def make_generate_custom_recipe_use_case():
     recipe_service = GeminiRecipeGeneratorService()
-    profile_service = make_firestore_profile_service()
-    return GenerateCustomRecipeUseCase(
-        recipe_service=recipe_service,
-        profile_service=profile_service
-    )
+    return GenerateCustomRecipeUseCase(recipe_service)
 
 def make_save_recipe_use_case():
     return SaveRecipeUseCase(RecipeRepositoryImpl(db))
